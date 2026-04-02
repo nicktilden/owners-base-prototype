@@ -16,6 +16,8 @@ import {
   Comments,
   Building,
   CaretDown,
+  CaretUp,
+  Search,
 } from '@procore/core-icons';
 import styled from 'styled-components';
 import { ProcoreLogoSvg } from './ProcoreLogoSvg';
@@ -29,6 +31,7 @@ const ProjectPickerPopover = dynamic(() => import('./ProjectPickerPopover'), { s
 const AppPickerPopover = dynamic(() => import('./AppPickerPopover'), { ssr: false });
 const HelpPopover = dynamic(() => import('./HelpPopover'), { ssr: false });
 const UserMenuPopover = dynamic(() => import('./UserMenuPopover'), { ssr: false });
+const BrowseAsTearsheet = dynamic(() => import('./BrowseAsTearsheet'), { ssr: false });
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -46,9 +49,10 @@ const Bar = styled.header`
   left: 0;
   right: 0;
   height: ${GLOBAL_HEADER_HEIGHT}px;
-  background: #1a1a1a;
+  background: #000000;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 12px;
   z-index: 1000;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -66,7 +70,7 @@ const MenuButton = styled.button`
   border-radius: 4px;
   flex-shrink: 0;
   transition: background 0.15s;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: rgba(117, 131, 138, 0.3); }
 `;
 
 const ProcoreLogo = styled(Link)`
@@ -75,30 +79,25 @@ const ProcoreLogo = styled(Link)`
   margin: 0 12px 0 4px;
   flex-shrink: 0;
   text-decoration: none;
-`;
-
-const PickerDivider = styled.div`
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 2px;
-  flex-shrink: 0;
+  border-radius: 4px;
+  transition: background 0.15s;
+  &:hover { background: rgba(117, 131, 138, 0.3); }
 `;
 
 const PickerButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
+  background: rgb(70, 79, 83);
   border: none;
   color: #fff;
   cursor: pointer;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: 6px;
   flex-shrink: 0;
   transition: background 0.15s;
   min-width: 0;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: rgb(85, 95, 100); }
 `;
 
 const PickerIcon = styled.div`
@@ -124,10 +123,30 @@ const Spacer = styled.div`
   flex: 1;
 `;
 
+const LeftActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
+/* Absolutely centered in the Bar so it never overlaps LeftActions or RightActions */
+const SearchBarContainer = styled.div`
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  /* Constrain so it can't grow into the side groups — each side keeps its own space */
+  max-width: min(480px, calc(100% - 800px));
+  width: 480px;
+`;
+
 const RightActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
   flex-shrink: 0;
 `;
 
@@ -141,9 +160,9 @@ const IconBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.75);
-  transition: background 0.15s, color 0.15s;
-  &:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  color: #ffffff;
+  transition: background 0.15s;
+  &:hover { background: rgba(117, 131, 138, 0.3); }
 `;
 
 const ProfileButton = styled.button`
@@ -157,7 +176,7 @@ const ProfileButton = styled.button`
   border-radius: 6px;
   transition: background 0.15s;
   margin-left: 4px;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: rgba(117, 131, 138, 0.3); }
 `;
 
 const AvatarImg = styled.img`
@@ -183,15 +202,66 @@ const AppPickerButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
+  background: rgb(70, 79, 83);
   border: none;
   color: #fff;
   cursor: pointer;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: 6px;
   flex-shrink: 0;
   transition: background 0.15s;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: rgb(85, 95, 100); }
+`;
+
+const SearchBarWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  background: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 0 12px;
+  cursor: text;
+  pointer-events: auto;
+  transition: border-color 0.15s, background 0.15s;
+  &:focus-within {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: #ffffff;
+  }
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #6A767C;
+  font-size: 14px;
+  &::placeholder { color: #6A767C; }
+`;
+
+const KbdBadge = styled.kbd`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 6px;
+  background: #EEF0F1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  color: #232729;
+  white-space: nowrap;
+`;
+
+const SearchShortcut = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -202,6 +272,7 @@ export default function GlobalHeader() {
   const [appPickerOpen, setAppPickerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [browseAsOpen, setBrowseAsOpen] = useState(false);
 
   const pickerBtnRef = useRef<HTMLButtonElement>(null);
   const appPickerBtnRef = useRef<HTMLButtonElement>(null);
@@ -219,7 +290,8 @@ export default function GlobalHeader() {
   const activeProject = activeProjectId
     ? data.projects.find((p) => p.id === activeProjectId)
     : null;
-  const pickerLabel = activeProject ? activeProject.name : 'Select Project';
+  const rawLabel = activeProject ? activeProject.name : 'Select Project';
+  const pickerLabel = rawLabel.length > 22 ? rawLabel.slice(0, 22) + '…' : rawLabel;
   const pickerSublabel = level === 'project' && activeProject
     ? activeProject.number
     : companyName;
@@ -227,21 +299,22 @@ export default function GlobalHeader() {
   return (
     <>
       <Bar>
+        
+        {/* Right actions */}
+        <LeftActions>
         {/* Left: menu toggle + logo */}
         <MenuButton
           onClick={() => setNavOpen(true)}
           aria-label="Open navigation menu"
           aria-expanded={navOpen}
         >
-          <List size="sm" />
-          <Typography color="white" intent="small" style={{ fontWeight: 500 }}>Menu</Typography>
+          <List size="md" style={{ width: 24, height: 24 }} />
+          <Typography color="white" intent="small" style={{ fontWeight: 600, fontSize: 14 }}>Menu</Typography>
         </MenuButton>
 
         <ProcoreLogo href="/portfolio">
           <ProcoreLogoSvg />
         </ProcoreLogo>
-
-        <PickerDivider />
 
         {/* Project / portfolio picker */}
         <PickerWrap>
@@ -263,7 +336,7 @@ export default function GlobalHeader() {
                 {pickerLabel}
               </Typography>
             </PickerLabels>
-            <CaretDown size="sm" />
+            {projectPickerOpen ? <CaretUp size="sm" /> : <CaretDown size="sm" />}
           </PickerButton>
           {projectPickerOpen && (
             <ProjectPickerPopover
@@ -272,8 +345,19 @@ export default function GlobalHeader() {
             />
           )}
         </PickerWrap>
+        </LeftActions>
 
-        <Spacer />
+        {/* Search bar */}
+        <SearchBarContainer>
+          <SearchBarWrap>
+            <Search size="sm" style={{ color: '#6A767C', flexShrink: 0 }} />
+            <SearchInput placeholder="Search" />
+            <SearchShortcut>
+              <KbdBadge>Cmd</KbdBadge>
+              <KbdBadge>K</KbdBadge>
+            </SearchShortcut>
+          </SearchBarWrap>
+        </SearchBarContainer>
 
         {/* Right actions */}
         <RightActions>
@@ -286,8 +370,11 @@ export default function GlobalHeader() {
               aria-expanded={appPickerOpen}
               onClick={() => setAppPickerOpen((v) => !v)}
             >
-              <Typography color="white" intent="small" style={{ opacity: 0.6, lineHeight: 1 }}>Apps</Typography>
-              <CaretDown size="sm" />
+              <PickerLabels>
+                <Typography color="white" intent="small" style={{ opacity: 0.6, lineHeight: 1 }}>Apps</Typography>
+                <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Select an App</Typography>
+              </PickerLabels>
+              {appPickerOpen ? <CaretUp size="sm" /> : <CaretDown size="sm" />}
             </AppPickerButton>
             {appPickerOpen && (
               <AppPickerPopover
@@ -350,6 +437,7 @@ export default function GlobalHeader() {
               <UserMenuPopover
                 anchorRef={userMenuBtnRef}
                 onClose={() => setUserMenuOpen(false)}
+                onBrowseAs={() => setBrowseAsOpen(true)}
               />
             )}
           </PickerWrap>
@@ -357,6 +445,7 @@ export default function GlobalHeader() {
       </Bar>
 
       <NavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
+      <BrowseAsTearsheet open={browseAsOpen} onClose={() => setBrowseAsOpen(false)} />
     </>
   );
 }

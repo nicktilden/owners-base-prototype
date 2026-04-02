@@ -55,7 +55,7 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
 
 // Human-readable display names for tools in the nav
 export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
-  hubs:               'Hub',
+  hubs:               'Home',
   documents:          'Documents',
   schedule:           'Schedule',
   assets:             'Assets',

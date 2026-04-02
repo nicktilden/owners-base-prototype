@@ -30,6 +30,7 @@ import {
   Payments,
   Envelope,
   NotepadPencil,
+  Home,
 } from '@procore/core-icons';
 import styled, { keyframes, css } from 'styled-components';
 import { ProcoreLogoSvg } from './ProcoreLogoSvg';
@@ -147,8 +148,8 @@ const NavItemEl = styled.a<{ $active?: boolean }>`
   padding: 8px 6px 8px 8px;
   border-radius: 6px;
   text-decoration: none;
-  color: #fff;
-  background: ${({ $active }) => ($active ? 'rgba(255,255,255,0.12)' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#ffffff' : 'rgba(255, 255, 255, 0.85)')};
+  background: ${({ $active }) => ($active ? 'rgba(117, 131, 138, 0.3)' : 'transparent')};
   flex-shrink: 0;
   transition: background 0.15s;
 
@@ -156,14 +157,14 @@ const NavItemEl = styled.a<{ $active?: boolean }>`
 
   svg {
     flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.85);
+    color: ${({ $active }) => ($active ? '#ffffff' : 'rgba(255, 255, 255, 0.85)')};
   }
 `;
 
 // ─── Tool icon map ─────────────────────────────────────────────────────────────
 
 const TOOL_ICONS: Partial<Record<ToolKey, React.ReactNode>> = {
-  hubs:             <ChartBar size="sm" />,
+  hubs:             <Home size="sm" />,
   documents:        <FileList size="sm" />,
   schedule:         <Calendar size="sm" />,
   assets:           <Assets size="sm" />,
@@ -199,7 +200,10 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
   const { activeUser } = usePersona();
   const [closing, setClosing] = React.useState(false);
 
-  const currentPath = router.pathname;
+  const currentPath = React.useMemo(() => {
+    const pathWithoutQuery = router.asPath.split('?')[0]?.split('#')[0] ?? '';
+    return pathWithoutQuery.replace(/\/+$/, '') || '/';
+  }, [router.asPath]);
   const isProjectLevel = level === 'project' && !!activeProjectId;
 
   // Build the tool list for the current level, filtered by user permissions
@@ -216,14 +220,31 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
   // Build nav items
   const baseHref = isProjectLevel ? `/project/${activeProjectId}` : '/portfolio';
 
-  const toolNavItems = toolKeys.map((key) => ({
-    key,
-    label: TOOL_DISPLAY_NAMES[key],
-    icon: TOOL_ICONS[key] ?? <File size="sm" />,
-    href: key === 'hubs'
-      ? baseHref
-      : `${baseHref}/${key.replace(/_/g, '-')}`,
-  }));
+  const toolNavItems: { key: string; label: string; icon: React.ReactNode; href: string }[] = toolKeys
+    .map((key) => ({
+      key,
+      label: TOOL_DISPLAY_NAMES[key],
+      icon: TOOL_ICONS[key] ?? <File size="sm" />,
+      href: key === 'hubs'
+        ? baseHref
+        : `${baseHref}/${key.replace(/_/g, '-')}`,
+    }))
+    .sort((a, b) => {
+      if (a.key === 'hubs') return -1;
+      if (b.key === 'hubs') return 1;
+      return a.label.localeCompare(b.label);
+    });
+
+  // Insert Project Overview as the second item when at project level
+  if (isProjectLevel) {
+    const projectOverviewItem = {
+      key: '__project_overview__',
+      label: 'Project Overview',
+      icon: <Home size="sm" />,
+      href: `/project/${activeProjectId}`,
+    };
+    toolNavItems.splice(1, 0, projectOverviewItem);
+  }
 
   const sectionLabel = isProjectLevel ? 'PROJECT TOOLS' : 'PORTFOLIO TOOLS';
 
@@ -283,7 +304,11 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
           </SectionHeader>
 
           {toolNavItems.map((item) => {
-            const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/');
+            const normalizedHref = item.href.replace(/\/+$/, '') || '/';
+            const isHomeItem = item.key === 'hubs' || item.key === '__project_overview__';
+            const isActive = isHomeItem
+              ? currentPath === normalizedHref
+              : currentPath === normalizedHref || currentPath.startsWith(`${normalizedHref}/`);
             return (
               <NavItemEl key={item.key} href={item.href} $active={isActive}>
                 {item.icon}

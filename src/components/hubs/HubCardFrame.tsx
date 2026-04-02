@@ -1,0 +1,84 @@
+import React from "react";
+import { Typography } from "@procore/core-react";
+import styled from "styled-components";
+
+const Card = styled.div`
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  max-height: 420px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+`;
+
+const Header = styled.div`
+  padding: 16px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 44px;
+  gap: 8px;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+`;
+
+const Controls = styled.div`
+  padding: 8px 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+`;
+
+const Content = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 16px 16px;
+`;
+
+interface HubCardFrameProps {
+  title: React.ReactNode;
+  titlePrefix?: React.ReactNode;
+  titleSuffix?: React.ReactNode;
+  actions?: React.ReactNode;
+  controls?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+export default function HubCardFrame({
+  title,
+  titlePrefix,
+  titleSuffix,
+  actions,
+  controls,
+  children,
+}: HubCardFrameProps) {
+  return (
+    <Card>
+      <Header>
+        <HeaderLeft>
+          {titlePrefix}
+          <Typography intent="h3" style={{ fontWeight: 600, color: "#232729", fontSize: 16, letterSpacing: "0.15px" }}>
+            {title}
+          </Typography>
+          {titleSuffix}
+        </HeaderLeft>
+        {actions}
+      </Header>
+      {controls ? <Controls>{controls}</Controls> : null}
+      <Content>{children}</Content>
+    </Card>
+  );
+}
