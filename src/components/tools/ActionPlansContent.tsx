@@ -16,11 +16,12 @@ import { projects } from "@/data/seed/projects";
 import type { ActionPlan, ActionPlanStatus, ActionPlanType } from "@/types/action_plans";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return formatDateMMDDYYYY(d);
 }
 
 const STATUS_COLORS: Record<ActionPlanStatus, "green" | "yellow" | "red" | "gray" | "blue"> = {

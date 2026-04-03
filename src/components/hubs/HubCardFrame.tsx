@@ -1,5 +1,6 @@
 import React from "react";
-import { Typography } from "@procore/core-react";
+import { Tooltip, Typography } from "@procore/core-react";
+import { Info } from "@procore/core-icons";
 import styled from "styled-components";
 
 const Card = styled.div`
@@ -50,6 +51,7 @@ const Content = styled.div`
 
 interface HubCardFrameProps {
   title: React.ReactNode;
+  infoTooltip?: React.ReactNode;
   titlePrefix?: React.ReactNode;
   titleSuffix?: React.ReactNode;
   actions?: React.ReactNode;
@@ -59,6 +61,7 @@ interface HubCardFrameProps {
 
 export default function HubCardFrame({
   title,
+  infoTooltip,
   titlePrefix,
   titleSuffix,
   actions,
@@ -73,6 +76,31 @@ export default function HubCardFrame({
           <Typography intent="h3" style={{ fontWeight: 600, color: "#232729", fontSize: 16, letterSpacing: "0.15px" }}>
             {title}
           </Typography>
+          {infoTooltip ? (
+            <Tooltip
+              trigger="hover"
+              placement="top"
+              overlay={
+                <Tooltip.Content>
+                  <div
+                    style={{
+                      maxWidth: 280,
+                      lineHeight: 1.45,
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {infoTooltip}
+                  </div>
+                </Tooltip.Content>
+              }
+            >
+              <span style={{ display: "inline-flex", color: "#232729" }} aria-label="Card dataset info">
+                <Info size="sm" />
+              </span>
+            </Tooltip>
+          ) : null}
           {titleSuffix}
         </HeaderLeft>
         {actions}

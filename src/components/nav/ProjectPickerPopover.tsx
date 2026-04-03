@@ -11,6 +11,14 @@ import { useData } from '@/context/DataContext';
 import { useLevel } from '@/context/LevelContext';
 import { usePersona } from '@/context/PersonaContext';
 import { hasPermissionKey } from '@/utils/permissions';
+import { sampleProjectRows } from '@/data/projects';
+import {
+  favoriteKeyForSampleProject,
+  favoriteKeyForSeedProject,
+  getFavorite,
+  readProjectFavorites,
+  type ProjectFavoriteMap,
+} from '@/utils/projectFavorites';
 
 const Popover = styled.div`
   position: absolute;
@@ -97,6 +105,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
   const router = useRouter();
   const popoverRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
+  const [favoriteMap, setFavoriteMap] = useState<ProjectFavoriteMap>({});
   const { data } = useData();
   const { setProject, clearProject } = useLevel();
   const { activeUser } = usePersona();
@@ -116,8 +125,20 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
       )
     : visibleProjects;
 
-  const recent = filtered.slice(0, 5);
+  const favorites = filtered.filter((p) =>
+    getFavorite(favoriteMap, favoriteKeyForSeedProject(p.id), p.favorite)
+  );
+  const sampleFavorites = sampleProjectRows.filter((p) =>
+    getFavorite(favoriteMap, favoriteKeyForSampleProject(p.id), p.favorite)
+  );
   const isFiltering = query.trim().length > 0;
+
+  useEffect(() => {
+    setFavoriteMap(readProjectFavorites());
+    const onStorage = () => setFavoriteMap(readProjectFavorites());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -152,6 +173,11 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
     router.push(`/project/${id}`);
     onClose();
   };
+  const goToSampleProject = (id: number) => {
+    clearProject();
+    router.push(`/project/${id}`);
+    onClose();
+  };
 
   const account = data.account;
 
@@ -180,17 +206,32 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
           </>
         )}
 
-        {/* Recent projects */}
-        {(!isFiltering && recent.length > 0) && (
+        {/* Favorite projects */}
+        {!isFiltering && (
           <>
             <SectionLabel style={{ marginTop: 4 }}>
-              <Typography intent="body" style={{ fontWeight: 600 }}>Recent Projects</Typography>
+              <Typography intent="body" style={{ fontWeight: 600 }}>Favorites</Typography>
             </SectionLabel>
-            {recent.map((p) => (
-              <ProjectRow key={p.id} onClick={() => goToProject(p.id)}>
-                <Typography intent="body">{p.name}</Typography>
-              </ProjectRow>
-            ))}
+            {favorites.length === 0 && sampleFavorites.length === 0 ? (
+              <SectionLabel>
+                <Typography intent="body" style={{ color: "#6A767C" }}>
+                  No projects
+                </Typography>
+              </SectionLabel>
+            ) : (
+              <>
+                {favorites.map((p) => (
+                  <ProjectRow key={p.id} onClick={() => goToProject(p.id)}>
+                    <Typography intent="body">{p.number} — {p.name}</Typography>
+                  </ProjectRow>
+                ))}
+                {sampleFavorites.map((p) => (
+                  <ProjectRow key={`sample-${p.id}`} onClick={() => goToSampleProject(p.id)}>
+                    <Typography intent="body">{p.number} — {p.name}</Typography>
+                  </ProjectRow>
+                ))}
+              </>
+            )}
           </>
         )}
 
@@ -199,23 +240,23 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
           <>
             {!isFiltering && (
               <SectionLabel style={{ marginTop: 4 }}>
-                <Typography intent="body" style={{ fontWeight: 600 }}>Projects</Typography>
+                <Typography intent="body" style={{ fontWeight: 600 }}>All Projects</Typography>
               </SectionLabel>
             )}
-            {filtered.map((p) => (
-              <ProjectRow key={`all-${p.id}`} onClick={() => goToProject(p.id)}>
-                <Typography intent="body">{p.number} — {p.name}</Typography>
-              </ProjectRow>
-            ))}
+            {filtered.length === 0 ? (
+              <SectionLabel>
+                <Typography intent="body" style={{ color: "#6A767C" }}>
+                  No projects
+                </Typography>
+              </SectionLabel>
+            ) : (
+              filtered.map((p) => (
+                <ProjectRow key={`all-${p.id}`} onClick={() => goToProject(p.id)}>
+                  <Typography intent="body">{p.number} — {p.name}</Typography>
+                </ProjectRow>
+              ))
+            )}
           </>
-        )}
-
-        {isFiltering && filtered.length === 0 && (
-          <SectionLabel>
-            <Typography intent="body" style={{ color: '#6b7177' }}>
-              No projects match &ldquo;{query}&rdquo;
-            </Typography>
-          </SectionLabel>
         )}
 
         {!isFiltering && visibleProjects.length === 0 && (

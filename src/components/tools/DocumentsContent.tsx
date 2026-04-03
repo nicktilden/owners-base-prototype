@@ -22,6 +22,7 @@ import type { Document, DocumentStatus } from "@/types/documents";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ const FilterLabel = styled.label`
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return formatDateMMDDYYYY(d);
 }
 
 function formatFileSize(bytes: number): string {

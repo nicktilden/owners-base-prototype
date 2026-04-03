@@ -10,6 +10,7 @@ import {
   getStageOrder,
   type ProjectMilestoneName,
 } from "@/data/projects";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Heatmap color logic ───────────────────────────────────────────────────────
 
@@ -149,7 +150,7 @@ const Th = styled.th<{ $sticky?: boolean }>`
   height: 48px;
   font-size: 12px;
   font-weight: 600;
-  color: ${HEATMAP_HEADER_FG};
+  color: #232729;
   letter-spacing: 0.25px;
   white-space: nowrap;
   text-align: left;
@@ -170,14 +171,14 @@ const ThMilestone = styled.th`
   height: 48px;
   font-size: 12px;
   font-weight: 600;
-  color: ${HEATMAP_HEADER_FG};
+  color: #232729;
   letter-spacing: 0.2px;
   white-space: nowrap;
   text-align: center;
   border-bottom: 1px solid #d6dadc;
   border-right: 1px solid #e8eaeb;
   background: ${HEATMAP_HEADER_BG};
-  min-width: 52px;
+  min-width: 80px;
 `;
 
 const Tr = styled.tr`
@@ -257,7 +258,7 @@ const HeatCell = styled.div<{ $bg: string; $fg: string; $current: boolean }>`
   ${({ $current }) =>
     $current &&
     `
-    outline: 2px solid rgba(0, 0, 0, 0.35);
+    outline: 2px solid #232729;
     outline-offset: 1px;
   `}
 `;
@@ -332,7 +333,7 @@ const LegendCurrentBox = styled.div`
   height: 14px;
   border-radius: 2px;
   background: #8bc34a;
-  outline: 2px solid rgba(0, 0, 0, 0.35);
+  outline: 2px solid #232729;
   outline-offset: 1px;
 `;
 
@@ -418,11 +419,20 @@ export default function ScheduleHeatmapCard() {
 
                       const tooltipContent = (
                         <Tooltip.Content>
-                          <div style={{ minWidth: 220, lineHeight: 1.45 }}>
+                          <div
+                            style={{
+                              minWidth: 220,
+                              maxWidth: 280,
+                              lineHeight: 1.45,
+                              whiteSpace: "normal",
+                              overflowWrap: "anywhere",
+                              wordBreak: "break-word",
+                            }}
+                          >
                             <div style={{ fontWeight: 700 }}>{name}</div>
                             <div style={{ marginTop: 2, color: "#c9d1d4" }}>{project.name}</div>
-                            <div style={{ marginTop: 8 }}>Baseline: {m?.baselineDate ?? "N/A"}</div>
-                            <div>Actual: {m?.actualDate ?? "N/A"}</div>
+                            <div style={{ marginTop: 8 }}>Baseline: {m ? formatDateMMDDYYYY(m.baselineDate) : "N/A"}</div>
+                            <div>Actual: {m ? formatDateMMDDYYYY(m.actualDate) : "N/A"}</div>
                             <div>Variance: {varianceLabel}</div>
                           </div>
                         </Tooltip.Content>

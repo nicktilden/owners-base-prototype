@@ -35,6 +35,7 @@ export interface ProjectRow {
   id: number;
   name: string;
   number: string;
+  favorite: boolean;
   /** Full address line shown in the Location column */
   location: string;
   /** Parsed for filters (US: "City, ST ZIP"; otherwise city + region/country after last comma). */
@@ -332,7 +333,7 @@ const SAMPLE_STAGES: ProjectStage[] = [
 ];
 
 /** Sample projects for the Projects table (50 projects). Program: Data Center | Retail | Commercial | Healthcare | Industrial | Infrastructure | Residential. */
-const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state">[] = [
+const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state" | "favorite">[] = [
   { id: 1, name: "Northern Virginia Data Center Phase 2", number: `${REGIONS[0]}-${PROJECT_NUMBERS[0]}`, location: "Ashburn, VA 20147", stage: SAMPLE_STAGES[0], startDate: "2024-01-08", endDate: "2025-09-30", program: "Data Center", estimatedCost: 185000000, originalBudget: 178000000, jobToDateCost: 92000000, forecastToComplete: 187000000, estimatedCostAtCompletion: 187000000, priorities: "Schedule, Budget" },
   { id: 2, name: "Ohio Region Campus Expansion", number: `${REGIONS[1]}-${PROJECT_NUMBERS[1]}`, location: "Columbus, OH 43215", stage: SAMPLE_STAGES[1], startDate: "2024-02-01", endDate: "2025-11-15", program: "Data Center", estimatedCost: 220000000, originalBudget: 215000000, jobToDateCost: 88000000, forecastToComplete: 222000000, estimatedCostAtCompletion: 222000000, priorities: "Safety, Schedule" },
   { id: 3, name: "Roastery Chicago", number: `${REGIONS[2]}-${PROJECT_NUMBERS[2]}`, location: "Chicago, IL 60654", stage: SAMPLE_STAGES[2], startDate: "2024-01-15", endDate: "2025-06-30", program: "Retail", estimatedCost: 28500000, originalBudget: 27200000, jobToDateCost: 14200000, forecastToComplete: 28800000, estimatedCostAtCompletion: 28800000, priorities: "Quality, Schedule" },
@@ -387,6 +388,7 @@ const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state">[] = [
 
 export const sampleProjectRows: ProjectRow[] = SAMPLE_PROJECT_ROWS_BASE.map((row) => ({
   ...row,
+  favorite: false,
   ...parseLocationCityState(row.location),
 }));
 

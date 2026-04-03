@@ -277,6 +277,12 @@ const BulkCountLabel = styled.span`
   color: #1a2226;
 `;
 
+const Th = styled.th`
+  font-size: 12px;
+  font-weight: 600;
+  color: #232729;
+ `;
+
 type ColumnKey =
   | "projectNumber"
   | "project"

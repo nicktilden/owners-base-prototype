@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@procore/core-react";
-import { Eye, Pencil, Star, NotepadList } from "@procore/core-icons";
+import { Eye, Pencil, Star, StarOff, NotepadList } from "@procore/core-icons";
 
 const ACTIONS_WRAP_STYLE: React.CSSProperties = {
   display: "flex",
@@ -60,15 +60,22 @@ export function StandardRowActions() {
   );
 }
 
-export function ProjectRowActions() {
+export function ProjectRowActions({
+  isFavorite,
+  onToggleFavorite,
+}: {
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+}) {
   return (
     <div style={ACTIONS_WRAP_STYLE}>
       <Button
         variant="tertiary"
         size="sm"
-        icon={<Star size="sm" />}
-        aria-label="Favorite"
+        icon={isFavorite ? <Star size="sm" /> : <StarOff size="sm" />}
+        aria-label={isFavorite ? "Unfavorite" : "Favorite"}
         style={BUTTON_STYLE}
+        onClick={onToggleFavorite}
       />
       <Button
         variant="tertiary"

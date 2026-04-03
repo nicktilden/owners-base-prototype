@@ -1,38 +1,24 @@
 import React, { useState } from "react";
-import { Button, Pill, Search, Tearsheet, Typography } from "@procore/core-react";
+import { Button, Pill, Search, Select, Tearsheet, Typography } from "@procore/core-react";
 import {
   ExternalLink,
   FileQuestionMark,
   ClipboardPushpin,
   PencilErase,
   File,
+  EllipsisVertical,
 } from "@procore/core-icons";
 import styled from "styled-components";
 import { sampleOpenItemRows, type OpenItemRow } from "@/data/openitems";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Hub Card anatomy ─────────────────────────────────────────────────────────
 
-const QuickFilter = styled.button`
-  display: inline-flex;
+const HeaderActions = styled.div`
+  display: flex;
   align-items: center;
-  gap: 16px;
-  height: 36px;
-  padding: 6px 6px 6px 12px;
-  border: 1px solid #acb5b9;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 400;
-  color: #232729;
-  letter-spacing: 0.15px;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &:hover {
-    border-color: #6a767c;
-  }
+  gap: 8px;
 `;
 
 // ─── Table layout ─────────────────────────────────────────────────────────────
@@ -210,8 +196,7 @@ const STATUS_COLOR: Record<string, "blue" | "green" | "yellow" | "gray"> = {
 };
 
 function formatDueDate(isoDate: string): string {
-  const d = new Date(isoDate + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return formatDateMMDDYYYY(isoDate);
 }
 
 function isOverdue(isoDate: string): boolean {
@@ -223,8 +208,18 @@ function isOverdue(isoDate: string): boolean {
 export default function MyOpenItemsCard() {
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<OpenItemRow | null>(null);
+  const [projectFilter, setProjectFilter] = useState("All Projects");
+  const [typeFilter, setTypeFilter] = useState("All Types");
+  const [progressFilter, setProgressFilter] = useState("All Progress");
+
+  const projectOptions = ["All Projects", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.projectName))).sort()];
+  const typeOptions = ["All Types", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.type))).sort()];
+  const progressOptions = ["All Progress", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.status))).sort()];
 
   const filtered = MY_OPEN_ITEMS.filter((item) => {
+    if (projectFilter !== "All Projects" && item.projectName !== projectFilter) return false;
+    if (typeFilter !== "All Types" && item.type !== typeFilter) return false;
+    if (progressFilter !== "All Progress" && item.status !== progressFilter) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -238,15 +233,23 @@ export default function MyOpenItemsCard() {
     <>
     <HubCardFrame
       title="My Open Items"
+      infoTooltip="Top open work items assigned to the current user, sourced from the seeded open-items dataset and sorted by due date."
       actions={
+        <HeaderActions>
         <Button
-          variant="tertiary"
+          variant="secondary"
           size="sm"
-          icon={<ExternalLink size="sm" />}
           aria-label="View all open items"
         >
           View All
         </Button>
+        <Button
+          variant="tertiary"
+          size="sm"
+          icon={<EllipsisVertical size="sm" />}
+          aria-label="More actions"
+        />
+      </HeaderActions>
       }
       controls={
         <>
@@ -255,24 +258,45 @@ export default function MyOpenItemsCard() {
             value={search}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           />
-          <QuickFilter aria-label="Filter by Project Name">
-            Project Name
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 10l5 5 5-5" stroke="#232729" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </QuickFilter>
-          <QuickFilter aria-label="Filter by Item Type">
-            Item Type
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 10l5 5 5-5" stroke="#232729" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </QuickFilter>
-          <QuickFilter aria-label="Filter by Progress">
-            Progress
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 10l5 5 5-5" stroke="#232729" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </QuickFilter>
+          <Select
+            onSelect={(next) => {
+              if (typeof next === "string") setProjectFilter(next);
+            }}
+            placeholder="Project Name"
+            style={{ minWidth: 170 }}
+          >
+            {projectOptions.map((opt) => (
+              <Select.Option key={opt} value={opt} selected={projectFilter === opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
+          <Select
+            onSelect={(next) => {
+              if (typeof next === "string") setTypeFilter(next);
+            }}
+            placeholder="Item Type"
+            style={{ minWidth: 150 }}
+          >
+            {typeOptions.map((opt) => (
+              <Select.Option key={opt} value={opt} selected={typeFilter === opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
+          <Select
+            onSelect={(next) => {
+              if (typeof next === "string") setProgressFilter(next);
+            }}
+            placeholder="Progress"
+            style={{ minWidth: 140 }}
+          >
+            {progressOptions.map((opt) => (
+              <Select.Option key={opt} value={opt} selected={progressFilter === opt}>
+                {opt}
+              </Select.Option>
+            ))}
+          </Select>
         </>
       }
     >

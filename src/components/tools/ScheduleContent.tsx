@@ -18,12 +18,12 @@ import type { ScheduleEntry, ScheduleItem, Milestone, ScheduleStatus } from "@/t
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(d: Date | null): string {
-  if (!d) return "—";
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return formatDateMMDDYYYY(d);
 }
 
 function formatPercent(n: number): string {

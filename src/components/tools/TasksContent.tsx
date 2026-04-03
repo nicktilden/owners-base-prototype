@@ -27,6 +27,7 @@ import type { Task, TaskStatus } from "@/types/tasks";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -225,12 +226,7 @@ const FilterChipRemove = styled.button`
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(d: Date | null): string {
-  if (!d) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateMMDDYYYY(d);
 }
 
 const STATUS_COLORS: Record<TaskStatus, "green" | "yellow" | "red" | "gray" | "blue"> = {

@@ -6,13 +6,12 @@ import {
   Calendar,
   Circle,
   FileList,
-  Info,
-  Cog,
-  Lightning,
+  EllipsisVertical,
 } from "@procore/core-icons";
 import styled from "styled-components";
 import { sampleOpenItemRows } from "@/data/openitems";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Hub Card anatomy ─────────────────────────────────────────────────────────
 
@@ -205,17 +204,12 @@ const BRIEF_ROWS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AIDailyPlannerCard() {
-  const today = new Date(TODAY + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: undefined,
-    month: "long",
-    day: "numeric",
-  });
+  const today = formatDateMMDDYYYY(TODAY);
 
   return (
     <HubCardFrame
       title="Daily Brief"
-      titlePrefix={<Lightning size="sm" style={{ color: "#ff5100", flexShrink: 0 }} />}
-      titleSuffix={<Info size="sm" style={{ color: "#6a767c" }} />}
+      infoTooltip="AI-generated daily summary built from seeded open items, meeting placeholders, upcoming milestones, and new document signals."
       actions={
         <HeaderActions>
           <Button variant="secondary" size="sm" aria-label="Start Day">
@@ -224,13 +218,13 @@ export default function AIDailyPlannerCard() {
           <Button
             variant="tertiary"
             size="sm"
-            icon={<Cog size="sm" />}
-            aria-label="Settings"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="More actions"
           />
         </HeaderActions>
       }
     >
-      <AlertBanner>
+      <AlertBanner style={{ marginBottom: 8 }}>
         <AlertDate>Today, {today}</AlertDate>
         <AlertBody>
           You have{" "}

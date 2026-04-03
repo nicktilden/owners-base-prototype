@@ -10,7 +10,7 @@ import ProjectsTableCard from "@/components/ProjectsTableCard";
 import ScheduleHeatmapCard from "@/components/ScheduleHeatmapCard";
 import CostManagementTableCard from "@/components/CostManagementTableCard";
 import HubsContentLayout from "@/components/hubs/HubsContentLayout";
-import { ProjectsByStageHubCard, ScheduleRiskGHubCard } from "@/components/ScheduleInsightsHubCards";
+import { ScheduleRiskGHubCard, ScheduleVariance2HubCard } from "@/components/ScheduleInsightsHubCards";
 import { FinancialScorecardCard, InvoicesForApprovalCard } from "@/components/FinancialHubCards";
 
 const tabs = ["My Work", "Cost Management", "Schedule & Milestones"] as const;
@@ -83,8 +83,8 @@ export default function HomeContent() {
             {activeTab === "Schedule & Milestones" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row>
-                  <ProjectsByStageHubCard />
                   <ScheduleRiskGHubCard />
+                  <ScheduleVariance2HubCard />
                 </HubsContentLayout.Row>
                 <HubsContentLayout.Row variant="table">
                   <ScheduleHeatmapCard />

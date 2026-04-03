@@ -17,6 +17,13 @@ interface TableCardProps {
   navigationLabel?: string;
 }
 
+const TABLE_HEADER_CELL_STYLE: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  lineHeight: "16px",
+  color: "#232729",
+};
+
 export default function TableCard({
   heading,
   columns,
@@ -31,9 +38,15 @@ export default function TableCard({
             <Table.Header>
               <Table.HeaderRow>
                 {columns.map((col) => (
-                  <Table.HeaderCell key={col.key}>{col.label}</Table.HeaderCell>
+                  <Table.HeaderCell key={col.key} style={TABLE_HEADER_CELL_STYLE}>
+                    {col.label}
+                  </Table.HeaderCell>
                 ))}
-                <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
+                <Table.HeaderCell
+                  style={{ ...TABLE_HEADER_CELL_STYLE, ...PINNED_HEADER_CELL_STYLE }}
+                >
+                  Actions
+                </Table.HeaderCell>
               </Table.HeaderRow>
             </Table.Header>
             <Table.Body>

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Button, Select } from "@procore/core-react";
-import { ExternalLink } from "@procore/core-icons";
+import { EllipsisVertical, ExternalLink } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -9,10 +9,10 @@ import {
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 
 const HISTOGRAM_BUCKETS = [
-  { label: "0-3d", min: 0, max: 3, color: "#8bc34a" },
-  { label: "3-7d", min: 3, max: 7, color: "#ffcc80" },
-  { label: "7-14d", min: 7, max: 14, color: "#ff7043" },
-  { label: "14+d", min: 14, max: Infinity, color: "#b71c1c" },
+  { label: "0-3 days", min: 0, max: 3, color: "#8bc34a" },
+  { label: "3-7 days", min: 3, max: 7, color: "#ffcc80" },
+  { label: "7-14 days", min: 7, max: 14, color: "#ff7043" },
+  { label: "14+ days", min: 14, max: Infinity, color: "#b71c1c" },
 ];
 
 function bucketIndexForVariance(v: number): number {
@@ -53,22 +53,15 @@ export function ProjectsByStageHubCard() {
     () => stageRows.reduce((sum, s) => sum + s.value, 0),
     [stageRows]
   );
-  const gradient = useMemo(() => {
-    if (total === 0) return "#eef0f1";
-    let cursor = 0;
-    const stops = stageRows.map((s, i) => {
-      const pct = (s.value / total) * 100;
-      const start = cursor;
-      const end = cursor + pct;
-      cursor = end;
-      return `${stageColors[i % stageColors.length]} ${start}% ${end}%`;
-    });
-    return `conic-gradient(${stops.join(", ")})`;
-  }, [stageRows, total]);
+  const maxStageValue = useMemo(
+    () => Math.max(...stageRows.map((s) => s.value), 1),
+    [stageRows]
+  );
 
   return (
     <HubCardFrame
       title="Projects by Stage"
+      infoTooltip="Distribution of projects by current stage from the sample project dataset, with optional Program and Stage filters."
       actions={
         <Button
           variant="tertiary"
@@ -110,52 +103,58 @@ export function ProjectsByStageHubCard() {
         </>
       }
     >
-          <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 16, alignItems: "start" }}>
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 6 }}>
-              <div
-                style={{
-                  width: 150,
-                  height: 150,
-                  borderRadius: "50%",
-                  background: gradient,
-                  position: "relative",
-                  flexShrink: 0,
-                }}
-                aria-label="Projects by Stage donut chart"
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 26,
-                    borderRadius: "50%",
-                    background: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexDirection: "column",
-                  }}
-                >
-                  <span style={{ fontSize: 24, fontWeight: 700, color: "#232729", lineHeight: 1 }}>{total}</span>
-                  <span style={{ fontSize: 11, color: "#6a767c" }}>Projects</span>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${Math.max(stageRows.length, 1)}, minmax(56px, 1fr))`,
+              gap: 10,
+              alignItems: "end",
+              height: 210,
+            }}
+            aria-label="Projects by Stage column chart"
+          >
+            {stageRows.map((s, i) => {
+              const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
+              const barHeight = `${Math.max(s.value > 0 ? 12 : 0, (s.value / maxStageValue) * 140)}px`;
+              return (
+                <div key={s.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#232729", fontVariantNumeric: "tabular-nums" }}>
+                    {s.value}
+                  </span>
+                  <div
+                    style={{
+                      width: "100%",
+                      maxWidth: 48,
+                      height: barHeight,
+                      borderRadius: "6px 6px 0 0",
+                      background: stageColors[i % stageColors.length],
+                    }}
+                  />
+                  <span
+                    style={{
+                      width: "100%",
+                      fontSize: 12,
+                      color: "#232729",
+                      textAlign: "center",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={s.name}
+                  >
+                    {s.name}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#6a767c", fontVariantNumeric: "tabular-nums" }}>
+                    {pct}%
+                  </span>
                 </div>
+              );
+            })}
+            {stageRows.length === 0 && (
+              <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6a767c", textAlign: "center" }}>
+                No projects for selected filters.
               </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {stageRows.map((s, i) => {
-                const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
-                return (
-                  <div key={s.name} style={{ display: "grid", gridTemplateColumns: "12px 1fr auto", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: stageColors[i % stageColors.length] }} />
-                    <span style={{ fontSize: 12, color: "#232729", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {s.name}
-                    </span>
-                    <span style={{ fontSize: 12, color: "#6a767c", fontVariantNumeric: "tabular-nums" }}>
-                      {s.value} ({pct}%)
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            )}
           </div>
     </HubCardFrame>
   );
@@ -182,32 +181,59 @@ export function ScheduleRiskGHubCard() {
     () =>
       topScheduleRiskProjectRowsForMilestoneHeatmap
         .map((row) => {
+          const project = sampleProjectRows.find((p) => p.id === row.id);
           const milestones = sampleProjectMilestones.get(row.id) ?? [];
           const critCount = milestones.filter((m) => m.varianceDays >= 14).length;
+          const varianceDays = milestones.reduce(
+            (max, m) => Math.max(max, m.varianceDays),
+            0
+          );
+          const start = project ? new Date(project.startDate).getTime() : 0;
+          const end = project ? new Date(project.endDate).getTime() : 0;
+          const now = Date.now();
+          const totalDays =
+            start > 0 && end > start
+              ? (end - start) / (1000 * 60 * 60 * 24)
+              : 0;
+          const elapsedDays =
+            totalDays > 0
+              ? Math.min(Math.max((now - start) / (1000 * 60 * 60 * 24), 0), totalDays)
+              : 0;
+          const pctComplete =
+            totalDays > 0 ? Math.round((elapsedDays / totalDays) * 100) : 0;
           return {
             row,
             critCount,
-            pct: milestones.length > 0 ? Math.round((critCount / milestones.length) * 100) : 0,
+            varianceDays,
+            pctComplete,
           };
         })
         .filter((r) => r.critCount > 0)
         .sort((a, b) => b.critCount - a.critCount)
-        .slice(0, 8),
+        .slice(0, 7),
     []
   );
 
   return (
     <HubCardFrame
-      title="Schedule Risk"
+      title="Schedule Variance"
+      infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
-        <Button
-          variant="tertiary"
-          size="sm"
-          icon={<ExternalLink size="sm" />}
-          aria-label="View all schedule risk details"
-        >
-          View All
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label="View all schedule variance rows"
+          >
+            View all
+          </Button>
+          <Button
+            variant="tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="More actions"
+          />
+        </div>
       }
     >
           <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 80, marginBottom: 12 }}>
@@ -215,7 +241,7 @@ export function ScheduleRiskGHubCard() {
               const count = counts[i] ?? 0;
               return (
                 <div key={b.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, height: "100%", justifyContent: "flex-end" }}>
-                  <span style={{ fontSize: 10, color: "#555", fontWeight: 600 }}>{count}</span>
+                  <span style={{ fontSize: 12, color: "#232729", fontWeight: 600 }}>{count}</span>
                   <div
                     style={{
                       width: "100%",
@@ -224,42 +250,167 @@ export function ScheduleRiskGHubCard() {
                       borderRadius: "3px 3px 0 0",
                     }}
                   />
-                  <span style={{ fontSize: 9, color: "#888" }}>{b.label}</span>
+                  <span style={{ fontSize: 12, color: "#6A767C" }}>{b.label}</span>
                 </div>
               );
             })}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#444", borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 6 }}>
+          {/* <div style={{ fontSize: 11, fontWeight: 600, color: "#444", borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 6 }}>
             Critical milestones (&gt;=14d)
-          </div>
+          </div> */}
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 11, color: "#666" }}>Project</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 11, color: "#666" }}>Critical</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 11, color: "#666" }}>%</th>
+                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Project</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Variance</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>% Complete</th>
               </tr>
             </thead>
             <tbody>
-              {criticalRows.map(({ row, critCount, pct }, i) => (
+              {criticalRows.map(({ row, varianceDays, pctComplete }, i) => (
                 <tr key={row.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                  <td style={{ padding: "5px 6px", borderBottom: "1px solid #eee" }}>
-                    <span style={{ fontWeight: 600, color: "#1d5cc9" }}>
+                  <td style={{ padding: "8px 8px", borderBottom: "1px solid #eee" }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#1d5cc9" }}>
                       {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                     </span>
                   </td>
-                  <td style={{ padding: "5px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
-                    <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 11, fontWeight: 700 }}>
-                      {critCount}
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
+                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
+                      +{varianceDays}d
                     </span>
                   </td>
-                  <td style={{ padding: "5px 6px", borderBottom: "1px solid #eee", textAlign: "center", color: "#555" }}>
-                    {pct}%
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#232729" }}>
+                    {pctComplete}%
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+    </HubCardFrame>
+  );
+}
+
+export function ScheduleVariance2HubCard() {
+  const portfolioRows = useMemo(() => {
+    return sampleProjectRows
+      .map((row) => {
+        const milestones = sampleProjectMilestones.get(row.id) ?? [];
+        const worstVariance = milestones.reduce(
+          (max, m) => Math.max(max, m.varianceDays),
+          0
+        );
+        const delayed = milestones.filter((m) => m.varianceDays >= 7).length;
+        const drift = milestones.length
+          ? Math.round((delayed / milestones.length) * 100)
+          : 0;
+        const costDeltaMillions = Math.max(
+          0.4,
+          Math.round((worstVariance * 0.32 + row.id * 0.11) * 10) / 10
+        );
+        return {
+          id: row.id,
+          name: row.name,
+          drift,
+          worstVariance,
+          costDeltaLabel:
+            costDeltaMillions >= 1
+              ? `+$${costDeltaMillions.toFixed(1)}M`
+              : `+$${Math.round(costDeltaMillions * 1000)}K`,
+        };
+      })
+      .sort((a, b) => b.worstVariance - a.worstVariance);
+  }, []);
+  const rows = useMemo(() => portfolioRows.slice(0, 7), [portfolioRows]);
+
+  const avgVariance = useMemo(() => {
+    if (!portfolioRows.length) return 0;
+    return Math.round(
+      portfolioRows.reduce((sum, r) => sum + r.worstVariance, 0) / portfolioRows.length
+    );
+  }, [portfolioRows]);
+
+  const onScheduleCount = portfolioRows.filter((r) => r.worstVariance <= 0).length;
+  const delaysCount = portfolioRows.filter(
+    (r) => r.worstVariance >= 7 && r.worstVariance <= 13
+  ).length;
+  const criticalCount = portfolioRows.filter((r) => r.worstVariance >= 14).length;
+
+  return (
+    <HubCardFrame
+      title="Schedule Variance 2"
+      infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
+      actions={
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label="View all schedule variance rows"
+          >
+            View all
+          </Button>
+          <Button
+            variant="tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="More actions"
+          />
+        </div>
+      }
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
+        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Average</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>+{avgVariance} days</div>
+        </div>
+        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>On Schedule</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#1a7d3a", marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          
+        </div>
+        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#f6a623", marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+        </div>
+        <div style={{ padding: "8px 16px"}}>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (14+ days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+        </div>
+      </div>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Project</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Drift</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Variance</th>
+            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Cost Delta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                  {r.name}
+                </span>
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
+                  {r.drift}%
+                </span>
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
+                  +{r.worstVariance}d
+                </span>
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "right", color: "#b71c1c", fontWeight: 600 }}>
+                {r.costDeltaLabel}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </HubCardFrame>
   );
 }

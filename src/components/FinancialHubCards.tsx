@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Button, Pill, Select } from "@procore/core-react";
-import { EllipsisVertical, Info } from "@procore/core-icons";
+import { EllipsisVertical } from "@procore/core-icons";
 import styled from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import KPIPill from "@/components/KPIPill";
+import { sampleProjectRows } from "@/data/projects";
 
 const KpiGrid = styled.div`
   display: grid;
@@ -31,14 +33,6 @@ const KpiValue = styled.div`
   color: #232729;
   line-height: 1.1;
   letter-spacing: 0.15px;
-`;
-
-const KpiDelta = styled.div`
-  color: #d92626;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
 `;
 
 const InvoiceList = styled.div`
@@ -94,16 +88,12 @@ const Company = styled.div`
   line-height: 16px;
 `;
 
-const financialKpis = [
-  { label: "Revised Budget", value: "$2.45bn", delta: "0.0%" },
-  { label: "Forecast to Complete", value: "$0.00", delta: "0.0%" },
-  { label: "Job to Date Costs", value: "$1.38bn", delta: "0.0%" },
-  { label: "Total Committed", value: "$6.73M", delta: "0.0%" },
-  { label: "% Forecast/Budget", value: "$2.46bn", delta: "0.0%" },
-  { label: "Projected Over/Under", value: "-$6.73M", delta: "0.0%" },
-  { label: "Invoiced to Date", value: "$924M", delta: "0.0%" },
-  { label: "Est Cost of Completion", value: "100.27%", delta: "0.0%" },
-];
+function formatCurrency(n: number): string {
+  if (Math.abs(n) >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}bn`;
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toLocaleString()}`;
+}
 
 const invoiceRows = [
   { invoice: "Invoice #234", amount: "$20,000", company: "Vertigo Construction" },
@@ -118,13 +108,42 @@ export function FinancialScorecardCard() {
   const [view, setView] = useState("Budget View");
   const [snapshot, setSnapshot] = useState("Budget Snapshot");
   const valuePillColor = useMemo(() => "green" as const, []);
+  const financialKpis = useMemo(() => {
+    const revisedBudget = sampleProjectRows.reduce((sum, p) => sum + p.originalBudget, 0);
+    const forecastToComplete = sampleProjectRows.reduce((sum, p) => sum + p.forecastToComplete, 0);
+    const jobToDateCosts = sampleProjectRows.reduce((sum, p) => sum + p.jobToDateCost, 0);
+    const estCostAtCompletion = sampleProjectRows.reduce(
+      (sum, p) => sum + p.estimatedCostAtCompletion,
+      0
+    );
+    const forecastVsBudget =
+      revisedBudget > 0 ? (estCostAtCompletion / revisedBudget) * 100 : 0;
+    const projectedOverUnder = estCostAtCompletion - revisedBudget;
+
+    return [
+      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Total Committed", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      {
+        label: "Projected Over/Under",
+        value: `${projectedOverUnder >= 0 ? "+" : "-"}${formatCurrency(Math.abs(projectedOverUnder))}`,
+        delta: "0%",
+        tone: projectedOverUnder > 0 ? ("negative" as const) : projectedOverUnder < 0 ? ("positive" as const) : ("neutral" as const),
+        trendValue: projectedOverUnder > 0 ? -1 : projectedOverUnder < 0 ? 1 : 0,
+      },
+      { label: "Invoiced to Date", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+    ];
+  }, []);
 
   return (
     <HubCardFrame
       title="Financial Scorecard"
+      infoTooltip="Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
       titleSuffix={
         <>
-          <Info size="sm" style={{ color: "#232729" }} />
           <Pill color={valuePillColor}>Value</Pill>
         </>
       }
@@ -175,10 +194,7 @@ export function FinancialScorecardCard() {
             <KpiLabel>{kpi.label}</KpiLabel>
             <KpiValueRow>
               <KpiValue>{kpi.value}</KpiValue>
-              <KpiDelta>
-                <span style={{ fontSize: 16 }}>↓</span>
-                <span>{kpi.delta}</span>
-              </KpiDelta>
+              <KPIPill tone={kpi.tone} trendValue={kpi.trendValue} value={kpi.delta} />
             </KpiValueRow>
           </div>
         ))}
@@ -194,13 +210,13 @@ export function InvoicesForApprovalCard() {
   return (
     <HubCardFrame
       title="Invoices for Approval"
-      titleSuffix={<Info size="sm" style={{ color: "#232729" }} />}
+      infoTooltip="Invoices currently awaiting approval from the seeded invoice list, filtered by date range and company."
       actions={
         <Button
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
-          aria-label="Invoices for Approval actions"
+          aria-label="More actions"
         />
       }
       controls={

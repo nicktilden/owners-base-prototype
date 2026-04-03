@@ -12,8 +12,15 @@ import {
 } from "@procore/core-react";
 import { Filter, Location, Sliders, ViewRows, Clear, CaretDown, CaretRight, Pencil } from "@procore/core-icons";
 import styled from "styled-components";
-import { sampleProjectRows } from "@/data/projects";
+import { sampleProjectMilestones, sampleProjectRows, scheduleVarianceData } from "@/data/projects";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, ProjectRowActions } from "@/components/table/TableActions";
+import { formatDateMMDDYYYY } from "@/utils/date";
+import {
+  favoriteKeyForSampleProject,
+  getFavorite,
+  readProjectFavorites,
+  writeProjectFavorites,
+} from "@/utils/projectFavorites";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -272,6 +279,9 @@ type ColumnKey =
   | "stage"
   | "startDate"
   | "endDate"
+  | "lastMilestone"
+  | "nextMilestone"
+  | "scheduleVariance"
   | "originalBudget"
   | "estimatedCostAtCompletion";
 
@@ -283,6 +293,9 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: "stage", label: "Stage" },
   { key: "startDate", label: "Start Date" },
   { key: "endDate", label: "End Date" },
+  { key: "lastMilestone", label: "Last Milestone" },
+  { key: "nextMilestone", label: "Next Milestone" },
+  { key: "scheduleVariance", label: "Schedule Variance" },
   { key: "originalBudget", label: "Original Budget" },
   { key: "estimatedCostAtCompletion", label: "Est. Cost at Completion" },
 ];
@@ -291,9 +304,10 @@ interface FilterState {
   stage: string[];
   program: string[];
   state: string[];
+  favorite: string[];
 }
 
-const EMPTY_FILTERS: FilterState = { stage: [], program: [], state: [] };
+const EMPTY_FILTERS: FilterState = { stage: [], program: [], state: [], favorite: [] };
 
 const STAGE_OPTIONS = [...new Set(sampleProjectRows.map((p) => p.stage))].sort((a, b) => a.localeCompare(b));
 const PROGRAM_OPTIONS = [...new Set(sampleProjectRows.map((p) => p.program))].sort((a, b) => a.localeCompare(b));
@@ -340,6 +354,15 @@ export default function ProjectsTableCard() {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [hiddenCols, setHiddenCols] = useState<Set<ColumnKey>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [favoriteOverrides, setFavoriteOverrides] = useState<Record<number, boolean>>(() => {
+    const map = readProjectFavorites();
+    const next: Record<number, boolean> = {};
+    sampleProjectRows.forEach((p) => {
+      const key = favoriteKeyForSampleProject(p.id);
+      next[p.id] = getFavorite(map, key, p.favorite);
+    });
+    return next;
+  });
 
   const rows = useMemo(() => {
     let base = [...sampleProjectRows];
@@ -356,8 +379,36 @@ export default function ProjectsTableCard() {
     if (filters.stage.length) base = base.filter((p) => filters.stage.includes(p.stage));
     if (filters.program.length) base = base.filter((p) => filters.program.includes(p.program));
     if (filters.state.length) base = base.filter((p) => filters.state.includes(p.state));
+    if (filters.favorite.length) {
+      base = base.filter((p) => {
+        const isFavorite = favoriteOverrides[p.id] ?? p.favorite;
+        if (filters.favorite.includes("favorited") && isFavorite) return true;
+        if (filters.favorite.includes("not_favorited") && !isFavorite) return true;
+        return false;
+      });
+    }
     return base;
-  }, [search, filters]);
+  }, [search, filters, favoriteOverrides]);
+  const scheduleDetailsByProjectId = useMemo(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const varianceByName = new Map(scheduleVarianceData.map((d) => [d.project, d.variance]));
+    const details = new Map<number, { lastMilestone: string; nextMilestone: string; scheduleVariance: number }>();
+    sampleProjectRows.forEach((p) => {
+      const milestones = sampleProjectMilestones.get(p.id) ?? [];
+      const completed = milestones.filter((m) => m.actualDate <= todayIso);
+      const upcoming = milestones.filter((m) => m.actualDate > todayIso);
+      const lastMilestone =
+        completed.length > 0 ? completed[completed.length - 1]?.name ?? "—" : "—";
+      const nextMilestone =
+        upcoming.length > 0 ? upcoming[0]?.name ?? "—" : "—";
+      details.set(p.id, {
+        lastMilestone,
+        nextMilestone,
+        scheduleVariance: varianceByName.get(p.name) ?? 0,
+      });
+    });
+    return details;
+  }, []);
 
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
   const visibleColCount = COLUMNS.length - hiddenCols.size + 1;
@@ -405,9 +456,20 @@ export default function ProjectsTableCard() {
     });
   }
 
+  function toggleFavorite(projectId: number) {
+    setFavoriteOverrides((prev) => {
+      const current = prev[projectId] ?? sampleProjectRows.find((p) => p.id === projectId)?.favorite ?? false;
+      const next = { ...prev, [projectId]: !current };
+      const map = readProjectFavorites();
+      map[favoriteKeyForSampleProject(projectId)] = !current;
+      writeProjectFavorites(map);
+      return next;
+    });
+  }
+
   return (
     <DetailPage.Card navigationLabel="Projects">
-      <DetailPage.Section heading="Projects">
+      <DetailPage.Section heading="Portfolio">
         <Toolbar>
           <ToolbarLeft>
             <SearchInputWrap>
@@ -544,6 +606,23 @@ export default function ProjectsTableCard() {
                     ))}
                   </Select>
                 </FilterSection>
+                <FilterSection>
+                  <FilterLabel>Favorites</FilterLabel>
+                  <Select
+                    placeholder="Select values"
+                    label={filters.favorite.length ? `${filters.favorite.length} selected` : undefined}
+                    onSelect={(s) => setFilters((f) => toggleFilterArrayValue(f, "favorite", s.item as string))}
+                    onClear={() => setFilters((f) => ({ ...f, favorite: [] }))}
+                    block
+                  >
+                    <Select.Option value="favorited" selected={filters.favorite.includes("favorited")}>
+                      Favorited
+                    </Select.Option>
+                    <Select.Option value="not_favorited" selected={filters.favorite.includes("not_favorited")}>
+                      Not Favorited
+                    </Select.Option>
+                  </Select>
+                </FilterSection>
               </PanelBody>
             </SidePanel>
           )}
@@ -594,6 +673,8 @@ export default function ProjectsTableCard() {
                   ) : groupBy.length > 0 ? (
                     (() => {
                       function renderProjectRow(p: (typeof rows)[number], depth = 0): React.ReactNode {
+                        const scheduleDetails = scheduleDetailsByProjectId.get(p.id);
+                        const isFavorite = favoriteOverrides[p.id] ?? p.favorite;
                         return (
                           <Table.BodyRow key={`${p.id}-${depth}`}>
                             {depth > 0 && <DepthRail $depth={depth} />}
@@ -619,11 +700,25 @@ export default function ProjectsTableCard() {
                                 <Pill color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
                               </Table.BodyCell>
                             )}
-                            {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{p.startDate}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("endDate") && <Table.BodyCell><Table.TextCell>{p.endDate}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.startDate)}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("endDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.endDate)}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("lastMilestone") && <Table.BodyCell><Table.TextCell>{scheduleDetails?.lastMilestone ?? "—"}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("nextMilestone") && <Table.BodyCell><Table.TextCell>{scheduleDetails?.nextMilestone ?? "—"}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("scheduleVariance") && (
+                              <Table.BodyCell>
+                                <Table.TextCell style={{ color: (scheduleDetails?.scheduleVariance ?? 0) < 0 ? "#d92626" : undefined }}>
+                                  {`${scheduleDetails?.scheduleVariance ?? 0}d`}
+                                </Table.TextCell>
+                              </Table.BodyCell>
+                            )}
                             {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{fmt(p.originalBudget)}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("estimatedCostAtCompletion") && <Table.BodyCell><Table.TextCell>{fmt(p.estimatedCostAtCompletion)}</Table.TextCell></Table.BodyCell>}
-                            <Table.BodyCell style={PINNED_BODY_CELL_STYLE}><ProjectRowActions /></Table.BodyCell>
+                            <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
+                              <ProjectRowActions
+                                isFavorite={isFavorite}
+                                onToggleFavorite={() => toggleFavorite(p.id)}
+                              />
+                            </Table.BodyCell>
                           </Table.BodyRow>
                         );
                       }
@@ -674,6 +769,10 @@ export default function ProjectsTableCard() {
                     })()
                   ) : (
                     rows.map((p) => (
+                      (() => {
+                        const scheduleDetails = scheduleDetailsByProjectId.get(p.id);
+                        const isFavorite = favoriteOverrides[p.id] ?? p.favorite;
+                        return (
                       <Table.BodyRow key={p.id}>
                         <Table.BodyCell snugfit style={{ paddingLeft: 16 }}>
                           <Checkbox
@@ -697,12 +796,28 @@ export default function ProjectsTableCard() {
                             <Pill color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
                           </Table.BodyCell>
                         )}
-                        {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{p.startDate}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("endDate") && <Table.BodyCell><Table.TextCell>{p.endDate}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.startDate)}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("endDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.endDate)}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("lastMilestone") && <Table.BodyCell><Table.TextCell>{scheduleDetails?.lastMilestone ?? "—"}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("nextMilestone") && <Table.BodyCell><Table.TextCell>{scheduleDetails?.nextMilestone ?? "—"}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("scheduleVariance") && (
+                          <Table.BodyCell>
+                            <Table.TextCell style={{ color: (scheduleDetails?.scheduleVariance ?? 0) < 0 ? "#d92626" : undefined }}>
+                              {`${scheduleDetails?.scheduleVariance ?? 0}d`}
+                            </Table.TextCell>
+                          </Table.BodyCell>
+                        )}
                         {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{fmt(p.originalBudget)}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("estimatedCostAtCompletion") && <Table.BodyCell><Table.TextCell>{fmt(p.estimatedCostAtCompletion)}</Table.TextCell></Table.BodyCell>}
-                        <Table.BodyCell style={PINNED_BODY_CELL_STYLE}><ProjectRowActions /></Table.BodyCell>
+                        <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
+                          <ProjectRowActions
+                            isFavorite={isFavorite}
+                            onToggleFavorite={() => toggleFavorite(p.id)}
+                          />
+                        </Table.BodyCell>
                       </Table.BodyRow>
+                        );
+                      })()
                     ))
                   )}
                 </Table.Body>
