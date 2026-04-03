@@ -5,14 +5,14 @@
  *  - Drilling into a user's tool permissions (edit view)
  */
 import React, { useState } from 'react';
-import { Button, Pill, Table, Tearsheet, Typography } from '@procore/core-react';
+import { Button, Dropdown, Table, Tearsheet, Typography } from '@procore/core-react';
 import styled, { createGlobalStyle } from 'styled-components';
-import { CaretLeft, Pencil, Check } from '@procore/core-icons';
+import { CaretLeft, Pencil, Check, Person } from '@procore/core-icons';
 import { usePersona } from '@/context/PersonaContext';
 import { TOOL_DISPLAY_NAMES, TOOL_LEVEL_MAP } from '@/types/tools';
 import type { ToolKey } from '@/types/tools';
 import type { ToolPermissionLevel } from '@/types/permissions';
-import type { User } from '@/types/user';
+import type { User, UserRole } from '@/types/user';
 
 // ─── Width override ────────────────────────────────────────────────────────────
 // Tearsheet renders into a Portal so we must use createGlobalStyle to reach it.
@@ -57,6 +57,14 @@ const AvatarCircle = styled.div<{ $color: string }>`
   flex-shrink: 0;
 `;
 
+const AvatarImage = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+`;
+
 const NameCell = styled.div`
   display: flex;
   align-items: center;
@@ -67,6 +75,14 @@ const ActionButtons = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
+`;
+
+const TableCard = styled.div`
+  margin: 16px;
+  border: 1px solid #d6dadc;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
 `;
 
 // ── Permission detail view ──────────────────────────────────────────────────
@@ -172,6 +188,13 @@ const LEVEL_LABELS: Record<ToolPermissionLevel, string> = {
   create: 'Create',
   admin:  'Admin',
 };
+
+const ROLE_OPTIONS: UserRole[] = [
+  'Executive Strategy',
+  'Operations & Administration',
+  'Project Delivery',
+  'Field Opperations',
+];
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
@@ -301,10 +324,15 @@ interface BrowseAsTearsheetProps {
 export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetProps) {
   const { activeUser, setActiveUser, users } = usePersona();
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [roleOverrides, setRoleOverrides] = useState<Record<string, UserRole>>({});
 
   function handleClose() {
     setEditingUser(null);
     onClose();
+  }
+
+  function handleRoleChange(userId: string, nextRole: UserRole) {
+    setRoleOverrides((prev) => ({ ...prev, [userId]: nextRole }));
   }
 
   return (
@@ -343,78 +371,110 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
                   </Typography>
                 </div>
               ) : (
-                <Table.Container>
-                  <Table>
-                    <Table.Header>
-                      <Table.HeaderRow>
-                        <Table.HeaderCell>Name</Table.HeaderCell>
-                        <Table.HeaderCell>Email</Table.HeaderCell>
-                        <Table.HeaderCell>Role</Table.HeaderCell>
-                        <Table.HeaderCell>Active</Table.HeaderCell>
-                        <Table.HeaderCell>Actions</Table.HeaderCell>
-                      </Table.HeaderRow>
-                    </Table.Header>
-                    <Table.Body>
-                      {users.map((user, idx) => {
-                        const isActive = activeUser?.id === user.id;
-                        const color = PERSONA_COLORS[idx % PERSONA_COLORS.length];
-                        return (
-                          <Table.BodyRow key={user.id}>
-                            {/* Name */}
-                            <Table.BodyCell>
-                              <NameCell>
-                                <AvatarCircle $color={color}>
-                                  {getInitials(user.firstName, user.lastName)}
-                                </AvatarCircle>
-                                <Typography intent="body" style={{ fontWeight: isActive ? 600 : 400, color: '#1a2226' }}>
-                                  {user.firstName} {user.lastName}
-                                </Typography>
-                              </NameCell>
-                            </Table.BodyCell>
+                <TableCard>
+                  <Table.Container>
+                    <Table>
+                      <Table.Header>
+                        <Table.HeaderRow>
+                          <Table.HeaderCell>Name</Table.HeaderCell>
+                          <Table.HeaderCell>Email</Table.HeaderCell>
+                          <Table.HeaderCell>Role</Table.HeaderCell>
+                          <Table.HeaderCell>Active</Table.HeaderCell>
+                          <Table.HeaderCell>Actions</Table.HeaderCell>
+                        </Table.HeaderRow>
+                      </Table.Header>
+                      <Table.Body>
+                        {users.map((user, idx) => {
+                          const isActive = activeUser?.id === user.id;
+                          const color = PERSONA_COLORS[idx % PERSONA_COLORS.length];
+                          const selectedRole = roleOverrides[user.id] ?? user.role;
+                          return (
+                            <Table.BodyRow key={user.id}>
+                              {/* Name */}
+                              <Table.BodyCell style={{ paddingLeft: 16, paddingRight: 16 }}>
+                                <NameCell>
+                                  {user.avatar ? (
+                                    <AvatarImage
+                                      src={user.avatar}
+                                      alt={`${user.firstName} ${user.lastName}`}
+                                    />
+                                  ) : (
+                                    <AvatarCircle $color={color}>
+                                      {getInitials(user.firstName, user.lastName)}
+                                    </AvatarCircle>
+                                  )}
+                                  <Typography intent="body" style={{ fontWeight: isActive ? 600 : 400, color: '#1a2226' }}>
+                                    {user.firstName} {user.lastName}
+                                  </Typography>
+                                </NameCell>
+                              </Table.BodyCell>
 
-                            {/* Email */}
-                            <Table.BodyCell>
-                              <Table.TextCell>{user.email}</Table.TextCell>
-                            </Table.BodyCell>
+                              {/* Email */}
+                              <Table.BodyCell>
+                                <Table.TextCell>{user.email}</Table.TextCell>
+                              </Table.BodyCell>
 
-                            {/* Role */}
-                            <Table.BodyCell>
-                              <Table.TextCell>{user.role}</Table.TextCell>
-                            </Table.BodyCell>
+                              {/* Role */}
+                              <Table.BodyCell>
+                                <Dropdown label={selectedRole} variant="secondary">
+                                  {ROLE_OPTIONS.map((role) => (
+                                    <Dropdown.Item
+                                      key={role}
+                                      item={role}
+                                      onClick={() => handleRoleChange(user.id, role)}
+                                    >
+                                      {role}
+                                    </Dropdown.Item>
+                                  ))}
+                                </Dropdown>
+                              </Table.BodyCell>
 
-                            {/* Active */}
-                            <Table.BodyCell>
-                              {isActive && <Pill color="green">Active</Pill>}
-                            </Table.BodyCell>
-
-                            {/* Actions */}
-                            <Table.BodyCell>
+                              {/* Active */}
+                              <Table.BodyCell>
                               <ActionButtons>
-                                <Button
-                                  variant="tertiary"
-                                  size="sm"
-                                  icon={<Pencil />}
-                                  onClick={() => setEditingUser(user)}
-                                  aria-label={`Edit permissions for ${user.firstName} ${user.lastName}`}
-                                />
-                                {!isActive && (
+                                {isActive ? (
                                   <Button
-                                    variant="secondary"
+                                    variant="tertiary"
                                     size="sm"
                                     icon={<Check />}
+                                    aria-label={`${user.firstName} ${user.lastName} is active`}
+                                  >
+                                    Active
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="tertiary"
+                                    size="sm"
+                                    icon={<Person />}
                                     onClick={() => { setActiveUser(user); handleClose(); }}
                                   >
-                                    Browse as
+                                    Make Active
                                   </Button>
                                 )}
                               </ActionButtons>
-                            </Table.BodyCell>
-                          </Table.BodyRow>
-                        );
-                      })}
-                    </Table.Body>
-                  </Table>
-                </Table.Container>
+                              </Table.BodyCell>
+
+                              {/* Actions */}
+                              <Table.BodyCell>
+                                <ActionButtons>
+                                  <Button
+                                  variant="secondary"
+                                    size="sm"
+                                    icon={<Pencil />}
+                                    onClick={() => setEditingUser(user)}
+                                    aria-label={`Edit permissions for ${user.firstName} ${user.lastName}`}
+                                >
+                                  Edit
+                                </Button>
+                                </ActionButtons>
+                              </Table.BodyCell>
+                            </Table.BodyRow>
+                          );
+                        })}
+                      </Table.Body>
+                    </Table>
+                  </Table.Container>
+                </TableCard>
               )}
             </Body>
           </>

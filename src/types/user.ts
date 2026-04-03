@@ -6,23 +6,10 @@ import type { ToolKey } from './tools';
 import type { ToolPermissionLevel, UserToolPermissions, PermissionKey } from './permissions';
 
 export type UserRole =
-  | 'CEO'
-  | 'COO'
-  | 'CFO'
-  | 'Capital Planning'
-  | 'VP of Operations'
-  | 'VP of Development'
-  | 'Board of Directors'
-  | 'Director of Project Management'
-  | 'Director of Construction'
-  | 'Program Manager'
-  | 'Project Manager'
-  | 'Construction Manager'
-  | 'Superintendent'
-  | 'Project Engineer'
-  | 'Foreman'
-  | 'Operators'
-  | 'IT Admin';
+  | 'Executive Strategy'
+  | 'Operations & Administration'
+  | 'Project Delivery'
+  | 'Field Opperations';
 
 export interface UserPermissions {
   toolDefaults: UserToolPermissions;
@@ -47,6 +34,7 @@ export interface User {
   email: string;
   avatar: string | null;
   role: UserRole;
+  jobTitle: string;
   projectIds: string[];
   permissions: UserPermissions;
   favorites: UserFavorites;

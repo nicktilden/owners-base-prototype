@@ -185,21 +185,8 @@ export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
 import type { UserRole } from './user';
 
 export const ROLE_TOOL_PERMISSION_MAP: Record<UserRole, UserToolPermissions> = {
-  'CEO':                              EXECUTIVE_TOOL_PERMISSIONS,
-  'COO':                              EXECUTIVE_TOOL_PERMISSIONS,
-  'CFO':                              EXECUTIVE_TOOL_PERMISSIONS,
-  'Capital Planning':                 EXECUTIVE_TOOL_PERMISSIONS,
-  'VP of Operations':                 ADMIN_TOOL_PERMISSIONS,
-  'VP of Development':                ADMIN_TOOL_PERMISSIONS,
-  'Director of Project Management':   ADMIN_TOOL_PERMISSIONS,
-  'Director of Construction':         ADMIN_TOOL_PERMISSIONS,
-  'IT Admin':                         ADMIN_TOOL_PERMISSIONS,
-  'Program Manager':                  MANAGER_TOOL_PERMISSIONS,
-  'Project Manager':                  MANAGER_TOOL_PERMISSIONS,
-  'Construction Manager':             MANAGER_TOOL_PERMISSIONS,
-  'Superintendent':                   FIELD_TOOL_PERMISSIONS,
-  'Project Engineer':                 FIELD_TOOL_PERMISSIONS,
-  'Foreman':                          FIELD_TOOL_PERMISSIONS,
-  'Operators':                        OPERATOR_TOOL_PERMISSIONS,
-  'Board of Directors':               BOARD_TOOL_PERMISSIONS,
+  'Executive Strategy': EXECUTIVE_TOOL_PERMISSIONS,
+  'Operations & Administration': ADMIN_TOOL_PERMISSIONS,
+  'Project Delivery': MANAGER_TOOL_PERMISSIONS,
+  'Field Opperations': FIELD_TOOL_PERMISSIONS,
 };

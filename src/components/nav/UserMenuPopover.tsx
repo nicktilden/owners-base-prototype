@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Typography } from '@procore/core-react';
-import { Person, Cog, Import, CaretDown, CaretRight, Pencil } from '@procore/core-icons';
+import { Person, Cog, Import, Pencil } from '@procore/core-icons';
 import styled from 'styled-components';
 import { usePersona } from '@/context/PersonaContext';
 import { useData } from '@/context/DataContext';
@@ -57,43 +57,6 @@ const SectionToggle = styled.button`
   text-align: left;
   transition: background 0.12s;
   &:hover { background: #f4f5f6; }
-`;
-
-const ActiveDot = styled.div`
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #1a7f37;
-  margin-left: auto;
-  flex-shrink: 0;
-`;
-
-const CompanyTile = styled.button<{ $active?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 16px;
-  background: ${({ $active }) => ($active ? '#f0f7ff' : 'transparent')};
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.12s;
-  &:hover { background: ${({ $active }) => ($active ? '#e3f1ff' : '#f4f5f6')}; }
-`;
-
-const CompanyIcon = styled.div`
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  background: #e8eaeb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #232729;
-  flex-shrink: 0;
 `;
 
 const AvatarLarge = styled.img`
@@ -145,12 +108,6 @@ const EditPersonaBtn = styled.button`
   &:hover { background: #e8eaeb; color: #232729; }
 `;
 
-// Stub companies for the company switcher
-const STUB_COMPANIES = [
-  { id: 'acc-001', name: 'Acme Development Group' },
-  { id: 'acc-demo', name: 'Demo Company' },
-];
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface UserMenuPopoverProps {
@@ -163,8 +120,6 @@ export default function UserMenuPopover({ anchorRef, onClose, onBrowseAs }: User
   const popoverRef = useRef<HTMLDivElement>(null);
   const { activeUser } = usePersona();
   const { data } = useData();
-  const [companyOpen, setCompanyOpen] = useState(false);
-  const [activeCompanyId, setActiveCompanyId] = useState('acc-001');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -187,43 +142,6 @@ export default function UserMenuPopover({ anchorRef, onClose, onBrowseAs }: User
 
   return (
     <Popover ref={popoverRef} role="dialog" aria-label="User menu">
-
-      {/* ── COMPANY SWITCHER ── */}
-      <SectionToggle
-        onClick={() => setCompanyOpen((v) => !v)}
-        aria-expanded={companyOpen}
-        aria-controls="company-list"
-      >
-        <Typography intent="small" style={{ fontWeight: 600, color: '#232729', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Company
-        </Typography>
-        {companyOpen ? <CaretDown size="sm" /> : <CaretRight size="sm" />}
-      </SectionToggle>
-
-      {companyOpen && (
-        <div id="company-list">
-          {STUB_COMPANIES.map((company) => {
-            const isActive = activeCompanyId === company.id;
-            const initials = company.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-            return (
-              <CompanyTile
-                key={company.id}
-                $active={isActive}
-                onClick={() => setActiveCompanyId(company.id)}
-                aria-pressed={isActive}
-              >
-                <CompanyIcon>{initials}</CompanyIcon>
-                <Typography intent="body" style={{ fontWeight: isActive ? 600 : 400, color: '#232729', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {company.name}
-                </Typography>
-                {isActive && <ActiveDot aria-label="Active company" />}
-              </CompanyTile>
-            );
-          })}
-        </div>
-      )}
-
-      <SectionDivider />
 
       {/* ── ACTIVE USER PROFILE ── */}
       {activeUser && (
