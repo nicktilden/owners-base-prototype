@@ -127,24 +127,26 @@ const MILESTONE_STAGE_INDEX: Record<ProjectMilestoneName, number> = {
 };
 
 /**
- * First milestone in `PROJECT_MILESTONES` order mapped to the project's workflow stage.
- * When no milestone shares that stage index (e.g. Maintenance), returns `project.stage`.
+ * Last milestone in `PROJECT_MILESTONES` order whose stage index <= the project's
+ * current stage. Matches the heatmap's "current" outline logic.
  */
 export function getCurrentMilestoneLabelForProject(project: ProjectRow): string {
   const stageOrder = getStageOrder(project.stage);
+  let current: string = project.stage;
   for (const name of PROJECT_MILESTONES) {
-    if (MILESTONE_STAGE_INDEX[name] === stageOrder) {
-      return name;
+    if (MILESTONE_STAGE_INDEX[name] <= stageOrder) {
+      current = name;
     }
   }
-  return project.stage;
+  return current;
 }
 
 /** Single milestone with baseline date, actual date, and variance in days (positive = late, negative = ahead). */
 export interface ProjectMilestone {
   name: ProjectMilestoneName;
   baselineDate: string;
-  actualDate: string;
+  /** Recorded actual date — null for milestones not yet reached. */
+  actualDate: string | null;
   varianceDays: number;
 }
 
@@ -176,7 +178,7 @@ function milestoneVarianceHash(projectId: number, name: string): number {
  * Future milestones: mostly on plan with light pull-ahead / minor slip.
  */
 const COMPLETED_MILESTONE_VARIANCE_DAYS = [
-  0, 0, 0, -2, -5, -9, -14, 3, 7, -3, 0, 5, -7, 2, -1, 0, 4, -11, 0, 6,
+  -1, 2, -3, -2, -5, -9, -14, 3, 7, -3, 4, 5, -7, 2, -1, 1, 4, -11, 3, 6,
 ] as const;
 
 const FUTURE_MILESTONE_VARIANCE_DAYS = [
@@ -221,6 +223,10 @@ export function getProjectMilestones(
     const t = totalDays <= 0 ? 0 : (i + 0.5) / n;
     const baselineDate = addDaysToDate(project.startDate, Math.round(totalDays * t));
     const milestoneStage = MILESTONE_STAGE_INDEX[name];
+    const isFuture = milestoneStage > stageOrder;
+    if (isFuture) {
+      return { name, baselineDate, actualDate: null, varianceDays: 0 };
+    }
     const varianceDays = varianceDaysForMilestone(project, name, milestoneStage, stageOrder, projectVarianceDays);
     const actualDate = addDaysToDate(baselineDate, varianceDays);
     return { name, baselineDate, actualDate, varianceDays };
@@ -241,7 +247,7 @@ export function getProjectMilestones(
       result[nextIdx] = {
         ...m,
         varianceDays: vd,
-        actualDate: addDaysToDate(m.baselineDate, vd),
+        actualDate: m.actualDate ? addDaysToDate(m.baselineDate, vd) : null,
       };
     }
   }
@@ -604,7 +610,24 @@ export const VARIANCE_AXIS_MAX = 32;
 
 /** Color for variance: red (late / behind), yellow (on time), green (ahead). */
 export function varianceToColor(varianceDays: number): string {
-  if (varianceDays > 0) return "#c00";
-  if (varianceDays === 0) return "#c9a227";
-  return "#00a878";
+  return varianceColors(varianceDays).bg;
+}
+
+/**
+ * Variance-to-color mapping aligned with the Schedule Heatmap gradient.
+ * Returns a bg/fg pair with WCAG-accessible contrast.
+ */
+export function varianceColors(days: number): { bg: string; fg: string } {
+  if (days <= -14) return { bg: "#1b5e20", fg: "#ffffff" };
+  if (days <= -9)  return { bg: "#2e7d32", fg: "#ffffff" };
+  if (days <= -5)  return { bg: "#43a047", fg: "#ffffff" };
+  if (days <= -2)  return { bg: "#8bc34a", fg: "#1a1a1a" };
+  if (days < 0)    return { bg: "#c5e1a5", fg: "#1a1a1a" };
+  if (days === 0)  return { bg: "#e6ee9c", fg: "#1a1a1a" };
+  if (days <= 3)   return { bg: "#ffcc80", fg: "#1a1a1a" };
+  if (days <= 7)   return { bg: "#ffab91", fg: "#1a1a1a" };
+  if (days <= 14)  return { bg: "#ff7043", fg: "#ffffff" };
+  if (days <= 21)  return { bg: "#e53935", fg: "#ffffff" };
+  if (days <= 28)  return { bg: "#d32f2f", fg: "#ffffff" };
+  return { bg: "#b71c1c", fg: "#ffffff" };
 }

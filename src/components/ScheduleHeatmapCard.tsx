@@ -434,7 +434,7 @@ export default function ScheduleHeatmapCard() {
                             <div style={{ fontWeight: 700 }}>{name}</div>
                             <div style={{ marginTop: 2, color: "#c9d1d4" }}>{project.name}</div>
                             <div style={{ marginTop: 8 }}>Baseline: {m ? formatDateMMDDYYYY(m.baselineDate) : "N/A"}</div>
-                            <div>Actual: {m ? formatDateMMDDYYYY(m.actualDate) : "N/A"}</div>
+                            <div>Actual: {m?.actualDate ? formatDateMMDDYYYY(m.actualDate) : "—"}</div>
                             <div>Variance: {varianceLabel}</div>
                           </div>
                         </Tooltip.Content>

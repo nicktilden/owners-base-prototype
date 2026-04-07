@@ -14,9 +14,9 @@ export type ProjectStage =
   | 'final_design'
   | 'permitting'
   | 'bidding'
-  | 'pre-construction'
+  | 'Pre-Construction'
   | 'course_of_construction'
-  | 'post-construction'
+  | 'Post-Construction'
   | 'handover'
   | 'closeout'
   | 'maintenance';

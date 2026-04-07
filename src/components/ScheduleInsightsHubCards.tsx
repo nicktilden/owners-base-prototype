@@ -8,6 +8,7 @@ import {
   scheduleVarianceData,
   getCurrentMilestoneLabelForProject,
   PROJECT_MILESTONES,
+  varianceColors,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { createGlobalStyle } from "styled-components";
@@ -28,11 +29,10 @@ function formatDate(iso: string): string {
 }
 
 function varianceBadge(v: number) {
-  const color = v <= 0 ? "#1a7d3a" : v <= 3 ? "#8bc34a" : v <= 7 ? "#f6a623" : v <= 14 ? "#ff7043" : "#b71c1c";
-  const bg = v <= 0 ? "#e8f5e9" : "#fbe9e7";
+  const { bg, fg } = varianceColors(v);
   const label = v > 0 ? `+${v}d` : `${v}d`;
   return (
-    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: bg, color, fontWeight: 600, fontSize: 12 }}>
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: bg, color: fg, fontWeight: 600, fontSize: 12 }}>
       {label}
     </span>
   );
@@ -128,8 +128,8 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
                           )}
                         </td>
                         <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(m.actualDate)}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{varianceBadge(m.varianceDays)}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
                       </tr>
                     );
                   })}
@@ -555,9 +555,7 @@ export function ScheduleRiskGHubCard() {
                     </button>
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
-                      +{varianceDays}d
-                    </span>
+                    {varianceBadge(varianceDays)}
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#232729" }}>
                     {pctComplete}%
@@ -726,7 +724,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Average</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>+{avgVariance} days</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(avgVariance).bg, marginTop: 4 }}>+{avgVariance} days</div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -739,7 +737,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>On Schedule</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#1a7d3a", marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(0).bg, marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -752,7 +750,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#f6a623", marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(10).bg, marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(false)}
@@ -765,7 +763,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (14+ days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(21).bg, marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
       </div>
 
@@ -790,16 +788,16 @@ export function ScheduleVariance2HubCard() {
                 </button>
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
-                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
-                  {r.drift}%
-                </span>
+                {(() => { const c = varianceColors(r.worstVariance); return (
+                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 600 }}>
+                    {r.drift}%
+                  </span>
+                ); })()}
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
-                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
-                  +{r.worstVariance}d
-                </span>
+                {varianceBadge(r.worstVariance)}
               </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "right", color: "#b71c1c", fontWeight: 600 }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
                 {r.costDeltaLabel}
               </td>
             </tr>

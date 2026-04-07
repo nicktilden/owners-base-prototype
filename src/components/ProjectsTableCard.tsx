@@ -397,8 +397,8 @@ export default function ProjectsTableCard() {
     const details = new Map<number, { lastMilestone: string; nextMilestone: string; scheduleVariance: number }>();
     filteredProjectRows.forEach((p) => {
       const milestones = sampleProjectMilestones.get(p.id) ?? [];
-      const completed = milestones.filter((m) => m.actualDate <= todayIso);
-      const upcoming = milestones.filter((m) => m.actualDate > todayIso);
+      const completed = milestones.filter((m) => m.actualDate != null && m.actualDate <= todayIso);
+      const upcoming = milestones.filter((m) => m.actualDate == null || m.actualDate > todayIso);
       const lastMilestone =
         completed.length > 0 ? completed[completed.length - 1]?.name ?? "—" : "—";
       const nextMilestone =
