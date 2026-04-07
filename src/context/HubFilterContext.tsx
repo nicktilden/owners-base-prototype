@@ -7,7 +7,10 @@
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { sampleProjectRows } from '@/data/projects';
+import { projects as seedProjects } from '@/data/seed/projects';
 import type { ProjectRow, ProjectStage, ProjectRegion } from '@/data/projects';
+import type { Project } from '@/types/project';
+import type { ProjectStage as SeedProjectStage, ProjectRegion as SeedProjectRegion } from '@/types/project';
 
 export interface HubFilterState {
   /** Stage filter — maps to ProjectStage values from data/projects */
@@ -27,6 +30,30 @@ export const EMPTY_HUB_FILTERS: HubFilterState = {
   projectManager: [],
 };
 
+// Maps display-name stages (hub filter) → machine-name stages (seed projects)
+const STAGE_DISPLAY_TO_SEED: Record<string, SeedProjectStage> = {
+  "Conceptual": "conceptual",
+  "Feasibility": "feasibility",
+  "Final design": "final_design",
+  "Permitting": "permitting",
+  "Bidding": "bidding",
+  "Pre-Construction": "pre-construction",
+  "Course of Construction": "course_of_construction",
+  "Post-Construction": "post-construction",
+  "Handover": "handover",
+  "Closeout": "closeout",
+  "Maintenance": "maintenance",
+};
+
+// Maps hub-filter region labels → seed project region values they should match
+const REGION_DISPLAY_TO_SEED: Record<string, SeedProjectRegion[]> = {
+  "Mid-Atlantic": ["Northeast"],
+  "Northeast": ["Northeast"],
+  "Midwest": ["Midwest"],
+  "Southeast": ["South"],
+  "Southwest": ["West", "Southwest"],
+};
+
 interface HubFilterContextValue {
   filters: HubFilterState;
   setFilters: React.Dispatch<React.SetStateAction<HubFilterState>>;
@@ -34,6 +61,8 @@ interface HubFilterContextValue {
   hasActiveFilters: boolean;
   /** All project rows filtered by the current hub filters */
   filteredProjectRows: ProjectRow[];
+  /** Seed projects filtered by the current hub filters (stage + region) */
+  filteredSeedProjects: Project[];
 }
 
 const HubFilterContext = createContext<HubFilterContextValue | null>(null);
@@ -59,12 +88,29 @@ export function HubFilterProvider({ children }: { children: React.ReactNode }) {
     return rows;
   }, [filters]);
 
+  const filteredSeedProjects = useMemo(() => {
+    let projects = seedProjects;
+    if (filters.stage.length > 0) {
+      const seedStages = new Set(
+        filters.stage.map((s) => STAGE_DISPLAY_TO_SEED[s]).filter(Boolean)
+      );
+      projects = projects.filter((p) => seedStages.has(p.stage));
+    }
+    if (filters.region.length > 0) {
+      const seedRegions = new Set(
+        filters.region.flatMap((r) => REGION_DISPLAY_TO_SEED[r] ?? [])
+      );
+      projects = projects.filter((p) => seedRegions.has(p.region));
+    }
+    return projects;
+  }, [filters]);
+
   function clearFilters() {
     setFilters(EMPTY_HUB_FILTERS);
   }
 
   return (
-    <HubFilterContext.Provider value={{ filters, setFilters, clearFilters, hasActiveFilters, filteredProjectRows }}>
+    <HubFilterContext.Provider value={{ filters, setFilters, clearFilters, hasActiveFilters, filteredProjectRows, filteredSeedProjects }}>
       {children}
     </HubFilterContext.Provider>
   );

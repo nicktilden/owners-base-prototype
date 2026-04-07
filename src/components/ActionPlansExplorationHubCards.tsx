@@ -3,7 +3,7 @@ import { Button, Modal, Pill, Tearsheet, Typography } from "@procore/core-react"
 import { ChevronDown, ChevronRight, EllipsisVertical, Cog, EyeOff, Grip } from "@procore/core-icons";
 import { createGlobalStyle } from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
-import { projects as seedProjects } from "@/data/seed/projects";
+import { useHubFilters } from "@/context/HubFilterContext";
 import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTemplates } from "@/data/seed/action_plan_types";
 import type { Project } from "@/types/project";
@@ -89,13 +89,14 @@ function stageLabel(stage: string): string {
   return labels[stage] ?? stage;
 }
 
-// ─── Seed projects with action plans ──────────────────────────────────────────
+// ─── Filtered seed projects with action plans ────────────────────────────────
 
 function useActionPlanProjects(): Project[] {
+  const { filteredSeedProjects } = useHubFilters();
   return useMemo(() => {
     const idsWithPlans = new Set(actionPlans.map((ap) => ap.projectId));
-    return seedProjects.filter((p) => idsWithPlans.has(p.id));
-  }, []);
+    return filteredSeedProjects.filter((p) => idsWithPlans.has(p.id));
+  }, [filteredSeedProjects]);
 }
 
 // ─── ProgressMiniBar ─────────────────────────────────────────────────────────
