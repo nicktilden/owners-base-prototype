@@ -14,6 +14,7 @@ export { scheduleEntries } from './schedule';
 export { tasks } from './tasks';
 export { documents } from './documents';
 export { actionPlans } from './action_plans';
+export { actionPlanTypes, actionPlanTemplates } from './action_plan_types';
 export { assets } from './assets';
 
 // Stub tools (empty arrays — no seed data yet)

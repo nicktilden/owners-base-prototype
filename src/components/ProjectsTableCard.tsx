@@ -21,6 +21,7 @@ import {
   readProjectFavorites,
   writeProjectFavorites,
 } from "@/utils/projectFavorites";
+import { useHubFilters } from "@/context/HubFilterContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -354,6 +355,7 @@ export default function ProjectsTableCard() {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [hiddenCols, setHiddenCols] = useState<Set<ColumnKey>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const { filteredProjectRows } = useHubFilters();
   const [favoriteOverrides, setFavoriteOverrides] = useState<Record<number, boolean>>(() => {
     const map = readProjectFavorites();
     const next: Record<number, boolean> = {};
@@ -365,7 +367,7 @@ export default function ProjectsTableCard() {
   });
 
   const rows = useMemo(() => {
-    let base = [...sampleProjectRows];
+    let base = [...filteredProjectRows];
     if (search.trim()) {
       const q = search.toLowerCase();
       base = base.filter((p) =>
@@ -388,12 +390,12 @@ export default function ProjectsTableCard() {
       });
     }
     return base;
-  }, [search, filters, favoriteOverrides]);
+  }, [filteredProjectRows, search, filters, favoriteOverrides]);
   const scheduleDetailsByProjectId = useMemo(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
     const varianceByName = new Map(scheduleVarianceData.map((d) => [d.project, d.variance]));
     const details = new Map<number, { lastMilestone: string; nextMilestone: string; scheduleVariance: number }>();
-    sampleProjectRows.forEach((p) => {
+    filteredProjectRows.forEach((p) => {
       const milestones = sampleProjectMilestones.get(p.id) ?? [];
       const completed = milestones.filter((m) => m.actualDate <= todayIso);
       const upcoming = milestones.filter((m) => m.actualDate > todayIso);
@@ -408,7 +410,7 @@ export default function ProjectsTableCard() {
       });
     });
     return details;
-  }, []);
+  }, [filteredProjectRows]);
 
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
   const visibleColCount = COLUMNS.length - hiddenCols.size + 1;

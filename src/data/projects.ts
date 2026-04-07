@@ -45,6 +45,8 @@ export interface ProjectRow {
   startDate: string;
   endDate: string;
   program: string;
+  region: ProjectRegion;
+  projectManager: string;
   estimatedCost: number;
   originalBudget: number;
   jobToDateCost: number;
@@ -272,6 +274,34 @@ export interface ScheduleVarianceDatum {
 
 export const PER_PAGE = 10;
 
+/** Geographic region names for each project (1–50, matching REGIONS code index). */
+export const PROJECT_REGIONS = [
+  "Mid-Atlantic", "Midwest", "Midwest", "Southwest", "Southeast", "Southwest",
+  "Midwest", "Southwest", "Midwest", "Northeast", "Southeast", "Midwest",
+  "West", "West", "Midwest", "Southwest", "Southeast", "Midwest", "Northeast",
+  "Southeast", "Midwest", "West", "Southeast", "Northeast", "Southeast",
+  "Southwest", "Midwest", "Northeast", "Midwest", "Midwest", "Mid-Atlantic",
+  "Southwest", "Southwest", "Southeast", "Midwest", "Northeast", "Midwest",
+  "Midwest", "Southwest", "Southwest", "West", "Southwest", "Southeast",
+  "Midwest", "Northeast", "West", "Midwest", "Mid-Atlantic", "International", "Southeast",
+] as const;
+
+export type ProjectRegion = (typeof PROJECT_REGIONS)[number];
+
+/** Project Manager names assigned per project (1–50). */
+const PROJECT_MANAGERS = [
+  "Sarah Chen", "Marcus Rivera", "Priya Nair", "James O'Brien", "Elena Vasquez",
+  "David Kim", "Aisha Moyo", "Thomas Nguyen", "Sarah Chen", "Marcus Rivera",
+  "Priya Nair", "James O'Brien", "Elena Vasquez", "David Kim", "Aisha Moyo",
+  "Thomas Nguyen", "Sarah Chen", "Marcus Rivera", "Priya Nair", "James O'Brien",
+  "Elena Vasquez", "David Kim", "Aisha Moyo", "Thomas Nguyen", "Sarah Chen",
+  "Marcus Rivera", "Priya Nair", "James O'Brien", "Elena Vasquez", "David Kim",
+  "Aisha Moyo", "Thomas Nguyen", "Sarah Chen", "Marcus Rivera", "Priya Nair",
+  "James O'Brien", "Elena Vasquez", "David Kim", "Aisha Moyo", "Thomas Nguyen",
+  "Sarah Chen", "Marcus Rivera", "Priya Nair", "James O'Brien", "Elena Vasquez",
+  "David Kim", "Aisha Moyo", "Thomas Nguyen", "Sarah Chen", "Marcus Rivera",
+] as const;
+
 /** Region codes for project numbers (NE=Northeast, MA=Mid-Atlantic, SE=Southeast, MW=Midwest, SW=Southwest, W=West). */
 const REGIONS = ["MA", "MW", "MW", "SW", "SE", "SW", "MW", "SW", "MW", "NE", "SE", "MW", "W", "W", "MW", "SW", "SE", "MW", "NE", "SE", "MW", "W", "SE", "NE", "SE", "SW", "MW", "NE", "MW", "MW", "MA", "SW", "SW", "SE", "MW", "NE", "MW", "MW", "SW", "SW", "W", "SW", "SE", "MW", "NE", "W", "MW", "MA", "INT", "SE"] as const;
 
@@ -333,7 +363,7 @@ const SAMPLE_STAGES: ProjectStage[] = [
 ];
 
 /** Sample projects for the Projects table (50 projects). Program: Data Center | Retail | Commercial | Healthcare | Industrial | Infrastructure | Residential. */
-const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state" | "favorite">[] = [
+const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state" | "favorite" | "region" | "projectManager">[] = [
   { id: 1, name: "Northern Virginia Data Center Phase 2", number: `${REGIONS[0]}-${PROJECT_NUMBERS[0]}`, location: "Ashburn, VA 20147", stage: SAMPLE_STAGES[0], startDate: "2024-01-08", endDate: "2025-09-30", program: "Data Center", estimatedCost: 185000000, originalBudget: 178000000, jobToDateCost: 92000000, forecastToComplete: 187000000, estimatedCostAtCompletion: 187000000, priorities: "Schedule, Budget" },
   { id: 2, name: "Ohio Region Campus Expansion", number: `${REGIONS[1]}-${PROJECT_NUMBERS[1]}`, location: "Columbus, OH 43215", stage: SAMPLE_STAGES[1], startDate: "2024-02-01", endDate: "2025-11-15", program: "Data Center", estimatedCost: 220000000, originalBudget: 215000000, jobToDateCost: 88000000, forecastToComplete: 222000000, estimatedCostAtCompletion: 222000000, priorities: "Safety, Schedule" },
   { id: 3, name: "Roastery Chicago", number: `${REGIONS[2]}-${PROJECT_NUMBERS[2]}`, location: "Chicago, IL 60654", stage: SAMPLE_STAGES[2], startDate: "2024-01-15", endDate: "2025-06-30", program: "Retail", estimatedCost: 28500000, originalBudget: 27200000, jobToDateCost: 14200000, forecastToComplete: 28800000, estimatedCostAtCompletion: 28800000, priorities: "Quality, Schedule" },
@@ -386,9 +416,11 @@ const SAMPLE_PROJECT_ROWS_BASE: Omit<ProjectRow, "city" | "state" | "favorite">[
   { id: 50, name: "Miami Critical Load Upgrade", number: `${REGIONS[49]}-${PROJECT_NUMBERS[49]}`, location: "Miami, FL 33122", stage: SAMPLE_STAGES[49], startDate: "2024-04-01", endDate: "2025-06-30", program: "Data Center", estimatedCost: 22000000, originalBudget: 21200000, jobToDateCost: 6600000, forecastToComplete: 21900000, estimatedCostAtCompletion: 21900000, priorities: "Schedule" },
 ];
 
-export const sampleProjectRows: ProjectRow[] = SAMPLE_PROJECT_ROWS_BASE.map((row) => ({
+export const sampleProjectRows: ProjectRow[] = SAMPLE_PROJECT_ROWS_BASE.map((row, i) => ({
   ...row,
   favorite: false,
+  region: PROJECT_REGIONS[i],
+  projectManager: PROJECT_MANAGERS[i],
   ...parseLocationCityState(row.location),
 }));
 

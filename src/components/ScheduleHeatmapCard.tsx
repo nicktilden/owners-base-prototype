@@ -11,6 +11,7 @@ import {
   type ProjectMilestoneName,
 } from "@/data/projects";
 import { formatDateMMDDYYYY } from "@/utils/date";
+import { useHubFilters } from "@/context/HubFilterContext";
 
 // ─── Heatmap color logic ───────────────────────────────────────────────────────
 
@@ -345,6 +346,7 @@ const LEGEND_COLORS = [
 ];
 
 export default function ScheduleHeatmapCard() {
+  const { filteredProjectRows } = useHubFilters();
   return (
     <DetailPage.Card navigationLabel="Schedule & Milestones">
       <DetailPage.Section heading="Schedule & Milestones">
@@ -384,7 +386,7 @@ export default function ScheduleHeatmapCard() {
               </tr>
             </THead>
             <tbody>
-              {sampleProjectRows.map((project) => {
+              {filteredProjectRows.map((project) => {
                 const stageOrder = getStageOrder(project.stage);
                 const milestones = sampleProjectMilestones.get(project.id) ?? [];
                 const milestoneMap = new Map(milestones.map((m) => [m.name, m]));

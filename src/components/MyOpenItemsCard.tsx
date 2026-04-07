@@ -25,27 +25,23 @@ const HeaderActions = styled.div`
 
 const ItemTable = styled.div`
   width: 100%;
-  border: 1px solid #d6dadc;
-  border-radius: 8px;
-  overflow: hidden;
 `;
 
 const TableHeader = styled.div`
   display: grid;
   grid-template-columns: 110px 1fr auto auto;
-  padding: 0 12px;
-  height: 32px;
+  padding: 0 8px;
+  height: 28px;
   align-items: center;
   border-bottom: 1px solid #d6dadc;
 `;
 
 const HeaderCell = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
   color: #6a767c;
-  letter-spacing: 0.25px;
   line-height: 16px;
   white-space: nowrap;
+  padding: 6px 0;
 
   &:nth-child(3) {
     text-align: right;
@@ -56,23 +52,15 @@ const HeaderCell = styled.span`
   }
 `;
 
-const ItemRow = styled.div`
+const ItemRow = styled.div<{ $even?: boolean }>`
   display: grid;
   grid-template-columns: 110px 1fr auto auto;
-  padding: 0 12px;
-  min-height: 52px;
+  padding: 0 8px;
+  min-height: 44px;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #d6dadc;
+  background: ${({ $even }) => ($even ? "#fff" : "#fafafa")};
+  border-bottom: 1px solid #eef0f1;
   cursor: pointer;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: #f4f5f6;
-  }
 `;
 
 const TypeCell = styled.div`
@@ -80,13 +68,12 @@ const TypeCell = styled.div`
   align-items: center;
   gap: 4px;
   overflow: hidden;
+  padding: 7px 0;
 `;
 
 const TypeLabel = styled.span`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
   color: #232729;
-  letter-spacing: 0.25px;
   line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -96,14 +83,12 @@ const TypeLabel = styled.span`
 
 const TitleCell = styled.div`
   min-width: 0;
-  padding-right: 16px;
+  padding: 7px 8px 7px 0;
 `;
 
 const ProjectLabel = styled.div`
   font-size: 12px;
-  font-weight: 400;
   color: #6a767c;
-  letter-spacing: 0.25px;
   line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -128,14 +113,12 @@ const ItemLinkButton = styled.button`
 `;
 
 const DueDateCell = styled.div<{ $overdue?: boolean }>`
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
   color: ${({ $overdue }) => ($overdue ? "#c42223" : "#232729")};
-  letter-spacing: 0.25px;
   line-height: 16px;
   white-space: nowrap;
   text-align: right;
-  padding-right: 16px;
+  padding: 7px 16px 7px 0;
 `;
 
 const StatusCell = styled.div`
@@ -308,10 +291,10 @@ export default function MyOpenItemsCard() {
             <HeaderCell role="columnheader">Status</HeaderCell>
           </TableHeader>
 
-          {filtered.map((item) => {
+          {filtered.map((item, idx) => {
             const overdue = isOverdue(item.dueDate);
             return (
-              <ItemRow key={item.id} role="row" tabIndex={0}>
+              <ItemRow key={item.id} role="row" tabIndex={0} $even={idx % 2 === 0}>
                 <TypeCell role="cell">
                   <span style={{ color: "#232729", display: "flex", alignItems: "center", flexShrink: 0 }}>
                     {TYPE_ICONS[item.type] ?? <File size="sm" />}

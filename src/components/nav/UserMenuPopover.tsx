@@ -114,9 +114,15 @@ interface UserMenuPopoverProps {
   anchorRef: React.RefObject<HTMLElement>;
   onClose: () => void;
   onBrowseAs: () => void;
+  onProfileSettings: () => void;
 }
 
-export default function UserMenuPopover({ anchorRef, onClose, onBrowseAs }: UserMenuPopoverProps) {
+export default function UserMenuPopover({
+  anchorRef,
+  onClose,
+  onBrowseAs,
+  onProfileSettings,
+}: UserMenuPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const { activeUser } = usePersona();
   const { data } = useData();
@@ -177,7 +183,15 @@ export default function UserMenuPopover({ anchorRef, onClose, onBrowseAs }: User
 
       {/* ── ACTIONS ── */}
       <ActionsSection>
-        <Button block variant="secondary" icon={<Person size="sm" />} onClick={onClose}>
+        <Button
+          block
+          variant="secondary"
+          icon={<Person size="sm" />}
+          onClick={() => {
+            onClose();
+            onProfileSettings();
+          }}
+        >
           My Profile Settings
         </Button>
         <Button block variant="secondary" icon={<Cog size="sm" />} onClick={onClose}>

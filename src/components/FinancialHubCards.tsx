@@ -5,6 +5,7 @@ import styled from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import KPIPill from "@/components/KPIPill";
 import { sampleProjectRows } from "@/data/projects";
+import { useHubFilters } from "@/context/HubFilterContext";
 
 const KpiGrid = styled.div`
   display: grid;
@@ -107,12 +108,13 @@ const invoiceRows = [
 export function FinancialScorecardCard() {
   const [view, setView] = useState("Budget View");
   const [snapshot, setSnapshot] = useState("Budget Snapshot");
+  const { filteredProjectRows } = useHubFilters();
   const valuePillColor = useMemo(() => "green" as const, []);
   const financialKpis = useMemo(() => {
-    const revisedBudget = sampleProjectRows.reduce((sum, p) => sum + p.originalBudget, 0);
-    const forecastToComplete = sampleProjectRows.reduce((sum, p) => sum + p.forecastToComplete, 0);
-    const jobToDateCosts = sampleProjectRows.reduce((sum, p) => sum + p.jobToDateCost, 0);
-    const estCostAtCompletion = sampleProjectRows.reduce(
+    const revisedBudget = filteredProjectRows.reduce((sum, p) => sum + p.originalBudget, 0);
+    const forecastToComplete = filteredProjectRows.reduce((sum, p) => sum + p.forecastToComplete, 0);
+    const jobToDateCosts = filteredProjectRows.reduce((sum, p) => sum + p.jobToDateCost, 0);
+    const estCostAtCompletion = filteredProjectRows.reduce(
       (sum, p) => sum + p.estimatedCostAtCompletion,
       0
     );
@@ -136,7 +138,7 @@ export function FinancialScorecardCard() {
       { label: "Invoiced to Date", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
       { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "0%", tone: "neutral" as const, trendValue: 0 },
     ];
-  }, []);
+  }, [filteredProjectRows]);
 
   return (
     <HubCardFrame

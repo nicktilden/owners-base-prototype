@@ -1,12 +1,238 @@
 import React, { useMemo, useState } from "react";
-import { Button, Select } from "@procore/core-react";
+import { Button, Select, Tearsheet, Typography } from "@procore/core-react";
 import { EllipsisVertical, ExternalLink } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
   topScheduleRiskProjectRowsForMilestoneHeatmap,
+  scheduleVarianceData,
+  getCurrentMilestoneLabelForProject,
+  PROJECT_MILESTONES,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import { createGlobalStyle } from "styled-components";
+import { useHubFilters } from "@/context/HubFilterContext";
+
+const TearsheetWide = createGlobalStyle`
+  .sc-ljrxoq-1 {
+    flex: 0 0 80vw !important;
+    max-width: 1100px !important;
+  }
+`;
+
+// ─── Project schedule detail tearsheet ───────────────────────────────────────
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function varianceBadge(v: number) {
+  const color = v <= 0 ? "#1a7d3a" : v <= 3 ? "#8bc34a" : v <= 7 ? "#f6a623" : v <= 14 ? "#ff7043" : "#b71c1c";
+  const bg = v <= 0 ? "#e8f5e9" : "#fbe9e7";
+  const label = v > 0 ? `+${v}d` : `${v}d`;
+  return (
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: bg, color, fontWeight: 600, fontSize: 12 }}>
+      {label}
+    </span>
+  );
+}
+
+interface ProjectScheduleTearsheetProps {
+  projectId: number | null;
+  onClose: () => void;
+}
+
+function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearsheetProps) {
+  const project = useMemo(
+    () => projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null,
+    [projectId]
+  );
+  const milestones = useMemo(
+    () => (projectId !== null ? sampleProjectMilestones.get(projectId) ?? [] : []),
+    [projectId]
+  );
+  const scheduleVariance = useMemo(
+    () => project ? scheduleVarianceData.find((d) => d.project === project.name)?.variance ?? 0 : 0,
+    [project]
+  );
+  const currentMilestone = project ? getCurrentMilestoneLabelForProject(project) : "";
+
+  return (
+    <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right" block>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Header */}
+        <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+          {project ? (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{project.number}</Typography>
+                <span style={{ color: "#d6dadc" }}>·</span>
+                <Typography intent="small" style={{ color: "#6a767c" }}>{project.stage}</Typography>
+              </div>
+              <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block" }}>
+                {project.name}
+              </Typography>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                  <span style={{ fontWeight: 600 }}>Start:</span> {formatDate(project.startDate)}
+                </span>
+                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                  <span style={{ fontWeight: 600 }}>End:</span> {formatDate(project.endDate)}
+                </span>
+                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                  <span style={{ fontWeight: 600 }}>Schedule Variance:</span>{" "}
+                  {varianceBadge(scheduleVariance)}
+                </span>
+                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                  <span style={{ fontWeight: 600 }}>Current Milestone:</span> {currentMilestone}
+                </span>
+              </div>
+            </>
+          ) : (
+            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>Project Schedule</Typography>
+          )}
+        </div>
+
+        {/* Body — milestone table */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+          {milestones.length === 0 ? (
+            <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
+          ) : (
+            <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f5f6f7" }}>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
+                    <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestones.map((m, i) => {
+                    const isCurrent = m.name === currentMilestone;
+                    return (
+                      <tr
+                        key={m.name}
+                        style={{
+                          background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
+                        }}
+                      >
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
+                          {m.name}
+                          {isCurrent && (
+                            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "#1d5cc9", background: "#e8eefb", borderRadius: 3, padding: "1px 6px" }}>
+                              Current
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(m.actualDate)}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{varianceBadge(m.varianceDays)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </Tearsheet>
+  );
+}
+
+// ─── Shared tearsheet for Schedule Variance buckets ──────────────────────────
+
+interface VarianceBucketRow {
+  number: string;
+  projectId?: number;
+  name: string;
+  stage: string;
+  currentMilestone: string;
+  nextMilestone: string;
+  startDate: string;
+  endDate: string;
+  varianceDays: number;
+}
+
+interface VarianceBucketTearsheetProps {
+  open: boolean;
+  onClose: () => void;
+  bucketLabel: string;
+  rows: VarianceBucketRow[];
+}
+
+function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceBucketTearsheetProps) {
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+
+  return (
+    <>
+      <TearsheetWide />
+      <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right" block>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {/* Header */}
+          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>
+              Schedule Variance: {bucketLabel}
+            </Typography>
+            <Typography intent="small" style={{ color: "#6a767c", display: "block", marginTop: 2 }}>
+              {rows.length} project{rows.length !== 1 ? "s" : ""} in this variance range
+            </Typography>
+          </div>
+          {/* Body */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+            {rows.length === 0 ? (
+              <Typography intent="body" style={{ color: "#6a767c" }}>No projects in this range.</Typography>
+            ) : (
+              <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f5f6f7" }}>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>#</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Name</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Stage</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Current Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Next Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Start Date</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>End Date</th>
+                      <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={r.number} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{r.number}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1" }}>
+                          <button
+                            onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
+                            style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", fontSize: 13, textAlign: "left" }}
+                          >
+                            {r.name}
+                          </button>
+                        </td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{r.stage}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729" }}>{r.currentMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c" }}>{r.nextMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(r.startDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(r.endDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", textAlign: "right", whiteSpace: "nowrap" }}>
+                          {varianceBadge(r.varianceDays)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </Tearsheet>
+      <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
+    </>
+  );
+}
 
 const HISTOGRAM_BUCKETS = [
   { label: "0-3 days", min: 0, max: 3, color: "#8bc34a" },
@@ -15,30 +241,27 @@ const HISTOGRAM_BUCKETS = [
   { label: "14+ days", min: 14, max: Infinity, color: "#b71c1c" },
 ];
 
-function bucketIndexForVariance(v: number): number {
-  return HISTOGRAM_BUCKETS.findIndex((b) => v >= b.min && v < b.max);
-}
-
 export function ProjectsByStageHubCard() {
   const [programFilter, setProgramFilter] = useState<string>("All Programs");
   const [stageFilter, setStageFilter] = useState<string>("All Stages");
+  const { filteredProjectRows } = useHubFilters();
   const stageColors = ["#1d5cc9", "#00a878", "#6b4ce6", "#f6a623", "#e05263", "#4a6572"];
   const programOptions = useMemo(
-    () => ["All Programs", ...Array.from(new Set(sampleProjectRows.map((r) => r.program))).sort()],
-    []
+    () => ["All Programs", ...Array.from(new Set(filteredProjectRows.map((r) => r.program))).sort()],
+    [filteredProjectRows]
   );
   const stageOptions = useMemo(
-    () => ["All Stages", ...Array.from(new Set(sampleProjectRows.map((r) => r.stage))).sort()],
-    []
+    () => ["All Stages", ...Array.from(new Set(filteredProjectRows.map((r) => r.stage))).sort()],
+    [filteredProjectRows]
   );
   const filteredProjects = useMemo(
     () =>
-      sampleProjectRows.filter((r) => {
+      filteredProjectRows.filter((r) => {
         const programOk = programFilter === "All Programs" || r.program === programFilter;
         const stageOk = stageFilter === "All Stages" || r.stage === stageFilter;
         return programOk && stageOk;
       }),
-    [programFilter, stageFilter]
+    [filteredProjectRows, programFilter, stageFilter]
   );
   const stageRows = useMemo(() => {
     const counts = new Map<string, number>();
@@ -160,28 +383,29 @@ export function ProjectsByStageHubCard() {
   );
 }
 
+
 export function ScheduleRiskGHubCard() {
-  const allMilestones = useMemo(
-    () =>
-      topScheduleRiskProjectRowsForMilestoneHeatmap.flatMap(
-        (row) => sampleProjectMilestones.get(row.id) ?? []
-      ),
-    []
-  );
+  const [openBucketIdx, setOpenBucketIdx] = useState<number | null>(null);
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const { filteredProjectRows } = useHubFilters();
+
   const counts = useMemo(
     () =>
-      HISTOGRAM_BUCKETS.map(
-        (_, i) =>
-          allMilestones.filter((m) => bucketIndexForVariance(m.varianceDays) === i).length
+      HISTOGRAM_BUCKETS.map((b) =>
+        filteredProjectRows.filter((project) => {
+          const v = scheduleVarianceData.find((x) => x.project === project.name)?.variance ?? 0;
+          return v >= b.min && v < b.max;
+        }).length
       ),
-    [allMilestones]
+    [filteredProjectRows]
   );
   const maxCount = Math.max(...counts, 1);
   const criticalRows = useMemo(
     () =>
       topScheduleRiskProjectRowsForMilestoneHeatmap
+        .filter((row) => filteredProjectRows.some((p) => p.id === row.id))
         .map((row) => {
-          const project = sampleProjectRows.find((p) => p.id === row.id);
+          const project = filteredProjectRows.find((p) => p.id === row.id);
           const milestones = sampleProjectMilestones.get(row.id) ?? [];
           const critCount = milestones.filter((m) => m.varianceDays >= 14).length;
           const varianceDays = milestones.reduce(
@@ -211,10 +435,52 @@ export function ScheduleRiskGHubCard() {
         .filter((r) => r.critCount > 0)
         .sort((a, b) => b.critCount - a.critCount)
         .slice(0, 7),
-    []
+    [filteredProjectRows]
   );
 
+  // Build tearsheet rows for a given bucket index
+  const tearsheetRows = useMemo(() => {
+    if (openBucketIdx === null) return [];
+    const bucket = HISTOGRAM_BUCKETS[openBucketIdx];
+    return filteredProjectRows
+      .filter((project) => {
+        const d = scheduleVarianceData.find((x) => x.project === project.name);
+        const v = d?.variance ?? 0;
+        return v >= bucket.min && v < bucket.max;
+      })
+      .map((project) => {
+        const d = scheduleVarianceData.find((x) => x.project === project.name);
+        const varianceDays = d?.variance ?? 0;
+        const currentMilestone = getCurrentMilestoneLabelForProject(project);
+        const curIdx = PROJECT_MILESTONES.indexOf(currentMilestone as typeof PROJECT_MILESTONES[number]);
+        const nextMilestone = curIdx >= 0 && curIdx + 1 < PROJECT_MILESTONES.length
+          ? PROJECT_MILESTONES[curIdx + 1]
+          : "—";
+        return {
+          number: project.number,
+          projectId: project.id,
+          name: project.name,
+          stage: project.stage,
+          currentMilestone,
+          nextMilestone,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          varianceDays,
+        };
+      })
+      .sort((a, b) => b.varianceDays - a.varianceDays);
+  }, [openBucketIdx, filteredProjectRows]);
+
   return (
+    <>
+      {openBucketIdx !== null && (
+        <VarianceBucketTearsheet
+          open={true}
+          onClose={() => setOpenBucketIdx(null)}
+          bucketLabel={HISTOGRAM_BUCKETS[openBucketIdx].label}
+          rows={tearsheetRows}
+        />
+      )}
     <HubCardFrame
       title="Schedule Variance"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
@@ -240,7 +506,15 @@ export function ScheduleRiskGHubCard() {
             {HISTOGRAM_BUCKETS.map((b, i) => {
               const count = counts[i] ?? 0;
               return (
-                <div key={b.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, height: "100%", justifyContent: "flex-end" }}>
+                <div
+                  key={b.label}
+                  onClick={() => setOpenBucketIdx(i)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View projects with variance ${b.label}`}
+                  onKeyDown={(e) => e.key === "Enter" && setOpenBucketIdx(i)}
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, height: "100%", justifyContent: "flex-end", cursor: "pointer" }}
+                >
                   <span style={{ fontSize: 12, color: "#232729", fontWeight: 600 }}>{count}</span>
                   <div
                     style={{
@@ -248,7 +522,10 @@ export function ScheduleRiskGHubCard() {
                       height: `${Math.max(count > 0 ? 8 : 0, (count / maxCount) * 100)}%`,
                       background: b.color,
                       borderRadius: "3px 3px 0 0",
+                      transition: "opacity 0.15s",
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                   />
                   <span style={{ fontSize: 12, color: "#6A767C" }}>{b.label}</span>
                 </div>
@@ -270,9 +547,12 @@ export function ScheduleRiskGHubCard() {
               {criticalRows.map(({ row, varianceDays, pctComplete }, i) => (
                 <tr key={row.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                   <td style={{ padding: "8px 8px", borderBottom: "1px solid #eee" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#1d5cc9" }}>
+                    <button
+                      onClick={() => setOpenProjectId(row.id)}
+                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                    >
                       {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
-                    </span>
+                    </button>
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
                     <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
@@ -287,12 +567,18 @@ export function ScheduleRiskGHubCard() {
             </tbody>
           </table>
     </HubCardFrame>
+    <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
+    </>
   );
 }
 
 export function ScheduleVariance2HubCard() {
+  const [openSegment, setOpenSegment] = useState<"average" | "onSchedule" | "delays" | "critical" | null>(null);
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const { filteredProjectRows } = useHubFilters();
+
   const portfolioRows = useMemo(() => {
-    return sampleProjectRows
+    return filteredProjectRows
       .map((row) => {
         const milestones = sampleProjectMilestones.get(row.id) ?? [];
         const worstVariance = milestones.reduce(
@@ -319,7 +605,7 @@ export function ScheduleVariance2HubCard() {
         };
       })
       .sort((a, b) => b.worstVariance - a.worstVariance);
-  }, []);
+  }, [filteredProjectRows]);
   const rows = useMemo(() => portfolioRows.slice(0, 7), [portfolioRows]);
 
   const avgVariance = useMemo(() => {
@@ -335,7 +621,78 @@ export function ScheduleVariance2HubCard() {
   ).length;
   const criticalCount = portfolioRows.filter((r) => r.worstVariance >= 14).length;
 
+  // Build tearsheet rows for the selected KPI segment
+  const tearsheetRows = useMemo(() => {
+    if (openSegment === null) return [];
+    let projectsForSegment = filteredProjectRows;
+    if (openSegment === "onSchedule") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        return (d?.variance ?? 0) <= 0;
+      });
+    } else if (openSegment === "delays") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        const v = d?.variance ?? 0;
+        return v >= 7 && v <= 13;
+      });
+    } else if (openSegment === "critical") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        return (d?.variance ?? 0) >= 14;
+      });
+    }
+    return projectsForSegment
+      .map((project) => {
+        const d = scheduleVarianceData.find((x) => x.project === project.name);
+        const varianceDays = d?.variance ?? 0;
+        const currentMilestone = getCurrentMilestoneLabelForProject(project);
+        const curIdx = PROJECT_MILESTONES.indexOf(currentMilestone as typeof PROJECT_MILESTONES[number]);
+        const nextMilestone = curIdx >= 0 && curIdx + 1 < PROJECT_MILESTONES.length
+          ? PROJECT_MILESTONES[curIdx + 1]
+          : "—";
+        return {
+          number: project.number,
+          projectId: project.id,
+          name: project.name,
+          stage: project.stage,
+          currentMilestone,
+          nextMilestone,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          varianceDays,
+        };
+      })
+      .sort((a, b) => b.varianceDays - a.varianceDays);
+  }, [openSegment, filteredProjectRows]);
+
+  const tearsheetLabel = openSegment === "average"
+    ? "All Projects (Average View)"
+    : openSegment === "onSchedule"
+    ? "On Schedule"
+    : openSegment === "delays"
+    ? "Delays (7–13 days)"
+    : openSegment === "critical"
+    ? "Delays (14+ days)"
+    : "";
+
+  const kpiCellStyle = (hasBorderRight: boolean): React.CSSProperties => ({
+    padding: "8px 16px",
+    ...(hasBorderRight ? { borderRight: "1px solid #d6dadc" } : {}),
+    cursor: "pointer",
+    transition: "background 0.15s",
+  });
+
   return (
+    <>
+      {openSegment !== null && (
+        <VarianceBucketTearsheet
+          open={true}
+          onClose={() => setOpenSegment(null)}
+          bucketLabel={tearsheetLabel}
+          rows={tearsheetRows}
+        />
+      )}
     <HubCardFrame
       title="Schedule Variance 2"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
@@ -358,20 +715,55 @@ export function ScheduleVariance2HubCard() {
       }
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
-        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+        <div
+          style={kpiCellStyle(true)}
+          onClick={() => setOpenSegment("average")}
+          role="button"
+          tabIndex={0}
+          aria-label="View all projects by average variance"
+          onKeyDown={(e) => e.key === "Enter" && setOpenSegment("average")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+        >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Average</div>
           <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>+{avgVariance} days</div>
         </div>
-        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+        <div
+          style={kpiCellStyle(true)}
+          onClick={() => setOpenSegment("onSchedule")}
+          role="button"
+          tabIndex={0}
+          aria-label="View projects on schedule"
+          onKeyDown={(e) => e.key === "Enter" && setOpenSegment("onSchedule")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+        >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>On Schedule</div>
           <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#1a7d3a", marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
-          
         </div>
-        <div style={{ padding: "8px 16px", borderRight: "1px solid #d6dadc" }}>
+        <div
+          style={kpiCellStyle(true)}
+          onClick={() => setOpenSegment("delays")}
+          role="button"
+          tabIndex={0}
+          aria-label="View projects with 7–13 day delays"
+          onKeyDown={(e) => e.key === "Enter" && setOpenSegment("delays")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+        >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
           <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#f6a623", marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
-        <div style={{ padding: "8px 16px"}}>
+        <div
+          style={kpiCellStyle(false)}
+          onClick={() => setOpenSegment("critical")}
+          role="button"
+          tabIndex={0}
+          aria-label="View projects with 14+ day delays"
+          onKeyDown={(e) => e.key === "Enter" && setOpenSegment("critical")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+        >
           <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (14+ days)</div>
           <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "#d92626", marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
@@ -390,9 +782,12 @@ export function ScheduleVariance2HubCard() {
           {rows.map((r, i) => (
             <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                <button
+                  onClick={() => setOpenProjectId(r.id)}
+                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                >
                   {r.name}
-                </span>
+                </button>
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
                 <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "#fbe9e7", color: "#b71c1c", fontSize: 12, fontWeight: 600 }}>
@@ -412,5 +807,7 @@ export function ScheduleVariance2HubCard() {
         </tbody>
       </table>
     </HubCardFrame>
+    <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
+    </>
   );
 }

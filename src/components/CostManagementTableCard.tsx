@@ -26,6 +26,7 @@ import {
   PINNED_HEADER_CELL_STYLE,
   StandardRowActions,
 } from "@/components/table/TableActions";
+import { useHubFilters } from "@/context/HubFilterContext";
 
 function formatCurrency(n: number): string {
   if (n === 0) return "$0";
@@ -347,9 +348,10 @@ export default function CostManagementTableCard() {
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [hiddenCols, setHiddenCols] = useState<Set<ColumnKey>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const { filteredProjectRows } = useHubFilters();
 
   const rows = useMemo<CostRow[]>(() => {
-    let base = sampleProjectRows.map((p) => {
+    let base = filteredProjectRows.map((p) => {
       const variance = p.originalBudget - p.estimatedCostAtCompletion;
       return {
         id: p.id,
@@ -379,19 +381,19 @@ export default function CostManagementTableCard() {
     if (filters.program.length) base = base.filter((r) => filters.program.includes(r.program));
     if (filters.state.length) base = base.filter((r) => filters.state.includes(r.state));
     return base;
-  }, [search, filters]);
+  }, [filteredProjectRows, search, filters]);
 
   const stageOptions = useMemo(
-    () => [...new Set(sampleProjectRows.map((p) => p.stage))].sort((a, b) => a.localeCompare(b)),
-    []
+    () => [...new Set(filteredProjectRows.map((p) => p.stage))].sort((a, b) => a.localeCompare(b)),
+    [filteredProjectRows]
   );
   const programOptions = useMemo(
-    () => [...new Set(sampleProjectRows.map((p) => p.program))].sort((a, b) => a.localeCompare(b)),
-    []
+    () => [...new Set(filteredProjectRows.map((p) => p.program))].sort((a, b) => a.localeCompare(b)),
+    [filteredProjectRows]
   );
   const stateOptions = useMemo(
-    () => [...new Set(sampleProjectRows.map((p) => p.state))].filter(Boolean).sort((a, b) => a.localeCompare(b)),
-    []
+    () => [...new Set(filteredProjectRows.map((p) => p.state))].filter(Boolean).sort((a, b) => a.localeCompare(b)),
+    [filteredProjectRows]
   );
 
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);

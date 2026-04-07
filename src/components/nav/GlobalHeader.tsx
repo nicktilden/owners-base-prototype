@@ -32,6 +32,7 @@ const AppPickerPopover = dynamic(() => import('./AppPickerPopover'), { ssr: fals
 const HelpPopover = dynamic(() => import('./HelpPopover'), { ssr: false });
 const UserMenuPopover = dynamic(() => import('./UserMenuPopover'), { ssr: false });
 const BrowseAsTearsheet = dynamic(() => import('./BrowseAsTearsheet'), { ssr: false });
+const ProfileSettingsTearsheet = dynamic(() => import('./ProfileSettingsTearsheet'), { ssr: false });
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ export default function GlobalHeader() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [browseAsOpen, setBrowseAsOpen] = useState(false);
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
 
   const pickerBtnRef = useRef<HTMLButtonElement>(null);
   const appPickerBtnRef = useRef<HTMLButtonElement>(null);
@@ -438,6 +440,7 @@ export default function GlobalHeader() {
                 anchorRef={userMenuBtnRef}
                 onClose={() => setUserMenuOpen(false)}
                 onBrowseAs={() => setBrowseAsOpen(true)}
+                onProfileSettings={() => setProfileSettingsOpen(true)}
               />
             )}
           </PickerWrap>
@@ -446,6 +449,10 @@ export default function GlobalHeader() {
 
       <NavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
       <BrowseAsTearsheet open={browseAsOpen} onClose={() => setBrowseAsOpen(false)} />
+      <ProfileSettingsTearsheet
+        open={profileSettingsOpen}
+        onClose={() => setProfileSettingsOpen(false)}
+      />
     </>
   );
 }
