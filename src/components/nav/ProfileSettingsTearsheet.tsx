@@ -221,7 +221,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Switch aria-label="Enable accounting sync integration" />
               <Typography intent="body">Accounting sync integration disabled</Typography>
             </Box>
-            <Form.SettingsPageFooter style={{ marginTop: 24 }} actions={[<Button key="cancel" variant="secondary" onClick={onClose}>Cancel</Button>, <Button key="save" variant="primary" type="submit">Save Connected Apps</Button>]} />
+            <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" type="submit">Save Connected Apps</Button>
+            </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
       </Card>
@@ -302,13 +305,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                   ]}
                 />
               </Form.Row>
-              <Form.SettingsPageFooter
-                style={{ marginTop: 24 }}
-                actions={[
-                  <Button key="cancel" variant="secondary" onClick={onClose}>Cancel</Button>,
-                  <Button key="save" variant="primary" type="submit">Save Favorites</Button>,
-                ]}
-              />
+              <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+                <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                <Button variant="primary" type="submit">Save Favorites</Button>
+              </Form.SettingsPageFooter>
             </Form.Form>
           </Form>
         </Card>
@@ -336,7 +336,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable mobile push notifications" /><Typography intent="body">Mobile push notifications</Typography></Box>
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable budget alerts" defaultChecked /><Typography intent="body">Budget alerts</Typography></Box>
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable schedule alerts" defaultChecked /><Typography intent="body">Schedule alerts</Typography></Box>
-            <Form.SettingsPageFooter style={{ marginTop: 24 }} actions={[<Button key="cancel" variant="secondary" onClick={onClose}>Cancel</Button>, <Button key="save" variant="primary" type="submit">Save Notifications</Button>]} />
+            <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" type="submit">Save Notifications</Button>
+            </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
       </Card>
@@ -403,7 +406,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Switch aria-label="Enable security alerts" checked={securityAlerts} onChange={(event) => setSecurityAlerts(event.currentTarget.checked)} />
               <Typography intent="body">Email me when suspicious activity is detected</Typography>
             </Box>
-            <Form.SettingsPageFooter style={{ marginTop: 24 }} actions={[<Button key="cancel" variant="secondary" onClick={onClose}>Cancel</Button>, <Button key="save" variant="primary" type="submit">Save Security Settings</Button>]} />
+            <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" type="submit">Save Security Settings</Button>
+            </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
       </Card>
@@ -472,7 +478,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                       <Form.Row>
                         <Form.Text name="officeCountry" label="Office Country" colStart={1} colWidth={6} />
                       </Form.Row>
-                      <Form.SettingsPageFooter style={{ marginTop: 24 }} actions={[<Button key="cancel" variant="secondary" onClick={onClose}>Cancel</Button>, <Button key="save" variant="primary" type="submit">Save Profile</Button>]} />
+                      <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+                        <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                        <Button variant="primary" type="submit">Save Profile</Button>
+                      </Form.SettingsPageFooter>
                     </Form.Form>
                   </Form>
                 </Card>
