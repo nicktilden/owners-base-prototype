@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Box, Button, Card, Checkbox, Form, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
+import { Box, Button, Card, Checkbox, Form, H2, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
 import { createGlobalStyle } from 'styled-components';
 import { useData } from '@/context/DataContext';
 import { usePersona } from '@/context/PersonaContext';
@@ -7,12 +7,18 @@ import type { PermissionKey, ToolPermissionLevel } from '@/types/permissions';
 import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
 
+const ProfileTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"] {
+    flex: 0 0 50vw !important;
+  }
+`;
+
 interface ProfileSettingsTearsheetProps {
   open: boolean;
   onClose: () => void;
 }
 
-const PROFILE_TABS = ['Personal', 'My Connected Apps', 'Favorites', 'Notifications', 'Password & Security'] as const;
+const PROFILE_TABS = ['Personal', 'Preferences', 'Favorites', 'Notifications', 'Password & Security', 'Connected Apps'] as const;
 type ProfileTab = (typeof PROFILE_TABS)[number];
 
 interface OptionValue { id: string; label: string }
@@ -27,23 +33,6 @@ interface ProfileFormValues {
 
 const USER_ROLES: UserRole[] = ['Executive Strategy', 'Operations & Administration', 'Project Delivery', 'Field Opperations'];
 const FORM_CARD_STYLE = { padding: 16 };
-const TearsheetAnimationOverride = createGlobalStyle`
-  /* Tearsheet panel slide animation: 800ms -> 200ms */
-  [class*="sc-ljrxoq-0"] {
-    animation-duration: 200ms !important;
-  }
-
-  /* Close button: no enter/exit animation */
-  [class*="sc-ljrxoq-4"] {
-    animation: none !important;
-    transition: none !important;
-  }
-
-  /* Scrim fade transition: 150ms -> 75ms */
-  [class*="sc-1ijdug2-0"] {
-    transition-duration: 75ms !important;
-  }
-`;
 
 function toIso(value: Date | null): string { return value ? value.toISOString() : ''; }
 function safeParseRecord<T extends Record<string, unknown>>(value: string, fallback: T): T {
@@ -65,6 +54,11 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
   const [rememberDevices, setRememberDevices] = useState(true);
   const [securityAlerts, setSecurityAlerts] = useState(true);
   const [sessionTimeoutMins, setSessionTimeoutMins] = useState('30');
+  const [textDirectionControls, setTextDirectionControls] = useState(false);
+  const [startWeekOnMonday, setStartWeekOnMonday] = useState(false);
+  const [autoTimeZone, setAutoTimeZone] = useState(true);
+  const [showViewHistory, setShowViewHistory] = useState(true);
+  const [profileDiscoverability, setProfileDiscoverability] = useState(true);
   const { activeUser, setActiveUser, users, setUsers } = usePersona();
   const { data, setData } = useData();
 
@@ -197,12 +191,203 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     setData({ ...data, users: nextUsers });
   }
 
+  function renderPreferencesTab() {
+    return (
+      <>
+      <Card>
+        <Form
+          initialValues={{ language: 'English (US)', numberFormat: 'Default', dateFormat: 'Relative', prefsTimeZone: '(GMT-5:00) Chicago' }}
+          onSubmit={() => undefined}
+        >
+          <Form.Form style={FORM_CARD_STYLE}>
+            <H2 style={{ marginBottom: 16 }}>Language & time</H2>
+
+            <Form.Row>
+              <Form.Select
+                name="language"
+                label="Language"
+                colStart={1}
+                colWidth={8}
+                options={[
+                  { id: 'English (US)', label: 'English (US)' },
+                  { id: 'English (UK)', label: 'English (UK)' },
+                  { id: 'Español', label: 'Español' },
+                  { id: 'Français', label: 'Français' },
+                  { id: 'Deutsch', label: 'Deutsch' },
+                  { id: 'Português', label: 'Português' },
+                  { id: '日本語', label: '日本語' },
+                ]}
+              />
+            </Form.Row>
+            <Typography intent="small" color="gray45" style={{ marginTop: -8, marginBottom: 16 }}>Choose the language you want to use Procore in</Typography>
+
+            <Form.Row>
+              <Form.Select
+                name="numberFormat"
+                label="Number format"
+                colStart={1}
+                colWidth={8}
+                options={[
+                  { id: 'Default', label: 'Default' },
+                  { id: '1,234.56', label: '1,234.56' },
+                  { id: '1.234,56', label: '1.234,56' },
+                  { id: '1 234,56', label: '1 234,56' },
+                ]}
+              />
+            </Form.Row>
+            <Typography intent="small" color="gray45" style={{ marginTop: -8, marginBottom: 16 }}>Choose how numbers and currencies are formatted. Default uses your language setting.</Typography>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8 }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Always show text direction controls</Typography>
+                <Typography intent="small" color="gray45">Show the option to change text direction (left to right or right to left) in the editor, regardless of what language you&apos;re using</Typography>
+              </Box>
+              <Switch aria-label="Always show text direction controls" checked={textDirectionControls} onChange={(e) => setTextDirectionControls(e.currentTarget.checked)} />
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, borderTop: '1px solid #e0e0e0' }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Start week on Monday</Typography>
+                <Typography intent="small" color="gray45">This will affect the way your calendars appear in Procore</Typography>
+              </Box>
+              <Switch aria-label="Start week on Monday" checked={startWeekOnMonday} onChange={(e) => setStartWeekOnMonday(e.currentTarget.checked)} />
+            </Box>
+
+            <Box style={{ borderTop: '1px solid #e0e0e0', paddingTop: 8, paddingBottom: 8 }}>
+              <Form.Row>
+                <Form.Select
+                  name="dateFormat"
+                  label="Date format"
+                  colStart={1}
+                  colWidth={8}
+                  options={[
+                    { id: 'Relative', label: 'Relative' },
+                    { id: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+                    { id: 'DD/MM/YYYY', label: 'DD/MM/YYYY' },
+                    { id: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+                  ]}
+                />
+              </Form.Row>
+              <Typography intent="small" color="gray45" style={{ marginTop: -8, marginBottom: 16 }}>Set the default format for new @date mentions</Typography>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, borderTop: '1px solid #e0e0e0' }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Set time zone automatically using your location</Typography>
+                <Typography intent="small" color="gray45">Reminders, notifications, and emails will be delivered to you based on your time zone</Typography>
+              </Box>
+              <Switch aria-label="Set time zone automatically" checked={autoTimeZone} onChange={(e) => setAutoTimeZone(e.currentTarget.checked)} />
+            </Box>
+
+            <Box style={{ borderTop: '1px solid #e0e0e0', paddingTop: 8, paddingBottom: 8 }}>
+              <Form.Row>
+                <Form.Select
+                  name="prefsTimeZone"
+                  label="Time zone"
+                  colStart={1}
+                  colWidth={8}
+                  options={[
+                    { id: '(GMT-5:00) Chicago', label: '(GMT-5:00) Chicago' },
+                    { id: '(GMT-8:00) Los Angeles', label: '(GMT-8:00) Los Angeles' },
+                    { id: '(GMT-7:00) Denver', label: '(GMT-7:00) Denver' },
+                    { id: '(GMT-6:00) Dallas', label: '(GMT-6:00) Dallas' },
+                    { id: '(GMT-5:00) New York', label: '(GMT-5:00) New York' },
+                    { id: '(GMT+0:00) London', label: '(GMT+0:00) London' },
+                    { id: '(GMT+1:00) Berlin', label: '(GMT+1:00) Berlin' },
+                    { id: '(GMT+9:00) Tokyo', label: '(GMT+9:00) Tokyo' },
+                    { id: '(GMT+10:00) Sydney', label: '(GMT+10:00) Sydney' },
+                  ]}
+                />
+              </Form.Row>
+              <Typography intent="small" color="gray45" style={{ marginTop: -8 }}>Choose your time zone</Typography>
+            </Box>
+
+            <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" type="submit">Save Preferences</Button>
+            </Form.SettingsPageFooter>
+          </Form.Form>
+        </Form>
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
+        <Form initialValues={{ cookieSettings: 'Customize' }} onSubmit={() => undefined}>
+          <Form.Form style={FORM_CARD_STYLE}>
+            <H2 style={{ marginBottom: 16 }}>Privacy</H2>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8 }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Cookie settings</Typography>
+                <Typography intent="small" color="gray45">See the Cookie Notice for more information</Typography>
+              </Box>
+              <Form.Select
+                name="cookieSettings"
+                label=""
+                colStart={1}
+                colWidth={3}
+                options={[
+                  { id: 'Customize', label: 'Customize' },
+                  { id: 'Accept All', label: 'Accept All' },
+                  { id: 'Reject All', label: 'Reject All' },
+                ]}
+              />
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, borderTop: '1px solid #e0e0e0' }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Show my view history</Typography>
+                <Typography intent="small" color="gray45">People with edit or full access will be able to see when you&apos;ve viewed a page.</Typography>
+              </Box>
+              <Switch aria-label="Show my view history" checked={showViewHistory} onChange={(e) => setShowViewHistory(e.currentTarget.checked)} />
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 8, borderTop: '1px solid #e0e0e0' }}>
+              <Box>
+                <Typography intent="body" style={{ fontWeight: 600 }}>Profile discoverability</Typography>
+                <Typography intent="small" color="gray45">Users who know your email will see your Procore name and profile picture when inviting you to a new workspace.</Typography>
+              </Box>
+              <Switch aria-label="Profile discoverability" checked={profileDiscoverability} onChange={(e) => setProfileDiscoverability(e.currentTarget.checked)} />
+            </Box>
+          </Form.Form>
+        </Form>
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
+        <Form initialValues={{ favoriteLandingPage: 'Portfolio Home' }} onSubmit={() => undefined}>
+          <Form.Form style={FORM_CARD_STYLE}>
+            <H2 style={{ marginBottom: 16 }}>Defaults</H2>
+            <Form.Row>
+              <Form.Select
+                name="favoriteLandingPage"
+                label="Default Landing Page"
+                colStart={1}
+                colWidth={12}
+                options={[
+                  { id: 'Portfolio Home', label: 'Portfolio Home' },
+                  { id: 'Personal Dashboard', label: 'Personal Dashboard' },
+                  { id: 'Home', label: 'Home' },
+                  { id: 'Documents', label: 'Documents' },
+                  { id: 'Schedule', label: 'Schedule' },
+                ]}
+              />
+            </Form.Row>
+            <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+              <Button variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" type="submit">Save Defaults</Button>
+            </Form.SettingsPageFooter>
+          </Form.Form>
+        </Form>
+      </Card>
+      </>
+    );
+  }
+
   function renderConnectedAppsTab() {
     return (
       <Card>
         <Form initialValues={{ connectedWorkspace: 'Owners Enterprise Workspace', documentStorage: 'SharePoint' }} onSubmit={() => undefined}>
           <Form.Form style={FORM_CARD_STYLE}>
-            <Typography intent="h2" style={{ marginBottom: 8 }}>My Connected Apps</Typography>
+            <H2 style={{ marginBottom: 16 }}>My Connected Apps</H2>
             <Form.Row>
               <Form.Text name="connectedWorkspace" label="Connected Workspace" colStart={1} colWidth={6} />
               <Form.Select
@@ -234,83 +419,78 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
   function renderFavoritesTab() {
     return (
       <>
-        <Card style={{ marginBottom: 16 }}>
-          <Box style={FORM_CARD_STYLE}>
-            <Typography intent="h2" style={{ marginBottom: 8 }}>Favorite Projects</Typography>
-            <Box style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {projectOptions.map((project) => {
-                const checked = Boolean(activeUser?.favorites.projectIds.includes(project.id));
-                return (
-                  <Checkbox
-                    key={project.id}
-                    checked={checked}
-                    onChange={(event) => {
-                      const currentlySelected = activeUser?.favorites.projectIds ?? [];
-                      const nextProjectIds = event.currentTarget.checked
-                        ? [...currentlySelected, project.id]
-                        : currentlySelected.filter((id) => id !== project.id);
-                      updateFavoriteSelections(nextProjectIds, activeUser?.favorites.toolKeys ?? []);
-                    }}
-                  >
-                    {project.label}
-                  </Checkbox>
-                );
-              })}
-            </Box>
-          </Box>
+        <Card style={{ marginBottom: 16, padding: 16 }}>
+          <H2 style={{ marginBottom: 16 }}>Favorite Projects</H2>
+          <Table.Container>
+            <Table>
+              <Table.Header>
+                <Table.HeaderRow>
+                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
+                  <Table.HeaderCell>Project</Table.HeaderCell>
+                </Table.HeaderRow>
+              </Table.Header>
+              <Table.Body>
+                {projectOptions.map((project) => {
+                  const checked = Boolean(activeUser?.favorites.projectIds.includes(project.id));
+                  return (
+                    <Table.BodyRow key={project.id}>
+                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
+                        <Checkbox
+                          checked={checked}
+                          onChange={(event) => {
+                            const currentlySelected = activeUser?.favorites.projectIds ?? [];
+                            const nextProjectIds = event.currentTarget.checked
+                              ? [...currentlySelected, project.id]
+                              : currentlySelected.filter((id) => id !== project.id);
+                            updateFavoriteSelections(nextProjectIds, activeUser?.favorites.toolKeys ?? []);
+                          }}
+                          aria-label={`Favorite ${project.label}`}
+                        />
+                      </Table.BodyCell>
+                      <Table.BodyCell><Table.TextCell>{project.label}</Table.TextCell></Table.BodyCell>
+                    </Table.BodyRow>
+                  );
+                })}
+              </Table.Body>
+            </Table>
+          </Table.Container>
         </Card>
 
-        <Card style={{ marginBottom: 16 }}>
-          <Box style={FORM_CARD_STYLE}>
-            <Typography intent="h2" style={{ marginBottom: 8 }}>Favorite Tools</Typography>
-            <Box style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {toolOptions.map((tool) => {
-                const checked = Boolean(activeUser?.favorites.toolKeys.includes(tool.id as ToolKey));
-                return (
-                  <Checkbox
-                    key={tool.id}
-                    checked={checked}
-                    onChange={(event) => {
-                      const currentlySelected = activeUser?.favorites.toolKeys ?? [];
-                      const nextToolIds = event.currentTarget.checked
-                        ? [...currentlySelected, tool.id as ToolKey]
-                        : currentlySelected.filter((id) => id !== tool.id);
-                      updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], nextToolIds);
-                    }}
-                  >
-                    {tool.label}
-                  </Checkbox>
-                );
-              })}
-            </Box>
-          </Box>
-        </Card>
-
-        <Card>
-          <Form initialValues={{ favoriteLandingPage: 'Portfolio Home' }} onSubmit={() => undefined}>
-            <Form.Form style={FORM_CARD_STYLE}>
-              <Typography intent="h2" style={{ marginBottom: 8 }}>Defaults</Typography>
-              <Form.Row>
-                <Form.Select
-                  name="favoriteLandingPage"
-                  label="Default Landing Page"
-                  colStart={1}
-                  colWidth={12}
-                  options={[
-                    { id: 'Portfolio Home', label: 'Portfolio Home' },
-                    { id: 'Personal Dashboard', label: 'Personal Dashboard' },
-                    { id: 'Home', label: 'Home' },
-                    { id: 'Documents', label: 'Documents' },
-                    { id: 'Schedule', label: 'Schedule' },
-                  ]}
-                />
-              </Form.Row>
-              <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-                <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button variant="primary" type="submit">Save Favorites</Button>
-              </Form.SettingsPageFooter>
-            </Form.Form>
-          </Form>
+        <Card style={{ marginBottom: 16, padding: 16 }}>
+          <H2 style={{ marginBottom: 16 }}>Favorite Tools</H2>
+          <Table.Container>
+            <Table>
+              <Table.Header>
+                <Table.HeaderRow>
+                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
+                  <Table.HeaderCell>Tool</Table.HeaderCell>
+                </Table.HeaderRow>
+              </Table.Header>
+              <Table.Body>
+                {toolOptions.map((tool) => {
+                  const checked = Boolean(activeUser?.favorites.toolKeys.includes(tool.id as ToolKey));
+                  return (
+                    <Table.BodyRow key={tool.id}>
+                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
+                        <Checkbox
+                          checked={checked}
+                          onChange={(event) => {
+                            const currentlySelected = activeUser?.favorites.toolKeys ?? [];
+                            const nextToolIds = event.currentTarget.checked
+                              ? [...currentlySelected, tool.id as ToolKey]
+                              : currentlySelected.filter((id) => id !== tool.id);
+                            updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], nextToolIds);
+                          }}
+                          aria-label={`Favorite ${tool.label}`}
+                        />
+                      </Table.BodyCell>
+                      <Table.BodyCell><Table.TextCell>{tool.label}</Table.TextCell></Table.BodyCell>
+                    </Table.BodyRow>
+                  );
+                })}
+              </Table.Body>
+            </Table>
+          </Table.Container>
         </Card>
       </>
     );
@@ -321,7 +501,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
       <Card>
         <Form initialValues={{ emailFrequency: 'Immediate', digestTime: '08:00 AM' }} onSubmit={() => undefined}>
           <Form.Form style={FORM_CARD_STYLE}>
-            <Typography intent="h2" style={{ marginBottom: 8 }}>Notifications</Typography>
+            <H2 style={{ marginBottom: 16 }}>Notifications</H2>
             <Form.Row>
               <Form.Select
                 name="emailFrequency"
@@ -355,7 +535,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
           enableReinitialize
         >
           <Form.Form style={FORM_CARD_STYLE}>
-            <Typography intent="h2" style={{ marginBottom: 8 }}>Password & Security</Typography>
+            <H2 style={{ marginBottom: 16 }}>Password & Security</H2>
             <Typography intent="h3">Password</Typography>
             <Form.Row>
               <Form.Text name="currentPassword" label="Current Password" colStart={1} colWidth={6} type="password" required />
@@ -418,8 +598,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
 
   return (
     <>
-      <TearsheetAnimationOverride />
-      <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right" block>
+      <ProfileTearsheetWidth />
+      <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right">
         <Page style={{ height: '100%' }}>
           <Page.Main style={{ height: '100%', overflow: 'hidden' }}>
             <Page.Header>
@@ -439,7 +619,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                 <Card>
                   <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
                     <Form.Form style={FORM_CARD_STYLE}>
-                      <Typography intent="h2" style={{ marginBottom: 8 }}>Personal Info</Typography>
+                      <H2 style={{ marginBottom: 16 }}>Personal Info</H2>
                       <Form.Row>
                         <Form.Text name="firstName" label="First Name" colStart={1} colWidth={6} required />
                         <Form.Text name="lastName" label="Last Name" colStart={7} colWidth={6} required />
@@ -486,10 +666,11 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                   </Form>
                 </Card>
               )}
-              {selectedTab === 'My Connected Apps' && renderConnectedAppsTab()}
+              {selectedTab === 'Preferences' && renderPreferencesTab()}
               {selectedTab === 'Favorites' && renderFavoritesTab()}
               {selectedTab === 'Notifications' && renderNotificationsTab()}
               {selectedTab === 'Password & Security' && renderPasswordAndSecurityTab()}
+              {selectedTab === 'Connected Apps' && renderConnectedAppsTab()}
             </Page.Body>
           </Page.Main>
         </Page>

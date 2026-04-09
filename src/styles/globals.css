@@ -35,3 +35,41 @@ table th *,
   line-height: 16px !important;
   color: #232729;
 }
+
+/* Horizontal scrolling: table extends beyond its container */
+[class*="StyledTableWrapper"] {
+  overflow-x: auto;
+}
+
+table {
+  table-layout: fixed;
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Column resizing: draggable right edge on header cells */
+table th,
+[role="columnheader"] {
+  overflow: hidden;
+  resize: horizontal;
+  min-width: 60px;
+  position: relative;
+}
+
+/* Checkbox / snugfit columns: fixed narrow width, no resize */
+table th[snugfit],
+table th:has(input[type="checkbox"]),
+table th:has([role="checkbox"]) {
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  resize: none;
+}
+
+/* Style the resize handle area */
+table th::-webkit-resizer,
+[role="columnheader"]::-webkit-resizer {
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+}

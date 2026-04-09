@@ -132,6 +132,7 @@ const TearsheetHeader = styled.div`
 `;
 
 const TearsheetBody = styled.div`
+  width: 75%;
   padding: 16px 24px 24px;
   overflow-y: auto;
 `;

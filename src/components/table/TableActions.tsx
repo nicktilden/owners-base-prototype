@@ -18,23 +18,11 @@ const BUTTON_STYLE: React.CSSProperties = {
 };
 
 export const PINNED_HEADER_CELL_STYLE: React.CSSProperties = {
-  position: "sticky",
-  right: 0,
-  zIndex: 3,
-  background: "#f4f5f6",
-  borderLeft: "2px solid #d6dadc",
-  boxShadow: "-8px 0 12px -10px rgba(35, 39, 41, 0.35)",
   paddingLeft: 16,
   paddingRight: 16,
 };
 
 export const PINNED_BODY_CELL_STYLE: React.CSSProperties = {
-  position: "sticky",
-  right: 0,
-  zIndex: 2,
-  background: "#fff",
-  borderLeft: "2px solid #d6dadc",
-  boxShadow: "-8px 0 12px -10px rgba(35, 39, 41, 0.25)",
   paddingLeft: 16,
   paddingRight: 16,
 };

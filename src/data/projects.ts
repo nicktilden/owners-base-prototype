@@ -545,7 +545,7 @@ export const sampleProjectMilestones: Map<number, ProjectMilestone[]> = (() => {
 export const TOP_SCHEDULE_RISK_PROJECT_COUNT = 5;
 
 /** Milestone heatmap (Project Dates Variance D): additional rows beyond `TOP_SCHEDULE_RISK_PROJECT_COUNT`. */
-export const MILESTONE_HEATMAP_EXTRA_PROJECT_COUNT = 3;
+export const MILESTONE_HEATMAP_EXTRA_PROJECT_COUNT = 10;
 
 /** Same sort as `topScheduleRiskProjectRows`, extended for the milestone heatmap card only. */
 export const topScheduleRiskProjectRowsForMilestoneHeatmap: ProjectRow[] = (() => {
@@ -607,6 +607,26 @@ export const projectDatesVarianceRows: ProjectDatesVarianceRow[] = topScheduleRi
 /** Variance axis bounds for Project Dates Variance card (days). Wider than sample extrema so markers aren't clamped at the rails. */
 export const VARIANCE_AXIS_MIN = -24;
 export const VARIANCE_AXIS_MAX = 32;
+
+/** Contact details for a project manager shown in tearsheet/detail views. */
+export interface ProjectManagerContact {
+  name: string;
+  company: string;
+  email: string;
+  mobile: string;
+  office: string;
+}
+
+export const PROJECT_MANAGER_CONTACTS: Record<string, ProjectManagerContact> = {
+  "Sarah Chen": { name: "Sarah Chen", company: "Meridian Construction Group", email: "s.chen@meridiancg.com", mobile: "(617) 482-0142", office: "(617) 482-0100" },
+  "Marcus Rivera": { name: "Marcus Rivera", company: "Summit Builders Inc.", email: "m.rivera@summitbuilders.com", mobile: "(312) 736-0198", office: "(312) 736-0100" },
+  "Priya Nair": { name: "Priya Nair", company: "Apex Project Solutions", email: "p.nair@apexprojects.com", mobile: "(512) 649-4119", office: "(512) 888-9987" },
+  "James O'Brien": { name: "James O'Brien", company: "Cornerstone Development", email: "j.obrien@cornerstonedev.com", mobile: "(404) 523-0183", office: "(404) 523-0100" },
+  "Elena Vasquez": { name: "Elena Vasquez", company: "Vertigo Construction", email: "e.vasquez@vertigoconstruction.com", mobile: "(602) 381-0156", office: "(602) 381-0100" },
+  "David Kim": { name: "David Kim", company: "Pacific Ridge Partners", email: "d.kim@pacificridge.com", mobile: "(415) 267-0129", office: "(415) 267-0100" },
+  "Aisha Moyo": { name: "Aisha Moyo", company: "Ironclad Project Management", email: "a.moyo@ironcladpm.com", mobile: "(303) 894-0171", office: "(303) 894-0100" },
+  "Thomas Nguyen": { name: "Thomas Nguyen", company: "Pinnacle Construction Services", email: "t.nguyen@pinnacleconst.com", mobile: "(214) 715-0194", office: "(214) 715-0100" },
+};
 
 /** Color for variance: red (late / behind), yellow (on time), green (ahead). */
 export function varianceToColor(varianceDays: number): string {

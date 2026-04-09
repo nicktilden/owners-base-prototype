@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Button, Select, Tearsheet, Typography } from "@procore/core-react";
-import { EllipsisVertical, ExternalLink } from "@procore/core-icons";
+import { Avatar, Button, Card, H2, Link, Pill, Select, Tearsheet, Typography } from "@procore/core-react";
+import { Comment, Duplicate, EllipsisVertical, Envelope, ExternalLink, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -9,6 +9,7 @@ import {
   getCurrentMilestoneLabelForProject,
   PROJECT_MILESTONES,
   varianceColors,
+  PROJECT_MANAGER_CONTACTS,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { createGlobalStyle } from "styled-components";
@@ -20,6 +21,21 @@ const TearsheetWide = createGlobalStyle`
     max-width: 1100px !important;
   }
 `;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function addDaysLocal(isoDate: string, days: number): string {
+  const d = new Date(isoDate);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function pmAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const palette = ["#1d5cc9", "#00a878", "#6b4ce6", "#e05263", "#f6a623", "#4a6572", "#8e24aa", "#0097a7"];
+  return palette[Math.abs(hash) % palette.length];
+}
 
 // ─── Project schedule detail tearsheet ───────────────────────────────────────
 
@@ -58,6 +74,29 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
   );
   const currentMilestone = project ? getCurrentMilestoneLabelForProject(project) : "";
 
+  const firstMilestoneWithActual = milestones.find(m => m.actualDate !== null);
+  const startVariance = firstMilestoneWithActual?.varianceDays ?? 0;
+  const actualStartDate = startVariance !== 0 && project ? addDaysLocal(project.startDate, startVariance) : null;
+  const expectedEndDate = scheduleVariance !== 0 && project ? addDaysLocal(project.endDate, scheduleVariance) : null;
+  const pmContact = project ? PROJECT_MANAGER_CONTACTS[project.projectManager] ?? null : null;
+
+  const timeline = useMemo(() => {
+    if (!project) return null;
+    const bStart = new Date(project.startDate).getTime();
+    const bEnd = new Date(project.endDate).getTime();
+    const aStart = actualStartDate ? new Date(actualStartDate).getTime() : bStart;
+    const eEnd = expectedEndDate ? new Date(expectedEndDate).getTime() : bEnd;
+    const tMin = Math.min(bStart, aStart);
+    const tMax = Math.max(bEnd, eEnd);
+    const span = tMax - tMin || 1;
+    return {
+      baselineLeft: ((bStart - tMin) / span) * 100,
+      baselineWidth: ((bEnd - bStart) / span) * 100,
+      expectedLeft: ((aStart - tMin) / span) * 100,
+      expectedWidth: ((eEnd - aStart) / span) * 100,
+    };
+  }, [project, actualStartDate, expectedEndDate]);
+
   return (
     <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right" block>
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -65,28 +104,19 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
         <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
           {project ? (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{project.number}</Typography>
-                <span style={{ color: "#d6dadc" }}>·</span>
-                <Typography intent="small" style={{ color: "#6a767c" }}>{project.stage}</Typography>
-              </div>
+              <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
               <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block" }}>
                 {project.name}
               </Typography>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
-                  <span style={{ fontWeight: 600 }}>Start:</span> {formatDate(project.startDate)}
-                </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
-                  <span style={{ fontWeight: 600 }}>End:</span> {formatDate(project.endDate)}
-                </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
-                  <span style={{ fontWeight: 600 }}>Schedule Variance:</span>{" "}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+                <Pill color="blue">{project.stage}</Pill>
+                <Typography intent="small" color="gray45">
+                  <Typography intent="small" weight="bold">Schedule Variance:</Typography>{" "}
                   {varianceBadge(scheduleVariance)}
-                </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
-                  <span style={{ fontWeight: 600 }}>Current Milestone:</span> {currentMilestone}
-                </span>
+                </Typography>
+                <Typography intent="small" color="gray45">
+                  <Typography intent="small" weight="bold">Current Milestone:</Typography> {currentMilestone}
+                </Typography>
               </div>
             </>
           ) : (
@@ -94,49 +124,149 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
           )}
         </div>
 
-        {/* Body — milestone table */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-          {milestones.length === 0 ? (
-            <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
-          ) : (
-            <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: "#f5f6f7" }}>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
-                    <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {milestones.map((m, i) => {
-                    const isCurrent = m.name === currentMilestone;
-                    return (
-                      <tr
-                        key={m.name}
-                        style={{
-                          background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
-                        }}
-                      >
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
-                          {m.name}
-                          {isCurrent && (
-                            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "#1d5cc9", background: "#e8eefb", borderRadius: 3, padding: "1px 6px" }}>
-                              Current
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {project && (
+            <>
+              {/* ── Schedule Duration ── */}
+              <Card style={{ margin: 16, padding: 16 }}>
+                <H2 style={{ marginBottom: 16 }}>Schedule Duration</H2>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: 16 }}>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Start Date (Baseline)</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.startDate)}</Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Actual Start</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>
+                      {actualStartDate ? (
+                        <><span style={{ color: varianceColors(startVariance).bg }}>{formatDate(actualStartDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(startVariance)}</span></>
+                      ) : (
+                        <>{formatDate(project.startDate)} <Pill color="green">On Time</Pill></>
+                      )}
+                    </Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>End Date</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.endDate)}</Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Expected Completion</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>
+                      {expectedEndDate ? (
+                        <><span style={{ color: varianceColors(scheduleVariance).bg }}>{formatDate(expectedEndDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(scheduleVariance)}</span></>
+                      ) : (
+                        <>{formatDate(project.endDate)} <Pill color="green">On Schedule</Pill></>
+                      )}
+                    </Typography>
+                  </div>
+                </div>
+                {timeline && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: `${timeline.baselineLeft}%`, width: `${timeline.baselineWidth}%`, height: "100%", background: "#b0b8bc", borderRadius: 4 }} />
+                      </div>
+                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Baseline</Typography>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: `${timeline.expectedLeft}%`, width: `${timeline.expectedWidth}%`, height: "100%", background: varianceColors(scheduleVariance).bg, borderRadius: 4, opacity: 0.85 }} />
+                      </div>
+                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Expected</Typography>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingRight: 64 }}>
+                      <Typography intent="small" color="gray45">{formatDate(actualStartDate ?? project.startDate)}</Typography>
+                      <Typography intent="small" color="gray45">{formatDate(expectedEndDate ?? project.endDate)}</Typography>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* ── Project Manager ── */}
+              {pmContact && (
+                <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+                  <H2 style={{ marginBottom: 16 }}>Project Manager</H2>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <Avatar size="lg" role="img" aria-label={pmContact.name}>
+                      <Avatar.Label>{pmContact.name.split(" ").map(n => n[0]).join("")}</Avatar.Label>
+                    </Avatar>
+                    <div>
+                      <Typography intent="body" weight="bold">{pmContact.name}</Typography>
+                      <Typography intent="small" color="gray45">{pmContact.company}</Typography>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    <Button variant="secondary" size="sm" icon={<Envelope size="sm" />}>Send Mail</Button>
+                    <Button variant="secondary" size="sm" icon={<Comment size="sm" />}>Direct Message</Button>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <Envelope size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`mailto:${pmContact.email}`} style={{ fontSize: 13, flex: 1 }}>{pmContact.email}</Link>
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.email)} aria-label="Copy email" />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <PhoneMobile size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`tel:${pmContact.mobile}`} style={{ fontSize: 13 }}>{pmContact.mobile}</Link>
+                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(mobile)</Typography>
+                    <span style={{ flex: 1 }} />
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.mobile)} aria-label="Copy mobile" />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <Phone size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`tel:${pmContact.office}`} style={{ fontSize: 13 }}>{pmContact.office}</Link>
+                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(office)</Typography>
+                    <span style={{ flex: 1 }} />
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.office)} aria-label="Copy office" />
+                  </div>
+                </Card>
+              )}
+            </>
           )}
+
+          {/* ── Project Milestones ── */}
+          <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+            <H2 style={{ marginBottom: 16 }}>Project Milestones</H2>
+            {milestones.length === 0 ? (
+              <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
+            ) : (
+              <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f5f6f7" }}>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
+                      <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {milestones.map((m, i) => {
+                      const isCurrent = m.name === currentMilestone;
+                      return (
+                        <tr
+                          key={m.name}
+                          style={{
+                            background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
+                          }}
+                        >
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
+                            {m.name}
+                            {isCurrent && (
+                              <Pill color="blue" style={{ marginLeft: 8 }}>Current</Pill>
+                            )}
+                          </td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </div>
       </div>
     </Tearsheet>
@@ -425,16 +555,23 @@ export function ScheduleRiskGHubCard() {
               : 0;
           const pctComplete =
             totalDays > 0 ? Math.round((elapsedDays / totalDays) * 100) : 0;
+          const endDateStr = project?.endDate ?? "";
+          const endMs = endDateStr ? new Date(endDateStr).getTime() : 0;
+          const expectedCompletionDate = endMs && varianceDays > 0
+            ? new Date(endMs + varianceDays * 24 * 60 * 60 * 1000).toISOString()
+            : endDateStr;
           return {
             row,
             critCount,
             varianceDays,
             pctComplete,
+            endDate: endDateStr,
+            expectedCompletionDate,
           };
         })
-        .filter((r) => r.critCount > 0)
-        .sort((a, b) => b.critCount - a.critCount)
-        .slice(0, 7),
+        .filter((r) => r.varianceDays > 0 && r.pctComplete < 100)
+        .sort((a, b) => b.varianceDays - a.varianceDays)
+        .slice(0, 14),
     [filteredProjectRows]
   );
 
@@ -539,12 +676,14 @@ export function ScheduleRiskGHubCard() {
             <thead>
               <tr>
                 <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Project</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>End Date</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C", whiteSpace: "nowrap" }}>Expected Completion</th>
                 <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Variance</th>
                 <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>% Complete</th>
               </tr>
             </thead>
             <tbody>
-              {criticalRows.map(({ row, varianceDays, pctComplete }, i) => (
+              {criticalRows.map(({ row, varianceDays, pctComplete, endDate, expectedCompletionDate }, i) => (
                 <tr key={row.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                   <td style={{ padding: "8px 8px", borderBottom: "1px solid #eee" }}>
                     <button
@@ -553,6 +692,12 @@ export function ScheduleRiskGHubCard() {
                     >
                       {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                     </button>
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
+                    {endDate ? formatDate(endDate) : "—"}
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
+                    {expectedCompletionDate ? formatDate(expectedCompletionDate) : "—"}
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
                     {varianceBadge(varianceDays)}
