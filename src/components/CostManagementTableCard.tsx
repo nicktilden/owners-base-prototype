@@ -61,9 +61,9 @@ const SearchInputWrap = styled.div`
   height: 36px;
   gap: 8px;
   min-width: 260px;
-  background: #fff;
+  background: var(--color-surface-primary);
   &:focus-within {
-    border-color: #1d5cc9;
+    border-color: var(--color-text-link);
     box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
   }
 `;
@@ -112,8 +112,8 @@ const TableArea = styled.div`
 const SidePanel = styled.div`
   width: 280px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -124,7 +124,7 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const PanelTitle = styled.span`
@@ -200,11 +200,11 @@ const ColumnToggleLabel = styled.span`
 `;
 
 const GroupHeaderCell = styled.td<{ $depth: number }>`
-  background: #ffffff;
+  background: var(--color-surface-primary);
   padding: 0 8px 0 ${({ $depth }) => $depth * 12}px;
   height: 44px;
-  border-bottom: 1px solid #e0e4e7;
-  border-top: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
+  border-top: 1px solid var(--color-border-separator);
   position: relative;
   &::before {
     content: "";
@@ -213,8 +213,8 @@ const GroupHeaderCell = styled.td<{ $depth: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $depth }) => ($depth > 0 ? 12 : 0)}px;
-    background: #f4f5f6;
-    border-right: 1px solid #d6dadc;
+    background: var(--color-surface-secondary);
+    border-right: 1px solid var(--color-border-separator);
     display: ${({ $depth }) => ($depth > 0 ? "block" : "none")};
   }
 `;
@@ -230,7 +230,7 @@ const GroupHeaderContent = styled.button`
   font-size: 13px;
   font-weight: 600;
   color: #1a2226;
-  &:hover { color: #1d5cc9; }
+  &:hover { color: var(--color-text-link); }
 `;
 
 const DepthRail = styled.td<{ $depth: number }>`
@@ -249,8 +249,8 @@ const DepthRail = styled.td<{ $depth: number }>`
       to right,
       #f4f5f6 0px,
       #f4f5f6 11px,
-      #d6dadc 11px,
-      #d6dadc 12px
+      var(--color-border-separator) 11px,
+      var(--color-border-separator) 12px
     );
   }
 `;
@@ -281,7 +281,7 @@ const BulkCountLabel = styled.span`
 const Th = styled.th`
   font-size: 12px;
   font-weight: 600;
-  color: #232729;
+  color: var(--color-text-primary);
  `;
 
 type ColumnKey =
@@ -443,14 +443,15 @@ export default function CostManagementTableCard() {
   }
 
   return (
-    <DetailPage.Card navigationLabel="Cost Management">
+    <DetailPage.Card navigationLabel="Cost Management" className="card_container">
       <DetailPage.Section heading="Cost Management">
         <Toolbar>
           <ToolbarLeft>
             <SearchInputWrap>
-              <SearchInput placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <SearchInput className="i_search" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
             </SearchInputWrap>
             <ToggleButton
+              className="b_toggle"
               selected={filterOpen}
               icon={<Filter />}
               onClick={() => {
@@ -492,6 +493,7 @@ export default function CostManagementTableCard() {
               </SegmentedController.Segment>
             </SegmentedController>
             <ToggleButton
+              className="b_toggle"
               selected={configOpen}
               icon={<Sliders />}
               onClick={() => {
@@ -511,11 +513,11 @@ export default function CostManagementTableCard() {
                 <PanelTitle>Filters</PanelTitle>
                 <PanelHeaderActions>
                   {hasActiveFilters && (
-                    <Button variant="tertiary" size="md" onClick={() => setFilters(EMPTY_FILTERS)}>
+                    <Button className="b_tertiary" variant="tertiary" size="md" onClick={() => setFilters(EMPTY_FILTERS)}>
                       Clear All
                     </Button>
                   )}
-                  <Button variant="tertiary" icon={<Clear />} onClick={() => setFilterOpen(false)} />
+                  <Button className="b_tertiary" variant="tertiary" icon={<Clear />} onClick={() => setFilterOpen(false)} />
                 </PanelHeaderActions>
               </PanelHeader>
               <PanelBody>
@@ -610,7 +612,7 @@ export default function CostManagementTableCard() {
                               <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
                             </Table.BodyCell>
                             {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("stage") && <Table.BodyCell><Table.TextCell>{r.stage}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
@@ -670,7 +672,7 @@ export default function CostManagementTableCard() {
                           <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
                         </Table.BodyCell>
                         {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("stage") && <Table.BodyCell><Table.TextCell>{r.stage}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
@@ -698,7 +700,7 @@ export default function CostManagementTableCard() {
             <SidePanel style={{ marginLeft: 16 }}>
               <PanelHeader>
                 <PanelTitle>Table Settings</PanelTitle>
-                <Button variant="tertiary" icon={<Clear />} onClick={() => setConfigOpen(false)} />
+                <Button className="b_tertiary" variant="tertiary" icon={<Clear />} onClick={() => setConfigOpen(false)} />
               </PanelHeader>
               <PanelBody>
                 <div>

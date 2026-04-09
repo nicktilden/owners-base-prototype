@@ -16,7 +16,7 @@ const KpiGrid = styled.div`
 
 const KpiLabel = styled.div`
   font-size: 14px;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 20px;
   letter-spacing: 0.15px;
 `;
@@ -31,14 +31,14 @@ const KpiValueRow = styled.div`
 const KpiValue = styled.div`
   font-size: 26px;
   font-weight: 500;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 1.1;
   letter-spacing: 0.15px;
 `;
 
 const InvoiceList = styled.div`
   width: 100%;
-  border: 1px solid #d6dadc;
+  border: 1px solid var(--color-border-separator);
   border-radius: 8px;
   overflow: hidden;
 `;
@@ -48,7 +48,7 @@ const InvoiceRow = styled.div`
   grid-template-columns: 160px 1fr auto auto;
   padding: 8px;
   gap: 8px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
 
   &:last-child {
     border-bottom: none;
@@ -56,7 +56,7 @@ const InvoiceRow = styled.div`
 `;
 
 const InvoiceLink = styled.a`
-  color: #1d5cc9;
+  color: var(--color-text-tinted);
   text-decoration: underline;
   font-size: 14px;
   line-height: 20px;
@@ -79,13 +79,13 @@ const InvoiceMeta = styled.div`
 const Amount = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 16px;
 `;
 
 const Company = styled.div`
   font-size: 12px;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 16px;
 `;
 
@@ -146,11 +146,12 @@ export function FinancialScorecardCard() {
       infoTooltip="Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
       titleSuffix={
         <>
-          <Pill color={valuePillColor}>Value</Pill>
+          <Pill color={valuePillColor} data-pill-color={valuePillColor}>Value</Pill>
         </>
       }
       actions={
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
@@ -215,6 +216,7 @@ export function InvoicesForApprovalCard() {
       infoTooltip="Invoices currently awaiting approval from the seeded invoice list, filtered by date range and company."
       actions={
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
@@ -270,7 +272,7 @@ export function InvoicesForApprovalCard() {
               <Amount>{row.amount}</Amount>
               <Company>{row.company}</Company>
             </InvoiceMeta>
-            <Button variant="secondary" size="sm">View</Button>
+            <Button variant="secondary" className="b_secondary" size="sm">View</Button>
           </InvoiceRow>
         ))}
       </InvoiceList>

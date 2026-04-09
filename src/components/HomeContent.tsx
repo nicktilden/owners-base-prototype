@@ -201,7 +201,7 @@ function HomeContentInner() {
       <AppLayout>
       <ToolLandingPage>
         <ToolLandingPage.Main>
-          <ToolLandingPage.Header>
+          <ToolLandingPage.Header style={{ borderBottom: '1px solid var(--color-card-border)' }}>
             <ToolLandingPage.Title>
               <Title>
                 <Title.Text>
@@ -212,8 +212,8 @@ function HomeContentInner() {
                 </Title.Text>
                 <Title.Actions>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <Button variant="primary" icon={<Plus />}>Create Project</Button>
-                    <Button variant="secondary">Export</Button>
+                    <Button variant="primary" className="b_primary" icon={<Plus />}>Create Project</Button>
+                    <Button variant="secondary" className="b_secondary" data-variant="secondary">Export</Button>
                   </div>
                 </Title.Actions>
               </Title>
@@ -221,6 +221,7 @@ function HomeContentInner() {
             <ToolLandingPage.Tabs>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <ToggleButton
+                  className="b_toggle"
                   selected={filterBarOpen}
                   size="sm"
                   icon={<Filter />}
@@ -228,14 +229,15 @@ function HomeContentInner() {
                 >
                   Filter{hasActiveFilters ? " •" : ""}
                 </ToggleButton>
-                <div style={{ width: 2, height: 20, background: "#d6dadc", borderRadius: 1, flexShrink: 0 }} />
-                <TabBarList>
+                <div style={{ width: 2, height: 20, background: "var(--color-border-separator)", borderRadius: 1, flexShrink: 0 }} />
+                <TabBarList className="Tabs__TabsList">
                   {tabs.map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <TabItem
                         key={tab}
                         $selected={isActive}
+                        data-active={isActive || undefined}
                         onClick={() => setActiveTab(tab)}
                       >
                         <TabInner $selected={isActive}>
@@ -265,7 +267,7 @@ function HomeContentInner() {
                               minWidth: 150,
                               borderRadius: 4,
                               boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
-                              backgroundColor: "#ffffff",
+                              backgroundColor: "var(--color-surface-primary)",
                               overflow: "hidden",
                             }}
                           >
@@ -374,10 +376,10 @@ function HomeContentInner() {
         >
           <Modal.Header>Edit Hub View — {editViewTab}</Modal.Header>
           <Modal.Body>
-            <Typography intent="small" style={{ color: "#6a767c", display: "block", marginBottom: 16, lineHeight: 1.45 }}>
+            <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginBottom: 16, lineHeight: 1.45 }}>
               Toggle cards on or off for this hub view.
             </Typography>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
               {TAB_CARDS[editViewTab].map((cardName, idx) => {
                 const visible = isCardVisible(editViewTab, cardName);
                 return (
@@ -388,11 +390,11 @@ function HomeContentInner() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "12px 16px",
-                      borderTop: idx > 0 ? "1px solid #eef0f1" : "none",
-                      background: "#fff",
+                      borderTop: idx > 0 ? "1px solid var(--color-border-separator)" : "none",
+                      background: "var(--color-surface-primary)",
                     }}
                   >
-                    <span style={{ fontSize: 14, color: "#232729", fontWeight: visible ? 500 : 400 }}>{cardName}</span>
+                    <span style={{ fontSize: 14, color: "var(--color-text-primary)", fontWeight: visible ? 500 : 400 }}>{cardName}</span>
                     <Switch
                       checked={visible}
                       onChange={() => toggleCard(editViewTab, cardName)}
@@ -404,7 +406,7 @@ function HomeContentInner() {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="primary" onClick={() => setEditViewTab(null)}>Done</Button>
+            <Button variant="primary" className="b_primary" onClick={() => setEditViewTab(null)}>Done</Button>
           </Modal.Footer>
         </Modal>
       )}

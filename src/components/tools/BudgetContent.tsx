@@ -48,7 +48,7 @@ const PROGRAM_LABELS: Record<string, string> = {
 };
 
 const TotalsRow = styled.tr`
-  background: #f5f6f7;
+  background: var(--color-surface-secondary);
   font-weight: 700;
   border-top: 2px solid #c4cbcf;
 `;
@@ -108,11 +108,11 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Add Line Item</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Add Line Item</Button>
     </>
   );
 
@@ -123,8 +123,8 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
       breadcrumbs={breadcrumbs}
       actions={actions}
     >
-      <SplitViewCard>
-        <SplitViewCard.Main>
+      <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+        <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
           <SplitViewCard.Section heading="Budget">
             {isPortfolio && (
               <div style={{ marginBottom: 12, maxWidth: 320 }}>
@@ -187,7 +187,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                             {isPortfolio && (
                               <Table.BodyCell>
                                 <Table.TextCell>
-                                  <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+                                  <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
                                     {projectMap.get(item.projectId) ?? item.projectId}
                                   </span>
                                 </Table.TextCell>
@@ -205,7 +205,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                             </Table.BodyCell>
                             <Table.BodyCell>
                               <Table.TextCell>
-                                <span style={{ color: "#6a767c", fontSize: 13 }}>{item.costCode}</span>
+                                <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{item.costCode}</span>
                               </Table.TextCell>
                             </Table.BodyCell>
                             <Table.BodyCell>

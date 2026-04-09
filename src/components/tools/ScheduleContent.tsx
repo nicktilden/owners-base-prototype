@@ -55,7 +55,7 @@ const ProgressBarWrap = styled.div`
 const ProgressBarOuter = styled.div`
   flex: 1;
   height: 6px;
-  background: #e0e4e7;
+  background: var(--color-surface-active);
   border-radius: 3px;
   overflow: hidden;
   min-width: 60px;
@@ -70,7 +70,7 @@ const ProgressBarInner = styled.div<{ $pct: number }>`
 
 const ProgressLabel = styled.span`
   font-size: 13px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 `;
 
@@ -119,11 +119,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Add Item</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Add Item</Button>
     </>
   );
 
@@ -147,8 +147,8 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
       tabs={tabs}
     >
       {activeTab === "schedule" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="Schedule Items">
               {isPortfolio && (
                 <div style={{ marginBottom: 12, maxWidth: 320 }}>
@@ -199,7 +199,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                           {isPortfolio && (
                             <Table.BodyCell>
                               <Table.TextCell>
-                                <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+                                <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
                                   {projectMap.get(item.projectId) ?? item.projectId}
                                 </span>
                               </Table.TextCell>
@@ -207,18 +207,18 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                           )}
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{item.wbs}</span>
+                              <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{item.wbs}</span>
                             </Table.TextCell>
                           </Table.BodyCell>
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                              <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
                                 {item.name}
                               </span>
                             </Table.TextCell>
                           </Table.BodyCell>
                           <Table.BodyCell>
-                            <Pill color={STATUS_COLORS[item.status]}>{STATUS_LABELS[item.status]}</Pill>
+                            <Pill color={STATUS_COLORS[item.status]} data-pill-color={STATUS_COLORS[item.status]}>{STATUS_LABELS[item.status]}</Pill>
                           </Table.BodyCell>
                           <Table.BodyCell>
                             <ProgressBarWrap>
@@ -249,8 +249,8 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
       )}
 
       {activeTab === "milestones" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="Milestones">
               {isPortfolio && (
                 <div style={{ marginBottom: 12, maxWidth: 320 }}>
@@ -299,7 +299,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                           {isPortfolio && (
                             <Table.BodyCell>
                               <Table.TextCell>
-                                <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+                                <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
                                   {projectMap.get(m.projectId) ?? m.projectId}
                                 </span>
                               </Table.TextCell>
@@ -307,12 +307,12 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                           )}
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{m.wbs}</span>
+                              <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{m.wbs}</span>
                             </Table.TextCell>
                           </Table.BodyCell>
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                              <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
                                 {m.name}
                               </span>
                             </Table.TextCell>
@@ -325,7 +325,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                               {m.actualMilestoneDate ? (
                                 <span style={{ color: "#1a7d3a" }}>{formatDate(m.actualMilestoneDate)}</span>
                               ) : (
-                                <span style={{ color: "#6a767c" }}>—</span>
+                                <span style={{ color: "var(--color-text-secondary)" }}>—</span>
                               )}
                             </Table.TextCell>
                           </Table.BodyCell>

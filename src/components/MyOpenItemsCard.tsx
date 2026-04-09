@@ -33,12 +33,12 @@ const TableHeader = styled.div`
   padding: 0 8px;
   height: 28px;
   align-items: center;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const HeaderCell = styled.span`
   font-size: 13px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   line-height: 16px;
   white-space: nowrap;
   padding: 6px 0;
@@ -58,8 +58,8 @@ const ItemRow = styled.div<{ $even?: boolean }>`
   padding: 0 8px;
   min-height: 44px;
   align-items: center;
-  background: ${({ $even }) => ($even ? "#fff" : "#fafafa")};
-  border-bottom: 1px solid #eef0f1;
+  background: ${({ $even }) => ($even ? "var(--color-surface-primary)" : "var(--color-surface-secondary)")};
+  border-bottom: 1px solid var(--color-border-separator);
   cursor: pointer;
 `;
 
@@ -73,7 +73,7 @@ const TypeCell = styled.div`
 
 const TypeLabel = styled.span`
   font-size: 13px;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -88,7 +88,7 @@ const TitleCell = styled.div`
 
 const ProjectLabel = styled.div`
   font-size: 12px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -98,7 +98,7 @@ const ProjectLabel = styled.div`
 const ItemLinkButton = styled.button`
   font-size: 14px;
   font-weight: 600;
-  color: #1d5cc9;
+  color: var(--color-text-link);
   letter-spacing: 0.15px;
   line-height: 20px;
   overflow: hidden;
@@ -114,7 +114,7 @@ const ItemLinkButton = styled.button`
 
 const DueDateCell = styled.div<{ $overdue?: boolean }>`
   font-size: 13px;
-  color: ${({ $overdue }) => ($overdue ? "#c42223" : "#232729")};
+  color: ${({ $overdue }) => ($overdue ? "#c42223" : "var(--color-text-primary)")};
   line-height: 16px;
   white-space: nowrap;
   text-align: right;
@@ -128,7 +128,7 @@ const StatusCell = styled.div`
 
 const TearsheetHeader = styled.div`
   padding: 20px 24px 12px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const TearsheetBody = styled.div`
@@ -146,12 +146,12 @@ const DetailGrid = styled.div`
 const DetailLabel = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #6a767c;
+  color: var(--color-text-secondary);
 `;
 
 const DetailValue = styled.div`
   font-size: 14px;
-  color: #232729;
+  color: var(--color-text-primary);
 `;
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -214,12 +214,13 @@ export default function MyOpenItemsCard() {
 
   return (
     <>
-    <HubCardFrame
+    <HubCardFrame 
       title="My Open Items"
       infoTooltip="Top open work items assigned to the current user, sourced from the seeded open-items dataset and sorted by due date."
       actions={
         <HeaderActions>
         <Button
+         className="b_secondary"
           variant="secondary"
           size="sm"
           aria-label="View all open items"
@@ -227,6 +228,7 @@ export default function MyOpenItemsCard() {
           View All
         </Button>
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
@@ -237,6 +239,7 @@ export default function MyOpenItemsCard() {
       controls={
         <>
           <Search
+            className="i_search"
             placeholder="Search"
             value={search}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
@@ -296,7 +299,7 @@ export default function MyOpenItemsCard() {
             return (
               <ItemRow key={item.id} role="row" tabIndex={0} $even={idx % 2 === 0}>
                 <TypeCell role="cell">
-                  <span style={{ color: "#232729", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                  <span style={{ color: "var(--color-text-primary)", display: "flex", alignItems: "center", flexShrink: 0 }}>
                     {TYPE_ICONS[item.type] ?? <File size="sm" />}
                   </span>
                   <TypeLabel>{item.type}</TypeLabel>
@@ -317,7 +320,7 @@ export default function MyOpenItemsCard() {
                 </DueDateCell>
 
                 <StatusCell role="cell">
-                  <Pill color={STATUS_COLOR[item.status] ?? "gray"}>
+                  <Pill color={STATUS_COLOR[item.status] ?? "gray"} data-pill-color={STATUS_COLOR[item.status] ?? "gray"}>
                     {item.status}
                   </Pill>
                 </StatusCell>
@@ -336,10 +339,10 @@ export default function MyOpenItemsCard() {
       {selectedItem && (
         <>
           <TearsheetHeader>
-            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
               {selectedItem.number}
             </Typography>
-            <Typography intent="body" style={{ display: "block", color: "#6a767c", marginTop: 2 }}>
+            <Typography intent="body" style={{ display: "block", color: "var(--color-text-secondary)", marginTop: 2 }}>
               {selectedItem.title}
             </Typography>
           </TearsheetHeader>

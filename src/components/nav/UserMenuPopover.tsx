@@ -21,13 +21,19 @@ const Popover = styled.div`
   top: calc(100% + 4px);
   right: 0;
   width: 296px;
-  background: #fff;
+  background: var(--color-surface-primary);
   border-radius: 8px;
-  box-shadow: 0px 4px 28px 0px rgba(0, 0, 0, 0.28);
+  box-shadow: 0px 4px 28px 0px var(--color-shadow-strong);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 1300;
+  color: var(--color-text-primary);
+
+  html[data-color-scheme="dark"] & span[class],
+  html[data-color-scheme="dark"] & p[class] {
+    color: var(--color-text-primary);
+  }
 `;
 
 const Section = styled.div`
@@ -40,7 +46,7 @@ const Section = styled.div`
 
 const SectionDivider = styled.div`
   height: 1px;
-  background: #d6dadc;
+  background: var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -56,7 +62,7 @@ const SectionToggle = styled.button`
   cursor: pointer;
   text-align: left;
   transition: background 0.12s;
-  &:hover { background: #f4f5f6; }
+  &:hover { background: var(--color-surface-hover); }
 `;
 
 const AvatarLarge = styled.img`
@@ -87,7 +93,7 @@ const TermsText = styled.p`
   font-weight: 400;
   line-height: 16px;
   letter-spacing: 0.25px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   text-align: center;
   white-space: nowrap;
 `;
@@ -102,10 +108,10 @@ const EditPersonaBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   flex-shrink: 0;
   transition: background 0.12s;
-  &:hover { background: #e8eaeb; color: #232729; }
+  &:hover { background: var(--color-surface-active); color: var(--color-text-primary); }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -155,7 +161,7 @@ export default function UserMenuPopover({
           <AvatarLarge src={activeUser.avatar ?? avatarImg.src} alt={`${activeUser.firstName} ${activeUser.lastName}`} />
           <NameBlock>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Typography intent="h3" style={{ fontWeight: 600, color: '#232729', whiteSpace: 'nowrap' }}>
+              <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
                 {activeUser.firstName} {activeUser.lastName}
               </Typography>
               <EditPersonaBtn
@@ -166,14 +172,14 @@ export default function UserMenuPopover({
                 <Pencil size="sm" />
               </EditPersonaBtn>
             </div>
-            <Typography intent="body" style={{ color: '#6a767c', whiteSpace: 'nowrap' }}>
+            <Typography intent="body" style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
               {activeUser.role}
             </Typography>
-            <Typography intent="body" style={{ color: '#6a767c', whiteSpace: 'nowrap' }}>
+            <Typography intent="body" style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
               {activeUser.email}
             </Typography>
           </NameBlock>
-          <Typography intent="body" style={{ fontWeight: 600, color: '#232729', textAlign: 'center' }}>
+          <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center' }}>
             {account?.companyName ?? 'Acme Development Group'}
           </Typography>
         </Section>
@@ -185,7 +191,9 @@ export default function UserMenuPopover({
       <ActionsSection>
         <Button
           block
+          className="b_secondary"
           variant="secondary"
+          data-variant="secondary"
           icon={<Person size="sm" />}
           onClick={() => {
             onClose();
@@ -194,10 +202,10 @@ export default function UserMenuPopover({
         >
           My Profile Settings
         </Button>
-        <Button block variant="secondary" icon={<Cog size="sm" />} onClick={onClose}>
+        <Button className="b_secondary" block variant="secondary" data-variant="secondary" icon={<Cog size="sm" />} onClick={onClose}>
           Account Settings
         </Button>
-        <Button block variant="secondary" icon={<Import size="sm" />} onClick={onClose}>
+        <Button block variant="secondary" className="b_secondary" data-variant="secondary" icon={<Import size="sm" />} onClick={onClose}>
           Log Out
         </Button>
         <TermsText>Terms of Service • Privacy Notice</TermsText>

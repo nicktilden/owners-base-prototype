@@ -40,9 +40,9 @@ const SearchInputWrap = styled.div`
   height: 36px;
   gap: 6px;
   min-width: 220px;
-  background: #fff;
+  background: var(--color-surface-primary);
   &:focus-within {
-    border-color: #1d5cc9;
+    border-color: var(--color-text-link);
     box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
   }
 `;
@@ -93,8 +93,8 @@ const TableArea = styled.div`
 const SidePanel = styled.div`
   width: 280px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -105,14 +105,14 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const PanelTitle = styled.span`
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const PanelHeaderActions = styled.div`
@@ -141,7 +141,7 @@ const FilterSection = styled.div`
 const FilterLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 // ─── Config panel ─────────────────────────────────────────────────────────────
@@ -156,7 +156,7 @@ const ConfigSectionHeading = styled.div`
 const ConfigSectionTitle = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const ShowAllLink = styled.button`
@@ -165,7 +165,7 @@ const ShowAllLink = styled.button`
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
   padding: 0;
   &:hover { text-decoration: underline; }
 `;
@@ -175,13 +175,13 @@ const ColumnToggleRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f2f3;
+  border-bottom: 1px solid var(--color-border-separator);
   &:last-child { border-bottom: none; }
 `;
 
 const ColumnToggleLabel = styled.span`
   font-size: 14px;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 // ─── Quick filter bar ──────────────────────────────────────────────────────────
@@ -199,9 +199,9 @@ const FilterChipEl = styled.button`
   align-items: center;
   gap: 8px;
   height: 36px;
-  background: #e8f0fe;
-  color: #1d5cc9;
-  border: 1px solid #1d5cc9;
+  background: var(--color-brand-surface);
+  color: var(--color-text-link);
+  border: 1px solid var(--color-text-link);
   border-radius: 4px;
   padding: 0 12px;
   font-size: 14px;
@@ -214,7 +214,7 @@ const FilterChipRemove = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #1d5cc9;
+  color: var(--color-text-link);
   padding: 0;
   line-height: 1;
   font-size: 22px;
@@ -325,14 +325,14 @@ function TaskRow({ task, hidden, isPortfolio, projectLabel, selected, onToggle }
       {!hidden.has("number") && (
         <Table.BodyCell>
           <Table.TextCell>
-            <span style={{ color: "#6a767c", fontSize: 13 }}>#{task.number}</span>
+            <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>#{task.number}</span>
           </Table.TextCell>
         </Table.BodyCell>
       )}
       {isPortfolio && !hidden.has("project") && (
         <Table.BodyCell>
           <Table.TextCell>
-            <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+            <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
               {projectLabel}
             </span>
           </Table.TextCell>
@@ -341,7 +341,7 @@ function TaskRow({ task, hidden, isPortfolio, projectLabel, selected, onToggle }
       {!hidden.has("title") && (
         <Table.BodyCell>
           <Table.TextCell>
-            <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
               {task.title}
             </span>
           </Table.TextCell>
@@ -349,7 +349,7 @@ function TaskRow({ task, hidden, isPortfolio, projectLabel, selected, onToggle }
       )}
       {!hidden.has("status") && (
         <Table.BodyCell>
-          <Pill color={STATUS_COLORS[task.status]}>{STATUS_LABELS[task.status]}</Pill>
+          <Pill color={STATUS_COLORS[task.status]} data-pill-color={STATUS_COLORS[task.status]}>{STATUS_LABELS[task.status]}</Pill>
         </Table.BodyCell>
       )}
       {!hidden.has("category") && (
@@ -510,12 +510,12 @@ export default function TasksContent({ projectId }: TasksContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="pdf">PDF</Dropdown.Item>
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Add Task</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Add Task</Button>
     </>
   );
 
@@ -539,22 +539,24 @@ export default function TasksContent({ projectId }: TasksContentProps) {
       tabs={tabs}
     >
       {activeTab === "list" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="Tasks">
 
               {/* Toolbar */}
               <Toolbar>
                 <ToolbarLeft>
                   <SearchInputWrap>
-                    <SearchIcon size="sm" style={{ color: "#6a767c", flexShrink: 0 }} />
+                    <SearchIcon size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
                     <SearchInput
+                      className="i_search"
                       placeholder="Search"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </SearchInputWrap>
                   <ToggleButton
+                    className="b_toggle"
                     selected={filterOpen}
                     icon={<Filter />}
                     onClick={() => {
@@ -576,6 +578,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                     </SegmentedController.Segment>
                   </SegmentedController>
                   <ToggleButton
+                    className="b_toggle"
                     selected={configOpen}
                     icon={<Sliders />}
                     onClick={() => {
@@ -615,6 +618,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                       <PanelHeaderActions>
                         {hasActiveFilters && (
                           <Button
+                            className="b_tertiary"
                             variant="tertiary"
                             size="md"
                             onClick={clearFilters}
@@ -623,6 +627,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                           </Button>
                         )}
                         <Button
+                          className="b_tertiary"
                           variant="tertiary"
                           icon={<Clear />}
                           onClick={() => setFilterOpen(false)}
@@ -740,6 +745,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                     <PanelHeader>
                       <PanelTitle>Table Settings</PanelTitle>
                       <Button
+                        className="b_tertiary"
                         variant="tertiary"
                         icon={<Clear />}
                         onClick={() => setConfigOpen(false)}
@@ -774,10 +780,10 @@ export default function TasksContent({ projectId }: TasksContentProps) {
       )}
 
       {activeTab === "my_tasks" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="My Tasks">
-              <div style={{ padding: "24px", textAlign: "center", color: "#6a767c" }}>
+              <div style={{ padding: "24px", textAlign: "center", color: "var(--color-text-secondary)" }}>
                 My Tasks coming soon.
               </div>
             </SplitViewCard.Section>

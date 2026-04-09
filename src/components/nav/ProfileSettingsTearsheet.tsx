@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Box, Button, Card, Checkbox, Form, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
-import { createGlobalStyle } from 'styled-components';
+import { Box, Button, Card, Checkbox, Form, Page, Select, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
+import styled, { createGlobalStyle } from 'styled-components';
 import { useData } from '@/context/DataContext';
 import { usePersona } from '@/context/PersonaContext';
+import { useTheme } from '@/context/ThemeContext';
 import type { PermissionKey, ToolPermissionLevel } from '@/types/permissions';
 import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
@@ -26,24 +27,43 @@ interface ProfileFormValues {
 }
 
 const USER_ROLES: UserRole[] = ['Executive Strategy', 'Operations & Administration', 'Project Delivery', 'Field Opperations'];
-const FORM_CARD_STYLE = { padding: 16 };
+const FORM_CARD_STYLE: React.CSSProperties = { padding: 16, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' };
 const TearsheetAnimationOverride = createGlobalStyle`
-  /* Tearsheet panel slide animation: 800ms -> 200ms */
   [class*="sc-ljrxoq-0"] {
     animation-duration: 200ms !important;
   }
-
-  /* Close button: no enter/exit animation */
   [class*="sc-ljrxoq-4"] {
     animation: none !important;
     transition: none !important;
   }
-
-  /* Scrim fade transition: 150ms -> 75ms */
   [class*="sc-1ijdug2-0"] {
     transition-duration: 75ms !important;
   }
+
+  html[data-color-scheme="dark"] [class*="sc-1ijdug2-0"] {
+    background: transparent !important;
+  }
+
+  html[data-color-scheme="dark"] [aria-label="My profile settings"] {
+    h1, h2, h3, h4, p, span, label {
+      color: var(--color-text-primary) !important;
+    }
+    button[class][aria-haspopup="listbox"],
+    button[class][aria-haspopup="listbox"] span {
+      color: var(--color-text-primary) !important;
+    }
+  }
 `;
+
+type ThemeOption = 'system' | 'default-light' | 'default-dark' | 'owner-light' | 'owner-dark';
+
+const THEME_OPTIONS: { value: ThemeOption; label: string }[] = [
+  { value: 'system', label: 'System Preference' },
+  { value: 'default-light', label: 'Default Light' },
+  { value: 'default-dark', label: 'Default Dark' },
+  { value: 'owner-light', label: 'Owners Light' },
+  { value: 'owner-dark', label: 'Owners Dark' },
+];
 
 function toIso(value: Date | null): string { return value ? value.toISOString() : ''; }
 function safeParseRecord<T extends Record<string, unknown>>(value: string, fallback: T): T {
@@ -67,6 +87,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
   const [sessionTimeoutMins, setSessionTimeoutMins] = useState('30');
   const { activeUser, setActiveUser, users, setUsers } = usePersona();
   const { data, setData } = useData();
+  const { theme, colorScheme, resolvedColorScheme, setTheme, setColorScheme } = useTheme();
+  const isDark = resolvedColorScheme === 'dark';
 
   const projectOptions = useMemo(
     () => data.projects.map((project) => ({ id: project.id, label: `${project.number} - ${project.name}` })),
@@ -222,8 +244,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Typography intent="body">Accounting sync integration disabled</Typography>
             </Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Connected Apps</Button>
+<Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+                          <Button variant="primary" className="b_primary" type="submit">Save Connected Apps</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -306,8 +328,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                 />
               </Form.Row>
               <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-                <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button variant="primary" type="submit">Save Favorites</Button>
+<Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" type="submit">Save Favorites</Button>
               </Form.SettingsPageFooter>
             </Form.Form>
           </Form>
@@ -337,8 +359,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable budget alerts" defaultChecked /><Typography intent="body">Budget alerts</Typography></Box>
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable schedule alerts" defaultChecked /><Typography intent="body">Schedule alerts</Typography></Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Notifications</Button>
+              <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" type="submit">Save Notifications</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -390,13 +412,13 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                     <Table.BodyCell><Table.TextCell>MacBook Pro (Current)</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Austin, TX</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Now</Table.TextCell></Table.BodyCell>
-                    <Table.BodyCell><Button variant="tertiary" size="sm" disabled>Current Session</Button></Table.BodyCell>
+                    <Table.BodyCell><Button className="b_tertiary" variant="tertiary" size="sm" disabled>Current Session</Button></Table.BodyCell>
                   </Table.BodyRow>
                   <Table.BodyRow>
                     <Table.BodyCell><Table.TextCell>iPhone 15</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Dallas, TX</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>2 hours ago</Table.TextCell></Table.BodyCell>
-                    <Table.BodyCell><Button variant="secondary" size="sm">Revoke</Button></Table.BodyCell>
+                    <Table.BodyCell><Button variant="secondary" className="b_secondary" data-variant="secondary" size="sm">Revoke</Button></Table.BodyCell>
                   </Table.BodyRow>
                 </Table.Body>
               </Table>
@@ -407,8 +429,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Typography intent="body">Email me when suspicious activity is detected</Typography>
             </Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Security Settings</Button>
+              <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" type="submit">Save Security Settings</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -420,71 +442,127 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     <>
       <TearsheetAnimationOverride />
       <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right" block>
-        <Page style={{ height: '100%' }}>
-          <Page.Main style={{ height: '100%', overflow: 'hidden' }}>
-            <Page.Header>
+        <Page style={{ height: '100%', background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}>
+          <Page.Main style={{ height: '100%', overflow: 'hidden', background: 'var(--color-surface-primary)' }}>
+            <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
               <Page.Title><Typography intent="h2">My Profile Settings</Typography></Page.Title>
               <Page.Tabs>
                 <Tabs>
-                  {PROFILE_TABS.map((tab) => (
-                    <Tabs.Tab key={tab} role="button" selected={selectedTab === tab} onPress={() => setSelectedTab(tab)}>
-                      {tab}
-                    </Tabs.Tab>
-                  ))}
+                  {PROFILE_TABS.map((tab) => {
+                    const isSelected = selectedTab === tab;
+                    return (
+                      <Tabs.Tab
+                        key={tab}
+                        role="button"
+                        selected={isSelected}
+                        onPress={() => setSelectedTab(tab)}
+                        style={isDark ? { color: isSelected ? 'var(--color-text-link)' : 'var(--color-text-primary)' } : undefined}
+                      >
+                        {tab}
+                      </Tabs.Tab>
+                    );
+                  })}
                 </Tabs>
               </Page.Tabs>
             </Page.Header>
-            <Page.Body style={{ padding: 24, overflowY: 'auto' }}>
+            <Page.Body style={{ padding: 24, overflowY: 'auto', background: 'var(--color-surface-secondary)' }}>
               {selectedTab === 'Personal' && (
-                <Card>
-                  <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
-                    <Form.Form style={FORM_CARD_STYLE}>
-                      <Typography intent="h2" style={{ marginBottom: 8 }}>Personal Info</Typography>
-                      <Form.Row>
-                        <Form.Text name="firstName" label="First Name" colStart={1} colWidth={6} required />
-                        <Form.Text name="lastName" label="Last Name" colStart={7} colWidth={6} required />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="email" label="Email Address" colStart={1} colWidth={6} required />
-                        <Form.Text name="jobTitle" label="Job Title" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Select
-                          name="role"
-                          label="Role"
-                          colStart={1}
-                          colWidth={6}
-                          disabled
-                          options={USER_ROLES.map((role) => ({ id: role, label: role }))}
-                        />
-                        <Form.Text name="companyName" label="Company Name" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="avatar" label="Avatar URL" colStart={1} colWidth={6} />
-                        <Form.Text name="accountId" label="Account ID" colStart={7} colWidth={6} disabled />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="timeZone" label="Time Zone" colStart={1} colWidth={6} />
-                        <Form.Text name="officeName" label="Office Name" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeAddress" label="Office Address" colStart={1} colWidth={6} />
-                        <Form.Text name="officeCity" label="Office City" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeState" label="Office State" colStart={1} colWidth={6} />
-                        <Form.Text name="officeZip" label="Office ZIP" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeCountry" label="Office Country" colStart={1} colWidth={6} />
-                      </Form.Row>
-                      <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-                        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                        <Button variant="primary" type="submit">Save Profile</Button>
-                      </Form.SettingsPageFooter>
-                    </Form.Form>
-                  </Form>
-                </Card>
+                <>
+                  <Card>
+                    <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
+                      <Form.Form style={FORM_CARD_STYLE}>
+                        <Typography intent="h2" style={{ marginBottom: 8 }}>Personal Info</Typography>
+                        <Form.Row>
+                          <Form.Text name="firstName" label="First Name" colStart={1} colWidth={6} required />
+                          <Form.Text name="lastName" label="Last Name" colStart={7} colWidth={6} required />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="email" label="Email Address" colStart={1} colWidth={6} required />
+                          <Form.Text name="jobTitle" label="Job Title" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Select
+                            name="role"
+                            label="Role"
+                            colStart={1}
+                            colWidth={6}
+                            disabled
+                            options={USER_ROLES.map((role) => ({ id: role, label: role }))}
+                          />
+                          <Form.Text name="companyName" label="Company Name" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="avatar" label="Avatar URL" colStart={1} colWidth={6} />
+                          <Form.Text name="accountId" label="Account ID" colStart={7} colWidth={6} disabled />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="timeZone" label="Time Zone" colStart={1} colWidth={6} />
+                          <Form.Text name="officeName" label="Office Name" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeAddress" label="Office Address" colStart={1} colWidth={6} />
+                          <Form.Text name="officeCity" label="Office City" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeState" label="Office State" colStart={1} colWidth={6} />
+                          <Form.Text name="officeZip" label="Office ZIP" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeCountry" label="Office Country" colStart={1} colWidth={6} />
+                        </Form.Row>
+                        <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+                          <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+                          <Button variant="primary" className="b_primary" type="submit">Save Profile</Button>
+                        </Form.SettingsPageFooter>
+                      </Form.Form>
+                    </Form>
+                  </Card>
+
+                  <Card style={{ marginTop: 16 }}>
+                    <Box style={FORM_CARD_STYLE}>
+                      <Typography intent="h2" style={{ marginBottom: 4 }}>Appearance</Typography>
+                      <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
+                        Choose a brand theme and color scheme for the interface.
+                      </Typography>
+
+                      <Typography intent="h3" style={{ marginBottom: 8 }}>Interface Theme</Typography>
+                      <Box style={{ width: '50%' }}>
+                        <Select
+                        className="i_select"
+                          label={THEME_OPTIONS.find((o) => o.value === (
+                            colorScheme === 'system' ? 'system'
+                              : `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}` as ThemeOption
+                          ))?.label}
+                          onSelect={(selection) => {
+                            const val = selection.item as ThemeOption;
+                            if (val === 'system') {
+                              setColorScheme('system');
+                            } else {
+                              const [t, s] = val.split('-') as ['default' | 'owner', 'light' | 'dark'];
+                              setTheme(t);
+                              setColorScheme(s);
+                            }
+                          }}
+                          block
+                        >
+                          {THEME_OPTIONS.map((opt) => (
+                            <Select.Option
+                              key={opt.value}
+                              value={opt.value}
+                              selected={
+                                colorScheme === 'system'
+                                  ? opt.value === 'system'
+                                  : opt.value === `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}`
+                              }
+                            >
+                              {opt.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Box>
+                    </Box>
+                  </Card>
+                </>
               )}
               {selectedTab === 'My Connected Apps' && renderConnectedAppsTab()}
               {selectedTab === 'Favorites' && renderFavoritesTab()}

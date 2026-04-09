@@ -101,15 +101,15 @@ function planHasOverdue(plan: ActionPlan): boolean {
 const SearchInputWrap = styled.div`
   display: flex;
   align-items: center;
-  border: 1px solid #c4cbcf;
+  border: 1px solid var(--color-border-default);
   border-radius: 4px;
   padding: 0 8px;
   height: 36px;
   gap: 6px;
   min-width: 220px;
-  background: #fff;
+  background: var(--color-surface-primary);
   &:focus-within {
-    border-color: #1d5cc9;
+    border-color: var(--color-border-focus);
     box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
   }
 `;
@@ -141,9 +141,9 @@ const FilterChipEl = styled.button`
   align-items: center;
   gap: 8px;
   height: 32px;
-  background: #e8f0fe;
-  color: #1d5cc9;
-  border: 1px solid #1d5cc9;
+  background: var(--color-brand-surface);
+  color: var(--color-text-tinted);
+  border: 1px solid var(--color-text-link);
   border-radius: 4px;
   padding: 0 10px;
   font-size: 13px;
@@ -156,7 +156,7 @@ const FilterChipRemove = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #1d5cc9;
+  color: var(--color-text-tinted);
   padding: 0;
   line-height: 1;
   font-size: 18px;
@@ -191,8 +191,8 @@ const TableArea = styled.div`
 const DetailPanel = styled.div`
   width: 420px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -201,7 +201,7 @@ const DetailPanel = styled.div`
 
 const DetailHeader = styled.div`
   padding: 16px 20px 14px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -225,13 +225,13 @@ const MetaRow = styled.div`
 `;
 
 const MetaLabel = styled.span`
-  color: #6a767c;
+  color: var(--color-text-secondary);
   min-width: 120px;
   flex-shrink: 0;
 `;
 
 const MetaValue = styled.span`
-  color: #232729;
+  color: var(--color-text-primary);
   font-weight: 500;
 `;
 
@@ -246,14 +246,14 @@ function SectionAccordion({ section, defaultOpen }: {
   const allClosed = closed === total && total > 0;
 
   return (
-    <div style={{ border: "1px solid #d6dadc", borderRadius: 6, marginBottom: 10, overflow: "hidden" }}>
+    <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 6, marginBottom: 10, overflow: "hidden" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "10px 14px", background: "#f5f6f7", border: "none", cursor: "pointer",
-          fontWeight: 600, fontSize: 13, color: "#232729", textAlign: "left", fontFamily: "inherit",
+          padding: "10px 14px", background: "var(--color-surface-tertiary)", border: "none", cursor: "pointer",
+          fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", textAlign: "left", fontFamily: "inherit",
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -268,25 +268,25 @@ function SectionAccordion({ section, defaultOpen }: {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "7px 14px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Item</th>
-              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12, whiteSpace: "nowrap" }}>Due</th>
-              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Status</th>
+              <th style={{ textAlign: "left", padding: "7px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Item</th>
+              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12, whiteSpace: "nowrap" }}>Due</th>
+              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {section.items.map((item) => (
-              <tr key={item.id} style={{ borderTop: "1px solid #eef0f1" }}>
+              <tr key={item.id} style={{ borderTop: "1px solid var(--color-border-separator)" }}>
                 <td style={{ padding: "9px 14px", verticalAlign: "top" }}>
-                  <div style={{ color: "#232729", fontWeight: 500, lineHeight: 1.4 }}>{item.title}</div>
+                  <div style={{ color: "var(--color-text-primary)", fontWeight: 500, lineHeight: 1.4 }}>{item.title}</div>
                   {item.acceptanceCriteria && (
-                    <div style={{ marginTop: 3, fontSize: 12, color: "#6a767c", lineHeight: 1.4 }}>
+                    <div style={{ marginTop: 3, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
                       {item.acceptanceCriteria}
                     </div>
                   )}
                 </td>
                 <td style={{
                   padding: "9px 10px", verticalAlign: "top", whiteSpace: "nowrap", fontSize: 12,
-                  color: item.status === "delayed" ? "#c62828" : "#232729",
+                  color: item.status === "delayed" ? "#c62828" : "var(--color-text-primary)",
                 }}>
                   {item.dueDate ? item.dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                 </td>
@@ -317,11 +317,12 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
       <DetailHeader>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: "#6a767c", marginBottom: 4, fontWeight: 500 }}>#{plan.number} · {typeName}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#232729", lineHeight: 1.3, marginBottom: 8 }}>{plan.title}</div>
-            <Pill color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 500 }}>#{plan.number} · {typeName}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.3, marginBottom: 8 }}>{plan.title}</div>
+            <Pill color={STATUS_COLORS[plan.status]} data-pill-color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
           </div>
           <Button
+            className="b_tertiary"
             variant="tertiary"
             icon={<Clear size="sm" />}
             onClick={onClose}
@@ -330,7 +331,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
         </div>
         {total > 0 && (
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#eceff1", overflow: "hidden" }}>
+            <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
               <div style={{ width: `${percent}%`, height: "100%", borderRadius: 4, background: barColor, transition: "width 0.2s ease" }} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 600, color: barColor, whiteSpace: "nowrap" }}>
@@ -341,7 +342,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
       </DetailHeader>
       <DetailBody>
         {plan.description && (
-          <div style={{ fontSize: 13, color: "#6a767c", marginBottom: 16, lineHeight: 1.5, fontStyle: "italic" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.5, fontStyle: "italic" }}>
             {plan.description}
           </div>
         )}
@@ -364,7 +365,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
           </MetaRow>
         </DetailMeta>
 
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#232729", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 10 }}>
           Sections ({plan.sections.length})
         </div>
         {plan.sections.map((section, i) => (
@@ -423,11 +424,11 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Create Action Plan</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Create Action Plan</Button>
     </>
   );
 
@@ -463,16 +464,17 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
       tabs={tabs}
     >
       {activeTab === "list" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="Action Plans">
 
               {/* Toolbar */}
               <Toolbar>
                 <ToolbarLeft>
                   <SearchInputWrap>
-                    <SearchIcon size="sm" style={{ color: "#6a767c", flexShrink: 0 }} />
+                    <SearchIcon size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
                     <SearchInput
+                      className="i_search"
                       placeholder="Search"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
@@ -493,10 +495,10 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
               {filterOpen && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-                  background: "#f5f6f7", border: "1px solid #d6dadc", borderRadius: 4,
+                  background: "var(--color-surface-tertiary)", border: "1px solid var(--color-border-separator)", borderRadius: 4,
                   marginBottom: 8, flexWrap: "wrap",
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#6a767c", marginRight: 4 }}>Status:</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-secondary)", marginRight: 4 }}>Status:</span>
                   {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s}
@@ -504,9 +506,9 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                       onClick={() => toggleStatus(s)}
                       style={{
                         padding: "4px 12px", fontSize: 13, borderRadius: 4, cursor: "pointer",
-                        border: `1px solid ${statusFilter.includes(s) ? "#1d5cc9" : "#d6dadc"}`,
-                        background: statusFilter.includes(s) ? "#e8f0fe" : "#fff",
-                        color: statusFilter.includes(s) ? "#1d5cc9" : "#232729",
+                        border: `1px solid ${statusFilter.includes(s) ? "var(--color-border-focus)" : "var(--color-border-separator)"}`,
+                        background: statusFilter.includes(s) ? "var(--color-brand-surface)" : "var(--color-surface-primary)",
+                        color: statusFilter.includes(s) ? "var(--color-text-tinted)" : "var(--color-text-primary)",
                         fontWeight: statusFilter.includes(s) ? 600 : 400,
                         fontFamily: "inherit",
                       }}
@@ -515,7 +517,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     </button>
                   ))}
                   {hasFilters && (
-                    <Button variant="tertiary" size="sm" onClick={() => setStatusFilter([])}>
+                    <Button className="b_tertiary" variant="tertiary" size="sm" onClick={() => setStatusFilter([])}>
                       Clear
                     </Button>
                   )}
@@ -571,11 +573,11 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                             return (
                               <Table.BodyRow
                                 key={plan.id}
-                                style={{ background: isSelected ? "#f0f4ff" : undefined }}
+                                style={{ background: isSelected ? "var(--color-brand-surface)" : undefined }}
                               >
                                 <Table.BodyCell>
                                   <Table.TextCell>
-                                    <span style={{ color: "#6a767c", fontSize: 13 }}>#{plan.number}</span>
+                                    <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>#{plan.number}</span>
                                   </Table.TextCell>
                                 </Table.BodyCell>
                                 <Table.BodyCell>
@@ -585,7 +587,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                                       onClick={() => setSelectedPlan(isSelected ? null : plan)}
                                       style={{
                                         background: "none", border: "none", padding: 0,
-                                        fontWeight: 600, color: "#1d5cc9", cursor: "pointer",
+                                        fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer",
                                         fontSize: 14, textAlign: "left", fontFamily: "inherit",
                                       }}
                                     >
@@ -597,22 +599,22 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                                   <Table.TextCell>{TYPE_MAP.get(plan.typeId) ?? plan.typeId}</Table.TextCell>
                                 </Table.BodyCell>
                                 <Table.BodyCell>
-                                  <Pill color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
+                                  <Pill color={STATUS_COLORS[plan.status]} data-pill-color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
                                 </Table.BodyCell>
                                 <Table.BodyCell>
                                   {total === 0 ? (
                                     <Table.TextCell>
-                                      <span style={{ color: "#6a767c", fontSize: 12 }}>No items</span>
+                                      <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>No items</span>
                                     </Table.TextCell>
                                   ) : (
                                     <div style={{ minWidth: 120 }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "#eceff1", overflow: "hidden" }}>
+                                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
                                           <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
                                         </div>
                                         <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
                                       </div>
-                                      <div style={{ fontSize: 11, color: "#6a767c", marginTop: 2 }}>
+                                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
                                         {closed}/{total} items closed{overdue && <span style={{ color: "#c62828", fontWeight: 600 }}> · overdue</span>}
                                       </div>
                                     </div>
@@ -648,8 +650,8 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
       )}
 
       {activeTab === "templates" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
+        <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+          <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
             <SplitViewCard.Section heading="Account Templates">
               <Table.Container>
                 <Table>
@@ -670,7 +672,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                         <Table.BodyRow key={tpl.id}>
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                              <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
                                 {tpl.name}
                               </span>
                             </Table.TextCell>
@@ -686,7 +688,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                           </Table.BodyCell>
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{tpl.description ?? "—"}</span>
+                              <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{tpl.description ?? "—"}</span>
                             </Table.TextCell>
                           </Table.BodyCell>
                           <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>

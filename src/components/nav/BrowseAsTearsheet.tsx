@@ -29,7 +29,7 @@ const Header = styled.div`
   align-items: center;
   gap: 12px;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -79,9 +79,9 @@ const ActionButtons = styled.div`
 
 const TableCard = styled.div`
   margin: 16px;
-  border: 1px solid #d6dadc;
+  border: 1px solid var(--color-border-separator);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
   overflow: hidden;
 `;
 
@@ -97,7 +97,7 @@ const PermTHead = styled.thead``;
 const PermTBody = styled.tbody``;
 
 const PermTr = styled.tr`
-  border-bottom: 1px solid #eef0f1;
+  border-bottom: 1px solid var(--color-border-separator);
   &:last-child { border-bottom: none; }
 `;
 
@@ -106,17 +106,17 @@ const PermTh = styled.th`
   padding: 10px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  background: #f5f6f7;
-  border-bottom: 1px solid #e0e4e7;
+  background: var(--color-surface-tertiary);
+  border-bottom: 1px solid var(--color-border-default);
 `;
 
 const PermTd = styled.td`
   padding: 10px 16px;
   font-size: 14px;
-  color: #1a2226;
+  color: var(--color-text-primary);
   vertical-align: middle;
 `;
 
@@ -134,25 +134,25 @@ const LevelBadge = styled.span<{ $level: ToolPermissionLevel }>`
 
 const LevelSelect = styled.select`
   height: 30px;
-  border: 1px solid #c4cbcf;
+  border: 1px solid var(--color-border-default);
   border-radius: 4px;
   font-size: 13px;
   padding: 0 6px;
-  background: #fff;
-  color: #1a2226;
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
   cursor: pointer;
-  &:focus { outline: none; border-color: #1d5cc9; }
+  &:focus { outline: none; border-color: var(--color-border-focus); }
 `;
 
 const SectionDivider = styled.div`
   padding: 8px 16px 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: #fafbfc;
-  border-bottom: 1px solid #eef0f1;
+  background: var(--color-surface-tertiary);
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -280,16 +280,17 @@ function PermissionsView({
     <>
       <Header>
         <Button
+          className="b_tertiary"
           variant="tertiary"
           icon={<CaretLeft />}
           onClick={onBack}
           aria-label="Back to team members"
         />
         <HeaderText>
-          <Typography intent="h2" style={{ fontWeight: 700, color: '#232729' }}>
+          <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
             {user.firstName} {user.lastName}
           </Typography>
-          <Typography intent="small" style={{ color: '#6a767c', display: 'block' }}>
+          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
             {user.role} · Tool Permissions
           </Typography>
         </HeaderText>
@@ -354,10 +355,10 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
           <>
             <Header>
               <HeaderText>
-                <Typography intent="h2" style={{ fontWeight: 700, color: '#232729' }}>
+                <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
                   Browse as
                 </Typography>
-                <Typography intent="small" style={{ color: '#6a767c', display: 'block', marginTop: 2 }}>
+                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginTop: 2 }}>
                   Switch perspective to view the app as a different team member.
                 </Typography>
               </HeaderText>
@@ -366,7 +367,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
             <Body>
               {users.length === 0 ? (
                 <div style={{ padding: '24px' }}>
-                  <Typography intent="body" style={{ color: '#6a767c' }}>
+                  <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
                     No users loaded yet.
                   </Typography>
                 </div>
@@ -403,7 +404,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
                                       {getInitials(user.firstName, user.lastName)}
                                     </AvatarCircle>
                                   )}
-                                  <Typography intent="body" style={{ fontWeight: isActive ? 600 : 400, color: '#1a2226' }}>
+                                  <Typography intent="body" style={{ fontWeight: isActive ? 600 : 400, color: 'var(--color-text-primary)' }}>
                                     {user.firstName} {user.lastName}
                                   </Typography>
                                 </NameCell>
@@ -416,7 +417,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
 
                               {/* Role */}
                               <Table.BodyCell>
-                                <Dropdown label={selectedRole} variant="secondary">
+                                <Dropdown label={selectedRole} className="b_secondary" variant="secondary">
                                   {ROLE_OPTIONS.map((role) => (
                                     <Dropdown.Item
                                       key={role}
@@ -434,6 +435,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
                               <ActionButtons>
                                 {isActive ? (
                                   <Button
+                                    className="b_tertiary"
                                     variant="tertiary"
                                     size="sm"
                                     icon={<Check />}
@@ -443,6 +445,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
                                   </Button>
                                 ) : (
                                   <Button
+                                    className="b_tertiary"
                                     variant="tertiary"
                                     size="sm"
                                     icon={<Person />}
@@ -458,6 +461,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
                               <Table.BodyCell>
                                 <ActionButtons>
                                   <Button
+                                  className="b_secondary"
                                   variant="secondary"
                                     size="sm"
                                     icon={<Pencil />}

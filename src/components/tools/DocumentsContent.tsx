@@ -35,9 +35,9 @@ const SearchInputWrap = styled.div`
   height: 36px;
   gap: 6px;
   min-width: 220px;
-  background: #fff;
+  background: var(--color-surface-primary);
   &:focus-within {
-    border-color: #1d5cc9;
+    border-color: var(--color-text-link);
     box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
   }
 `;
@@ -80,8 +80,8 @@ const TableArea = styled.div`
 const SidePanel = styled.div`
   width: 280px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -92,14 +92,14 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const PanelTitle = styled.span`
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const PanelHeaderActions = styled.div`
@@ -126,7 +126,7 @@ const FilterSection = styled.div`
 const FilterLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -224,11 +224,11 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Upload Document</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Upload Document</Button>
     </>
   );
 
@@ -254,14 +254,15 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
       actions={actions}
       tabs={tabs}
     >
-      <SplitViewCard>
-        <SplitViewCard.Main>
+      <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+        <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
           <SplitViewCard.Section heading="Documents">
             <Toolbar>
               <ToolbarLeft>
                 <SearchInputWrap>
-                  <SearchIcon size="sm" style={{ color: "#6a767c", flexShrink: 0 }} />
+                  <SearchIcon size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
                   <SearchInput
+                    className="i_search"
                     placeholder="Search"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -269,6 +270,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                 </SearchInputWrap>
                 {isPortfolio && (
                   <ToggleButton
+                    className="b_toggle"
                     selected={filterOpen}
                     icon={<Filter />}
                     onClick={() => setFilterOpen((v) => !v)}
@@ -286,11 +288,12 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                     <PanelTitle>Filters</PanelTitle>
                     <PanelHeaderActions>
                       {hasActiveFilters && (
-                        <Button variant="tertiary" size="md" onClick={() => setSelectedProjectIds([])}>
+                        <Button className="b_tertiary" variant="tertiary" size="md" onClick={() => setSelectedProjectIds([])}>
                           Clear All
                         </Button>
                       )}
                       <Button
+                        className="b_tertiary"
                         variant="tertiary"
                         icon={<Clear />}
                         onClick={() => setFilterOpen(false)}
@@ -357,7 +360,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                             {isPortfolio && (
                               <Table.BodyCell>
                                 <Table.TextCell>
-                                  <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+                                  <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
                                     {projectMap.get(doc.projectId) ?? doc.projectId}
                                   </span>
                                 </Table.TextCell>
@@ -365,7 +368,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                             )}
                             <Table.BodyCell>
                               <Table.TextCell>
-                                <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+                                <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
                                   {doc.title}
                                 </span>
                               </Table.TextCell>
@@ -377,7 +380,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                               <Table.TextCell>{doc.format.toUpperCase()}</Table.TextCell>
                             </Table.BodyCell>
                             <Table.BodyCell>
-                              <Pill color={STATUS_COLORS[doc.status]}>{STATUS_LABELS[doc.status]}</Pill>
+                              <Pill color={STATUS_COLORS[doc.status]} data-pill-color={STATUS_COLORS[doc.status]}>{STATUS_LABELS[doc.status]}</Pill>
                             </Table.BodyCell>
                             <Table.BodyCell>
                               <Table.TextCell>v{doc.version}</Table.TextCell>

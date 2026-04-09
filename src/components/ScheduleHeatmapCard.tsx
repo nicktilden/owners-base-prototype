@@ -110,17 +110,17 @@ const MILESTONE_ABBR: Record<ProjectMilestoneName, string> = {
 
 // ─── Stage pill colors ─────────────────────────────────────────────────────────
 
-const STAGE_COLORS: Record<string, "blue" | "green" | "yellow" | "gray"> = {
-  "Conceptual":             "gray",
-  "Feasibility":            "gray",
-  "Final design":           "blue",
+const STAGE_COLORS: Record<string, "blue" | "green" | "yellow" | "gray" | "magenta" | "cyan"> = {
+  "Conceptual":             "magenta",
+  "Feasibility":            "magenta",
+  "Final design":           "cyan",
   "Permitting":             "yellow",
   "Bidding":                "yellow",
   "Pre-Construction":       "blue",
   "Course of Construction": "green",
   "Post-Construction":      "green",
   "Handover":               "blue",
-  "Closeout":               "yellow",
+  "Closeout":               "gray",
   "Maintenance":            "gray",
 };
 
@@ -151,11 +151,11 @@ const Th = styled.th<{ $sticky?: boolean }>`
   height: 48px;
   font-size: 12px;
   font-weight: 600;
-  color: #232729;
+  color: var(--color-text-primary);
   letter-spacing: 0.25px;
   white-space: nowrap;
   text-align: left;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
   border-right: 1px solid #e8eaeb;
   background: ${HEATMAP_HEADER_BG};
   ${({ $sticky }) =>
@@ -172,11 +172,11 @@ const ThMilestone = styled.th`
   height: 48px;
   font-size: 12px;
   font-weight: 600;
-  color: #232729;
+  color: var(--color-text-primary);
   letter-spacing: 0.2px;
   white-space: nowrap;
   text-align: center;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
   border-right: 1px solid #e8eaeb;
   background: ${HEATMAP_HEADER_BG};
   min-width: 80px;
@@ -195,7 +195,7 @@ const Td = styled.td<{ $sticky?: boolean }>`
   padding: 6px 8px;
   border-bottom: 1px solid #e8eaeb;
   border-right: 1px solid #e8eaeb;
-  background: #fff;
+  background: var(--color-surface-primary);
   vertical-align: middle;
   white-space: nowrap;
   ${({ $sticky }) =>
@@ -204,7 +204,7 @@ const Td = styled.td<{ $sticky?: boolean }>`
     position: sticky;
     left: 0;
     z-index: 1;
-    background: #fff;
+    background: var(--color-surface-primary);
   `}
 `;
 
@@ -212,7 +212,7 @@ const TdMilestone = styled.td`
   padding: 3px 2px;
   border-bottom: 1px solid #e8eaeb;
   border-right: 1px solid #e8eaeb;
-  background: #fff;
+  background: var(--color-surface-primary);
   text-align: center;
   vertical-align: middle;
 `;
@@ -226,14 +226,14 @@ const ProjectMeta = styled.div`
 const ProjectNumber = styled.span`
   font-size: 11px;
   font-weight: 400;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   line-height: 1.2;
 `;
 
 const ProjectName = styled.span`
   font-size: 13px;
   font-weight: 600;
-  color: #1d5cc9;
+  color: var(--color-text-link);
   cursor: pointer;
   max-width: 220px;
   overflow: hidden;
@@ -259,7 +259,7 @@ const HeatCell = styled.div<{ $bg: string; $fg: string; $current: boolean }>`
   ${({ $current }) =>
     $current &&
     `
-    outline: 2px solid #232729;
+    outline: 2px solid var(--color-text-primary);
     outline-offset: 1px;
   `}
 `;
@@ -288,7 +288,7 @@ const LegendGradient = styled.div`
 
 const LegendLabel = styled.span`
   font-size: 11px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 `;
 
@@ -307,7 +307,7 @@ const LegendBand = styled.div<{ $color: string }>`
 
 const LegendSeparator = styled.div`
   width: 1px;
-  background: #d6dadc;
+  background: var(--color-border-separator);
   margin: 0 12px;
   height: 16px;
   align-self: center;
@@ -318,7 +318,7 @@ const LegendDotItem = styled.div`
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
 `;
 
 const LegendDot = styled.div`
@@ -326,7 +326,7 @@ const LegendDot = styled.div`
   height: 8px;
   border-radius: 50%;
   background: ${HEATMAP_NEUTRAL_BG};
-  border: 1px solid #d6dadc;
+  border: 1px solid var(--color-border-separator);
 `;
 
 const LegendCurrentBox = styled.div`
@@ -334,7 +334,7 @@ const LegendCurrentBox = styled.div`
   height: 14px;
   border-radius: 2px;
   background: #8bc34a;
-  outline: 2px solid #232729;
+  outline: 2px solid var(--color-text-primary);
   outline-offset: 1px;
 `;
 
@@ -348,7 +348,7 @@ const LEGEND_COLORS = [
 export default function ScheduleHeatmapCard() {
   const { filteredProjectRows } = useHubFilters();
   return (
-    <DetailPage.Card navigationLabel="Schedule & Milestones">
+    <DetailPage.Card navigationLabel="Schedule & Milestones" className="card_container">
       <DetailPage.Section heading="Schedule & Milestones">
         <Legend>
           <LegendGradient>
@@ -405,7 +405,7 @@ export default function ScheduleHeatmapCard() {
                       </ProjectMeta>
                     </Td>
                     <Td>
-                      <Pill color={STAGE_COLORS[project.stage] ?? "gray"}>
+                      <Pill color={STAGE_COLORS[project.stage] ?? "gray"} data-pill-color={STAGE_COLORS[project.stage] ?? "gray"}>
                         {project.stage}
                       </Pill>
                     </Td>

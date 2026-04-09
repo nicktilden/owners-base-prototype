@@ -62,51 +62,51 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
     <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right" block>
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header */}
-        <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+        <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
           {project ? (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{project.number}</Typography>
-                <span style={{ color: "#d6dadc" }}>·</span>
-                <Typography intent="small" style={{ color: "#6a767c" }}>{project.stage}</Typography>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>{project.number}</Typography>
+                <span style={{ color: "var(--color-border-separator)" }}>·</span>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)" }}>{project.stage}</Typography>
               </div>
-              <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block" }}>
+              <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
                 {project.name}
               </Typography>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   <span style={{ fontWeight: 600 }}>Start:</span> {formatDate(project.startDate)}
                 </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   <span style={{ fontWeight: 600 }}>End:</span> {formatDate(project.endDate)}
                 </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   <span style={{ fontWeight: 600 }}>Schedule Variance:</span>{" "}
                   {varianceBadge(scheduleVariance)}
                 </span>
-                <span style={{ fontSize: 12, color: "#6a767c" }}>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                   <span style={{ fontWeight: 600 }}>Current Milestone:</span> {currentMilestone}
                 </span>
               </div>
             </>
           ) : (
-            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>Project Schedule</Typography>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>Project Schedule</Typography>
           )}
         </div>
 
         {/* Body — milestone table */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
           {milestones.length === 0 ? (
-            <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
+            <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No milestone data available.</Typography>
           ) : (
-            <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: "#f5f6f7" }}>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
-                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
-                    <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                  <tr style={{ background: "var(--color-surface-secondary)" }}>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Milestone</th>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Baseline Date</th>
+                    <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Actual / Forecast</th>
+                    <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Variance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -116,20 +116,20 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
                       <tr
                         key={m.name}
                         style={{
-                          background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
+                          background: isCurrent ? "var(--color-brand-surface)" : i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)",
                         }}
                       >
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "var(--color-text-primary)" : "var(--color-text-secondary)" }}>
                           {m.name}
                           {isCurrent && (
-                            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "#1d5cc9", background: "#e8eefb", borderRadius: 3, padding: "1px 6px" }}>
+                            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "var(--color-text-link)", background: "var(--color-brand-surface)", borderRadius: 3, padding: "1px 6px" }}>
                               Current
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
-                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--color-border-separator)", color: m.actualDate ? "var(--color-text-primary)" : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}</td>
                       </tr>
                     );
                   })}
@@ -173,51 +173,51 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
       <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right" block>
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
-          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
-            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>
+          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
               Schedule Variance: {bucketLabel}
             </Typography>
-            <Typography intent="small" style={{ color: "#6a767c", display: "block", marginTop: 2 }}>
+            <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginTop: 2 }}>
               {rows.length} project{rows.length !== 1 ? "s" : ""} in this variance range
             </Typography>
           </div>
           {/* Body */}
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
             {rows.length === 0 ? (
-              <Typography intent="body" style={{ color: "#6a767c" }}>No projects in this range.</Typography>
+              <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No projects in this range.</Typography>
             ) : (
-              <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: "#f5f6f7" }}>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>#</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Name</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Stage</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Current Milestone</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Next Milestone</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Start Date</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>End Date</th>
-                      <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                    <tr style={{ background: "var(--color-surface-secondary)" }}>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>#</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Name</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Stage</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Current Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Next Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Start Date</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>End Date</th>
+                      <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Variance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((r, i) => (
-                      <tr key={r.number} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{r.number}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1" }}>
+                      <tr key={r.number} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{r.number}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
                           <button
                             onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
-                            style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", fontSize: 13, textAlign: "left" }}
+                            style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", fontSize: 13, textAlign: "left" }}
                           >
                             {r.name}
                           </button>
                         </td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{r.stage}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729" }}>{r.currentMilestone}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c" }}>{r.nextMilestone}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(r.startDate)}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{formatDate(r.endDate)}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{r.stage}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)" }}>{r.currentMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>{r.nextMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.startDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.endDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", whiteSpace: "nowrap" }}>
                           {varianceBadge(r.varianceDays)}
                         </td>
                       </tr>
@@ -287,6 +287,7 @@ export function ProjectsByStageHubCard() {
       infoTooltip="Distribution of projects by current stage from the sample project dataset, with optional Program and Stage filters."
       actions={
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<ExternalLink size="sm" />}
@@ -341,7 +342,7 @@ export function ProjectsByStageHubCard() {
               const barHeight = `${Math.max(s.value > 0 ? 12 : 0, (s.value / maxStageValue) * 140)}px`;
               return (
                 <div key={s.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#232729", fontVariantNumeric: "tabular-nums" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
                     {s.value}
                   </span>
                   <div
@@ -357,7 +358,7 @@ export function ProjectsByStageHubCard() {
                     style={{
                       width: "100%",
                       fontSize: 12,
-                      color: "#232729",
+                      color: "var(--color-text-primary)",
                       textAlign: "center",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -367,14 +368,14 @@ export function ProjectsByStageHubCard() {
                   >
                     {s.name}
                   </span>
-                  <span style={{ fontSize: 12, color: "#6a767c", fontVariantNumeric: "tabular-nums" }}>
+                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
                     {pct}%
                   </span>
                 </div>
               );
             })}
             {stageRows.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "#6a767c", textAlign: "center" }}>
+              <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>
                 No projects for selected filters.
               </div>
             )}
@@ -487,13 +488,16 @@ export function ScheduleRiskGHubCard() {
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Button
+            className="b_secondary"
             variant="secondary"
+            data-variant="secondary"
             size="sm"
             aria-label="View all schedule variance rows"
           >
             View all
           </Button>
           <Button
+            className="b_tertiary"
             variant="tertiary"
             size="sm"
             icon={<EllipsisVertical size="sm" />}
@@ -515,7 +519,7 @@ export function ScheduleRiskGHubCard() {
                   onKeyDown={(e) => e.key === "Enter" && setOpenBucketIdx(i)}
                   style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, height: "100%", justifyContent: "flex-end", cursor: "pointer" }}
                 >
-                  <span style={{ fontSize: 12, color: "#232729", fontWeight: 600 }}>{count}</span>
+                  <span style={{ fontSize: 12, color: "var(--color-text-primary)", fontWeight: 600 }}>{count}</span>
                   <div
                     style={{
                       width: "100%",
@@ -527,7 +531,7 @@ export function ScheduleRiskGHubCard() {
                     onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.75")}
                     onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                   />
-                  <span style={{ fontSize: 12, color: "#6A767C" }}>{b.label}</span>
+                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{b.label}</span>
                 </div>
               );
             })}
@@ -538,26 +542,26 @@ export function ScheduleRiskGHubCard() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Project</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>Variance</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid #ddd", fontSize: 12, fontWeight: 600, color: "#6A767C" }}>% Complete</th>
+                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Project</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Variance</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>% Complete</th>
               </tr>
             </thead>
             <tbody>
               {criticalRows.map(({ row, varianceDays, pctComplete }, i) => (
-                <tr key={row.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                  <td style={{ padding: "8px 8px", borderBottom: "1px solid #eee" }}>
+                <tr key={row.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                  <td style={{ padding: "8px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                     <button
                       onClick={() => setOpenProjectId(row.id)}
-                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
                     >
                       {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                     </button>
                   </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center" }}>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                     {varianceBadge(varianceDays)}
                   </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "#232729" }}>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "var(--color-text-primary)" }}>
                     {pctComplete}%
                   </td>
                 </tr>
@@ -676,7 +680,7 @@ export function ScheduleVariance2HubCard() {
 
   const kpiCellStyle = (hasBorderRight: boolean): React.CSSProperties => ({
     padding: "8px 16px",
-    ...(hasBorderRight ? { borderRight: "1px solid #d6dadc" } : {}),
+    ...(hasBorderRight ? { borderRight: "1px solid var(--color-border-separator)" } : {}),
     cursor: "pointer",
     transition: "background 0.15s",
   });
@@ -697,13 +701,16 @@ export function ScheduleVariance2HubCard() {
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Button
+            className="b_secondary"
             variant="secondary"
+            data-variant="secondary"
             size="sm"
             aria-label="View all schedule variance rows"
           >
             View all
           </Button>
           <Button
+            className="b_tertiary"
             variant="tertiary"
             size="sm"
             icon={<EllipsisVertical size="sm" />}
@@ -712,7 +719,7 @@ export function ScheduleVariance2HubCard() {
         </div>
       }
     >
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
         <div
           style={kpiCellStyle(true)}
           onClick={() => setOpenSegment("average")}
@@ -720,10 +727,10 @@ export function ScheduleVariance2HubCard() {
           tabIndex={0}
           aria-label="View all projects by average variance"
           onKeyDown={(e) => e.key === "Enter" && setOpenSegment("average")}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Average</div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Average</div>
           <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(avgVariance).bg, marginTop: 4 }}>+{avgVariance} days</div>
         </div>
         <div
@@ -733,11 +740,11 @@ export function ScheduleVariance2HubCard() {
           tabIndex={0}
           aria-label="View projects on schedule"
           onKeyDown={(e) => e.key === "Enter" && setOpenSegment("onSchedule")}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>On Schedule</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(0).bg, marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>On Schedule</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(0).bg, marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -746,11 +753,11 @@ export function ScheduleVariance2HubCard() {
           tabIndex={0}
           aria-label="View projects with 7–13 day delays"
           onKeyDown={(e) => e.key === "Enter" && setOpenSegment("delays")}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(10).bg, marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(10).bg, marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(false)}
@@ -759,45 +766,45 @@ export function ScheduleVariance2HubCard() {
           tabIndex={0}
           aria-label="View projects with 14+ day delays"
           onKeyDown={(e) => e.key === "Enter" && setOpenSegment("critical")}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f6f7")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "#232729", letterSpacing: 0.2 }}>Delays (14+ days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(21).bg, marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "#6a767c", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (14+ days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(21).bg, marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
       </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr>
-            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Project</th>
-            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Drift</th>
-            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Variance</th>
-            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c" }}>Cost Delta</th>
+            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Project</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Drift</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Variance</th>
+            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Cost Delta</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1" }}>
+            <tr key={r.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                 <button
                   onClick={() => setOpenProjectId(r.id)}
-                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
                 >
                   {r.name}
                 </button>
               </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                 {(() => { const c = varianceColors(r.worstVariance); return (
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 600 }}>
                     {r.drift}%
                   </span>
                 ); })()}
               </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                 {varianceBadge(r.worstVariance)}
               </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
                 {r.costDeltaLabel}
               </td>
             </tr>

@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { PersonaProvider, usePersona } from '@/context/PersonaContext';
 import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
@@ -50,14 +51,16 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <DataProvider>
-      <PersonaProvider>
-        <LevelProvider>
-          <SeedLoader>
-            {children}
-          </SeedLoader>
-        </LevelProvider>
-      </PersonaProvider>
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <PersonaProvider>
+          <LevelProvider>
+            <SeedLoader>
+              {children}
+            </SeedLoader>
+          </LevelProvider>
+        </PersonaProvider>
+      </DataProvider>
+    </ThemeProvider>
   );
 }

@@ -45,9 +45,9 @@ const SearchInputWrap = styled.div`
   height: 36px;
   gap: 6px;
   min-width: 220px;
-  background: #fff;
+  background: var(--color-surface-primary);
   &:focus-within {
-    border-color: #1d5cc9;
+    border-color: var(--color-text-link);
     box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
   }
 `;
@@ -99,8 +99,8 @@ const TableArea = styled.div`
 const SidePanel = styled.div`
   width: 280px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -111,14 +111,14 @@ const PanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const PanelTitle = styled.span`
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const PanelHeaderActions = styled.div`
@@ -147,7 +147,7 @@ const FilterSection = styled.div`
 const FilterLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 
@@ -163,7 +163,7 @@ const ConfigSectionHeading = styled.div`
 const ConfigSectionTitle = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const ShowAllLink = styled.button`
@@ -172,7 +172,7 @@ const ShowAllLink = styled.button`
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
   padding: 0;
   &:hover { text-decoration: underline; }
 `;
@@ -182,13 +182,13 @@ const ColumnToggleRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f2f3;
+  border-bottom: 1px solid var(--color-border-separator);
   &:last-child { border-bottom: none; }
 `;
 
 const ColumnToggleLabel = styled.span`
   font-size: 14px;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 // ─── Quick filter bar ──────────────────────────────────────────────────────────
@@ -206,9 +206,9 @@ const FilterChipEl = styled.button`
   align-items: center;
   gap: 8px;
   height: 36px;
-  background: #e8f0fe;
-  color: #1d5cc9;
-  border: 1px solid #1d5cc9;
+  background: var(--color-brand-surface);
+  color: var(--color-text-link);
+  border: 1px solid var(--color-text-link);
   border-radius: 4px;
   padding: 0 12px;
   font-size: 14px;
@@ -221,7 +221,7 @@ const FilterChipRemove = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  color: #1d5cc9;
+  color: var(--color-text-link);
   padding: 0;
   line-height: 1;
   font-size: 22px;
@@ -247,22 +247,22 @@ const BulkEditLabel = styled.span`
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const BulkCountLabel = styled.span`
   font-size: 14px;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 // ─── Group header row styles ───────────────────────────────────────────────────
 
 const GroupHeaderCell = styled.td<{ $depth: number }>`
-  background: #ffffff;
+  background: var(--color-surface-primary);
   padding: 0 8px 0 ${({ $depth }) => $depth * 12}px;
   height: 48px;
-  border-bottom: 1px solid #e0e4e7;
-  border-top: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
+  border-top: 1px solid var(--color-border-separator);
   position: relative;
   &::before {
     content: '';
@@ -271,8 +271,8 @@ const GroupHeaderCell = styled.td<{ $depth: number }>`
     top: 0;
     bottom: 0;
     width: ${({ $depth }) => ($depth > 0 ? 12 : 0)}px;
-    background: #f4f5f6;
-    border-right: 1px solid #d6dadc;
+    background: var(--color-surface-secondary);
+    border-right: 1px solid var(--color-border-separator);
     display: ${({ $depth }) => ($depth > 0 ? 'block' : 'none')};
   }
 `;
@@ -287,8 +287,8 @@ const GroupHeaderContent = styled.button`
   padding: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
-  &:hover { color: #1d5cc9; }
+  color: var(--color-text-primary);
+  &:hover { color: var(--color-text-link); }
 `;
 
 const DepthRail = styled.td<{ $depth: number }>`
@@ -307,8 +307,8 @@ const DepthRail = styled.td<{ $depth: number }>`
       to right,
       #f4f5f6 0px,
       #f4f5f6 11px,
-      #d6dadc 11px,
-      #d6dadc 12px
+      var(--color-border-separator) 11px,
+      var(--color-border-separator) 12px
     );
   }
 `;
@@ -454,7 +454,7 @@ function AssetRow({ asset, hidden, isPortfolio, projectLabel, selected, onToggle
       {isPortfolio && !hidden.has("project") && (
         <Table.BodyCell>
           <Table.TextCell>
-            <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
+            <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
               {projectLabel}
             </span>
           </Table.TextCell>
@@ -463,7 +463,7 @@ function AssetRow({ asset, hidden, isPortfolio, projectLabel, selected, onToggle
       {!hidden.has("name") && (
         <Table.BodyCell>
           <Table.TextCell>
-            <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
+            <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>
               {asset.name}
             </span>
           </Table.TextCell>
@@ -495,12 +495,12 @@ function AssetRow({ asset, hidden, isPortfolio, projectLabel, selected, onToggle
       )}
       {!hidden.has("status") && (
         <Table.BodyCell>
-          <Pill color={STATUS_COLORS[asset.status]}>{STATUS_LABELS[asset.status]}</Pill>
+          <Pill color={STATUS_COLORS[asset.status]} data-pill-color={STATUS_COLORS[asset.status]}>{STATUS_LABELS[asset.status]}</Pill>
         </Table.BodyCell>
       )}
       {!hidden.has("condition") && (
         <Table.BodyCell>
-          <Pill color={CONDITION_COLORS[asset.condition]}>{capitalize(asset.condition)}</Pill>
+          <Pill color={CONDITION_COLORS[asset.condition]} data-pill-color={CONDITION_COLORS[asset.condition]}>{capitalize(asset.condition)}</Pill>
         </Table.BodyCell>
       )}
       {!hidden.has("installDate") && (
@@ -677,12 +677,12 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="pdf">PDF</Dropdown.Item>
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Add Asset</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Add Asset</Button>
     </>
   );
 
@@ -706,22 +706,24 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
       tabs={tabs}
     >
               {activeTab === "list" && (
-                <SplitViewCard>
-                  <SplitViewCard.Main>
+                <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+                  <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
                     <SplitViewCard.Section heading="Assets">
 
                       {/* Toolbar */}
                       <Toolbar>
                         <ToolbarLeft>
                           <SearchInputWrap>
-                            <SearchIcon size="sm" style={{ color: "#6a767c", flexShrink: 0 }} />
+                            <SearchIcon size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 }} />
                             <SearchInput
+                              className="i_search"
                               placeholder="Search"
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
                             />
                           </SearchInputWrap>
                           <ToggleButton
+                            className="b_toggle"
                             selected={filterOpen}
                             icon={<Filter />}
                             onClick={() => {
@@ -770,6 +772,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                             </SegmentedController.Segment>
                           </SegmentedController>
                           <ToggleButton
+                            className="b_toggle"
                             selected={configOpen}
                             icon={<Sliders />}
                             onClick={() => {
@@ -822,6 +825,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                               <PanelHeaderActions>
                                 {hasActiveFilters && (
                                   <Button
+                                    className="b_tertiary"
                                     variant="tertiary"
                                     size="md"
                                     onClick={clearFilters}
@@ -830,6 +834,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                                   </Button>
                                 )}
                                 <Button
+                                  className="b_tertiary"
                                   variant="tertiary"
                                   icon={<Clear />}
                                   onClick={() => setFilterOpen(false)}
@@ -1042,6 +1047,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                             <PanelHeader>
                               <PanelTitle>Table Settings</PanelTitle>
                               <Button
+                                className="b_tertiary"
                                 variant="tertiary"
                                 icon={<Clear />}
                                 onClick={() => setConfigOpen(false)}
@@ -1076,10 +1082,10 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
               )}
 
               {activeTab === "recycle_bin" && (
-                <SplitViewCard>
-                  <SplitViewCard.Main>
+                <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+                  <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
                     <SplitViewCard.Section heading="Recycle Bin">
-                      <Box padding="xl" style={{ textAlign: "center", color: "#6a767c" }}>
+                      <Box padding="xl" style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>
                         Recycle Bin coming soon.
                       </Box>
                     </SplitViewCard.Section>

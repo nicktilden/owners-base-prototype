@@ -21,7 +21,7 @@ const TABLE_HEADER_CELL_STYLE: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
   lineHeight: "16px",
-  color: "#232729",
+  color: "var(--color-text-primary)",
 };
 
 export default function TableCard({

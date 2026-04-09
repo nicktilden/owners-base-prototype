@@ -24,7 +24,7 @@ const HeaderActions = styled.div`
 // ─── Alert Banner (orange summary strip) ─────────────────────────────────────
 
 const AlertBanner = styled.div`
-  background: #fff1eb;
+  background: var(--color-brand-surface);
   border-radius: 4px;
   padding: 8px;
   display: flex;
@@ -59,7 +59,7 @@ const AlertBold = styled.span`
 const BriefList = styled.div`
   display: flex;
   flex-direction: column;
-  border: 1px solid #d6dadc;
+  border: 1px solid var(--color-border-separator);
   border-radius: 8px;
   overflow: hidden;
   flex: 1;
@@ -72,8 +72,8 @@ const BriefRow = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: #fff;
-  border-bottom: 1px solid #d6dadc;
+  background: var(--color-surface-primary);
+  border-bottom: 1px solid var(--color-border-separator);
   cursor: pointer;
 
   &:last-child {
@@ -81,19 +81,19 @@ const BriefRow = styled.div`
   }
 
   &:hover {
-    background: #f4f5f6;
+    background: var(--color-surface-hover);
   }
 `;
 
 const IconWrap = styled.div`
-  background: #f4f5f6;
+  background: var(--color-surface-hover);
   border-radius: 40px;
   padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #6a767c;
+  color: var(--color-text-secondary);
 `;
 
 const RowContent = styled.div`
@@ -112,7 +112,7 @@ const RowTitleLine = styled.div`
 const RowTitle = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #1d5cc9;
+  color: var(--color-text-tinted);
   letter-spacing: 0.15px;
   line-height: 20px;
   white-space: nowrap;
@@ -127,7 +127,7 @@ const CountBadge = styled.span`
   padding: 0 6px;
   border-radius: 10px;
   background: #ff5100;
-  color: #fff;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 700;
   line-height: 16px;
@@ -137,7 +137,7 @@ const CountBadge = styled.span`
 const RowSubtitle = styled.span`
   font-size: 12px;
   font-weight: 400;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   letter-spacing: 0.25px;
   line-height: 16px;
   white-space: nowrap;
@@ -212,10 +212,11 @@ export default function AIDailyPlannerCard() {
       infoTooltip="AI-generated daily summary built from seeded open items, meeting placeholders, upcoming milestones, and new document signals."
       actions={
         <HeaderActions>
-          <Button variant="secondary" size="sm" aria-label="Start Day">
+          <Button className="b_secondary" variant="secondary" size="sm" aria-label="Start Day">
             Start Day
           </Button>
           <Button
+            className="b_tertiary"
             variant="tertiary"
             size="sm"
             icon={<EllipsisVertical size="sm" />}
@@ -224,8 +225,8 @@ export default function AIDailyPlannerCard() {
         </HeaderActions>
       }
     >
-      <AlertBanner style={{ marginBottom: 8 }}>
-        <AlertDate>Today, {today}</AlertDate>
+      <AlertBanner className="alert-banner" style={{ marginBottom: 8 }}>
+        <AlertDate className="alert-date-text">Today, {today}</AlertDate>
         <AlertBody>
           You have{" "}
           <AlertBold>{overdueCount} urgent items</AlertBold>
@@ -243,7 +244,7 @@ export default function AIDailyPlannerCard() {
             <RowContent>
               <RowTitleLine>
                 <RowTitle>{row.title}</RowTitle>
-                <CountBadge>{row.count}</CountBadge>
+                <CountBadge data-pill-color="yellow">{row.count}</CountBadge>
               </RowTitleLine>
               <RowSubtitle>{row.subtitle}</RowSubtitle>
             </RowContent>

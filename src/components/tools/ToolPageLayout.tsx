@@ -71,15 +71,15 @@ export default function ToolPageLayout({
     <>
       <GlobalHeader />
       <AppLayout>
-        <ToolLandingPage>
-          <ToolLandingPage.Main>
-            <ToolLandingPage.Header>
-              <ToolLandingPage.Title>
+        <ToolLandingPage style={{ background: 'var(--color-surface-secondary)' }}>
+          <ToolLandingPage.Main style={{ background: 'var(--color-surface-primary)' }}>
+            <ToolLandingPage.Header style={{ background: 'var(--color-surface-primary)', borderBottom: '1px solid var(--color-border-separator)' }}>
+              <ToolLandingPage.Title style={{ background: 'var(--color-surface-primary)' }}>
                 {breadcrumbs.length > 0 && (
-                  <Breadcrumbs variant="list">
+                  <Breadcrumbs variant="list" style={{ color: 'var(--color-text-secondary)' }}>
                     {breadcrumbs.map((crumb) => (
                       <Breadcrumbs.Crumb key={crumb.label}>
-                        {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : crumb.label}
+                        {crumb.href ? <Link href={crumb.href} style={{ color: 'var(--color-text-secondary)' }}>{crumb.label}</Link> : crumb.label}
                       </Breadcrumbs.Crumb>
                     ))}
                     <Breadcrumbs.Crumb active>{title}</Breadcrumbs.Crumb>
@@ -87,7 +87,7 @@ export default function ToolPageLayout({
                 )}
                 <Title>
                   <Title.Text>
-                    <H1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <H1 style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)' }}>
                       {icon}
                       {title}
                     </H1>
@@ -100,13 +100,13 @@ export default function ToolPageLayout({
                 </Title>
               </ToolLandingPage.Title>
               {tabs && (
-                <ToolLandingPage.Tabs>
+                <ToolLandingPage.Tabs style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
                   {tabs}
                 </ToolLandingPage.Tabs>
               )}
             </ToolLandingPage.Header>
 
-            <ToolLandingPage.Body>
+            <ToolLandingPage.Body style={{ background: 'var(--color-surface-secondary)' }}>
               {children}
             </ToolLandingPage.Body>
           </ToolLandingPage.Main>

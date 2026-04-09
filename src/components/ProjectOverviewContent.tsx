@@ -20,7 +20,7 @@ export default function ProjectOverviewContent() {
       <AppLayout>
         <DetailPage width="lg">
           <DetailPage.Main>
-            <DetailPage.Header>
+            <DetailPage.Header style={{ borderBottom: '1px solid var(--color-card-border)' }}>
               <DetailPage.Title>
                 <Title>
                   <Title.Text>
@@ -31,10 +31,10 @@ export default function ProjectOverviewContent() {
                   </Title.Text>
                   <Title.Actions>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <Button variant="primary" icon={<Plus />}>
+                      <Button variant="primary" className="b_primary" icon={<Plus />}>
                         Add Update
                       </Button>
-                      <Button variant="secondary">Export</Button>
+                      <Button variant="secondary" className="b_secondary" data-variant="secondary">Export</Button>
                     </div>
                   </Title.Actions>
                 </Title>

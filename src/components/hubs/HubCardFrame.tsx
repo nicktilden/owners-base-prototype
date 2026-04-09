@@ -4,9 +4,10 @@ import { Info } from "@procore/core-icons";
 import styled from "styled-components";
 
 const Card = styled.div`
-  background: #fff;
+  background: var(--color-surface-card);
   border-radius: 8px;
-  box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-card-border);
+  box-shadow: 0px 2px 6px 0px var(--color-shadow);
   display: flex;
   flex-direction: column;
   min-height: 200px;
@@ -69,11 +70,11 @@ export default function HubCardFrame({
   children,
 }: HubCardFrameProps) {
   return (
-    <Card>
+    <Card className="card_container">
       <Header>
         <HeaderLeft>
           {titlePrefix}
-          <Typography intent="h3" style={{ fontWeight: 600, color: "#232729", fontSize: 16, letterSpacing: "0.15px" }}>
+          <Typography intent="h3" style={{ fontWeight: 600, color: "var(--color-text-primary)", fontSize: 16, letterSpacing: "0.15px" }}>
             {title}
           </Typography>
           {infoTooltip ? (
@@ -96,7 +97,7 @@ export default function HubCardFrame({
                 </Tooltip.Content>
               }
             >
-              <span style={{ display: "inline-flex", color: "#232729" }} aria-label="Card dataset info">
+              <span style={{ display: "inline-flex", color: "var(--color-text-primary)" }} aria-label="Card dataset info">
                 <Info size="sm" />
               </span>
             </Tooltip>
