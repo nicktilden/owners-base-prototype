@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Avatar, Button, Card, H2, Link, Pill, Select, Tearsheet, Typography } from "@procore/core-react";
-import { Comment, Duplicate, EllipsisVertical, Envelope, ExternalLink, Phone, PhoneMobile } from "@procore/core-icons";
+import { Comment, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -12,6 +12,7 @@ import {
   PROJECT_MANAGER_CONTACTS,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import ActionPanel from "@/components/hubs/ActionPanel";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
 
@@ -517,6 +518,7 @@ export function ProjectsByStageHubCard() {
 export function ScheduleRiskGHubCard() {
   const [openBucketIdx, setOpenBucketIdx] = useState<number | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const [actionPanelOpen, setActionPanelOpen] = useState(false);
   const { filteredProjectRows } = useHubFilters();
 
   const counts = useMemo(
@@ -618,11 +620,39 @@ export function ScheduleRiskGHubCard() {
           rows={tearsheetRows}
         />
       )}
+    <ActionPanel
+      open={actionPanelOpen}
+      onClose={() => setActionPanelOpen(false)}
+      cardType="schedule_variance"
+      userRoles={['owner', 'owner_admin', 'project_manager']}
+      context={{
+        itemName: 'Portfolio Schedule Overview',
+        pills: [
+          { label: `${counts[2] + counts[3]} at risk`, color: 'red' },
+          { label: `${counts[0] + counts[1]} on track`, color: 'green' },
+        ],
+        aiSummary: `${counts[3]} project${counts[3] !== 1 ? 's' : ''} have critical delays (14+ days). ${counts[2]} additional project${counts[2] !== 1 ? 's' : ''} are showing moderate delays (7–14 days). Consider requesting recovery plans for the most impacted projects.`,
+      }}
+    />
     <HubCardFrame
       title="Schedule Variance"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Lightning size="sm" />}
+            onClick={() => setActionPanelOpen(true)}
+            aria-label="Open AI actions panel"
+            style={{
+              background: 'linear-gradient(135deg, #f3efff 0%, #e8f0ff 100%)',
+              borderColor: '#c4b5fd',
+              color: '#5b3cc4',
+            }}
+          >
+            AI Actions
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -718,6 +748,7 @@ export function ScheduleRiskGHubCard() {
 export function ScheduleVariance2HubCard() {
   const [openSegment, setOpenSegment] = useState<"average" | "onSchedule" | "delays" | "critical" | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const [actionPanelOpen, setActionPanelOpen] = useState(false);
   const { filteredProjectRows } = useHubFilters();
 
   const portfolioRows = useMemo(() => {
@@ -836,11 +867,40 @@ export function ScheduleVariance2HubCard() {
           rows={tearsheetRows}
         />
       )}
+    <ActionPanel
+      open={actionPanelOpen}
+      onClose={() => setActionPanelOpen(false)}
+      cardType="schedule_variance"
+      userRoles={['owner', 'owner_admin', 'project_manager']}
+      context={{
+        itemName: 'Portfolio Schedule Overview',
+        pills: [
+          { label: `${criticalCount} critical`, color: 'red' },
+          { label: `${delaysCount} delayed`, color: 'yellow' },
+          { label: `${onScheduleCount} on schedule`, color: 'green' },
+        ],
+        aiSummary: `Portfolio average variance is +${avgVariance} days. ${criticalCount} project${criticalCount !== 1 ? 's' : ''} are in critical delay territory (14+ days). Consider escalating or requesting recovery plans for the most impacted.`,
+      }}
+    />
     <HubCardFrame
       title="Schedule Variance 2"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Lightning size="sm" />}
+            onClick={() => setActionPanelOpen(true)}
+            aria-label="Open AI actions panel"
+            style={{
+              background: 'linear-gradient(135deg, #f3efff 0%, #e8f0ff 100%)',
+              borderColor: '#c4b5fd',
+              color: '#5b3cc4',
+            }}
+          >
+            AI Actions
+          </Button>
           <Button
             variant="secondary"
             size="sm"
