@@ -313,6 +313,33 @@ const DepthRail = styled.td<{ $depth: number }>`
   }
 `;
 
+const SegmentedControllerWrap = styled.div`
+  /* default (unselected) segment label */
+  [role="radiogroup"] label {
+    background-color: var(--color-surface-secondary) !important;
+    color: var(--color-text-secondary) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background-color: var(--color-surface-tertiary) !important;
+      color: var(--color-text-primary) !important;
+    }
+  }
+
+  /* selected segment — the label that contains a checked radio input */
+  [role="radiogroup"] label:has(input:checked) {
+    background-color: var(--color-action-primary) !important;
+    border-color: var(--color-action-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background-color: var(--color-action-primary) !important;
+      color: #ffffff !important;
+    }
+  }
+`;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(d: Date | null): string {
@@ -706,7 +733,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
       tabs={tabs}
     >
               {activeTab === "list" && (
-                <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+                <SplitViewCard className="card_container" style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
                   <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
                     <SplitViewCard.Section heading="Assets">
 
@@ -755,6 +782,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                               </Select.Option>
                             ))}
                           </Select>
+                          {/* <SegmentedControllerWrap className="b_segmented">
                           <SegmentedController>
                             <SegmentedController.Segment
                               selected={viewMode === "rows"}
@@ -769,8 +797,9 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                               tooltip="Map view"
                             >
                               <Location />
-                            </SegmentedController.Segment>
-                          </SegmentedController>
+                              </SegmentedController.Segment>
+                            </SegmentedController>
+                          </SegmentedControllerWrap> */}
                           <ToggleButton
                             className="b_toggle"
                             selected={configOpen}
@@ -933,7 +962,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
 
                         {/* ── Table ── */}
                         <TableArea>
-                          <Table.Container>
+                          <Table.Container className="table_container">
                             <Table>
                               <Table.Header>
                                 <Table.HeaderRow>

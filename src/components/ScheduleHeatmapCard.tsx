@@ -234,6 +234,7 @@ const ProjectName = styled.span`
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-link);
+  text-decoration: underline;
   cursor: pointer;
   max-width: 220px;
   overflow: hidden;
@@ -338,6 +339,33 @@ const LegendCurrentBox = styled.div`
   outline-offset: 1px;
 `;
 
+const SegmentedControllerWrap = styled.div`
+  /* default (unselected) segment label */
+  [role="radiogroup"] label {
+    background-color: var(--color-surface-secondary) !important;
+    color: var(--color-text-secondary) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background-color: var(--color-surface-tertiary) !important;
+      color: var(--color-text-primary) !important;
+    }
+  }
+
+  /* selected segment — the label that contains a checked radio input */
+  [role="radiogroup"] label:has(input:checked) {
+    background-color: var(--color-action-primary) !important;
+    border-color: var(--color-action-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background-color: var(--color-action-primary) !important;
+      color: #ffffff !important;
+    }
+  }
+`;
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const LEGEND_COLORS = [
@@ -372,8 +400,8 @@ export default function ScheduleHeatmapCard() {
           </LegendDotItem>
         </Legend>
 
-        <ScrollWrapper>
-          <HeatmapTable>
+        <ScrollWrapper className="table_container">
+          <HeatmapTable> 
             <THead>
               <tr>
                 <Th $sticky>Project</Th>
@@ -404,8 +432,8 @@ export default function ScheduleHeatmapCard() {
                         <ProjectName title={project.name}>{project.name}</ProjectName>
                       </ProjectMeta>
                     </Td>
-                    <Td>
-                      <Pill color={STAGE_COLORS[project.stage] ?? "gray"} data-pill-color={STAGE_COLORS[project.stage] ?? "gray"}>
+                    <Td style={{ minWidth: 160 }}>
+                      <Pill style={{ whiteSpace: "nowrap" }} color={STAGE_COLORS[project.stage] ?? "gray"} data-pill-color={STAGE_COLORS[project.stage] ?? "gray"}>
                         {project.stage}
                       </Pill>
                     </Td>

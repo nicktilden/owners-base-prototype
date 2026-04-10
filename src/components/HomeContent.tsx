@@ -244,6 +244,7 @@ function HomeContentInner() {
                           {tab}
                           {isActive && (
                             <EllipsisBtn
+                             className="b_tertiary"
                               ref={(el) => { if (el) ellipsisBtnRefs.current[tab] = el; }}
                               type="button"
                               aria-label={`${tab} options`}

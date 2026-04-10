@@ -469,6 +469,51 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               {selectedTab === 'Personal' && (
                 <>
                   <Card>
+                    <Box style={FORM_CARD_STYLE}>
+                      <Typography intent="h2" style={{ marginBottom: 4 }}>Appearance</Typography>
+                      <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
+                        Choose a brand theme and color scheme for the interface.
+                      </Typography>
+
+                      <Typography intent="h3" style={{ marginBottom: 8 }}>Interface Theme</Typography>
+                      <Box style={{ width: '50%' }}>
+                        <Select
+                        className="i_select"
+                          label={THEME_OPTIONS.find((o) => o.value === (
+                            colorScheme === 'system' ? 'system'
+                              : `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}` as ThemeOption
+                          ))?.label}
+                          onSelect={(selection) => {
+                            const val = selection.item as ThemeOption;
+                            if (val === 'system') {
+                              setColorScheme('system');
+                            } else {
+                              const [t, s] = val.split('-') as ['default' | 'owner', 'light' | 'dark'];
+                              setTheme(t);
+                              setColorScheme(s);
+                            }
+                          }}
+                          block
+                        >
+                          {THEME_OPTIONS.map((opt) => (
+                            <Select.Option
+                              key={opt.value}
+                              value={opt.value}
+                              selected={
+                                colorScheme === 'system'
+                                  ? opt.value === 'system'
+                                  : opt.value === `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}`
+                              }
+                            >
+                              {opt.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Box>
+                    </Box>
+                  </Card>
+
+                  <Card style={{ marginTop: 16 }}>
                     <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
                       <Form.Form style={FORM_CARD_STYLE}>
                         <Typography intent="h2" style={{ marginBottom: 8 }}>Personal Info</Typography>
@@ -516,51 +561,6 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                         </Form.SettingsPageFooter>
                       </Form.Form>
                     </Form>
-                  </Card>
-
-                  <Card style={{ marginTop: 16 }}>
-                    <Box style={FORM_CARD_STYLE}>
-                      <Typography intent="h2" style={{ marginBottom: 4 }}>Appearance</Typography>
-                      <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
-                        Choose a brand theme and color scheme for the interface.
-                      </Typography>
-
-                      <Typography intent="h3" style={{ marginBottom: 8 }}>Interface Theme</Typography>
-                      <Box style={{ width: '50%' }}>
-                        <Select
-                        className="i_select"
-                          label={THEME_OPTIONS.find((o) => o.value === (
-                            colorScheme === 'system' ? 'system'
-                              : `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}` as ThemeOption
-                          ))?.label}
-                          onSelect={(selection) => {
-                            const val = selection.item as ThemeOption;
-                            if (val === 'system') {
-                              setColorScheme('system');
-                            } else {
-                              const [t, s] = val.split('-') as ['default' | 'owner', 'light' | 'dark'];
-                              setTheme(t);
-                              setColorScheme(s);
-                            }
-                          }}
-                          block
-                        >
-                          {THEME_OPTIONS.map((opt) => (
-                            <Select.Option
-                              key={opt.value}
-                              value={opt.value}
-                              selected={
-                                colorScheme === 'system'
-                                  ? opt.value === 'system'
-                                  : opt.value === `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}`
-                              }
-                            >
-                              {opt.label}
-                            </Select.Option>
-                          ))}
-                        </Select>
-                      </Box>
-                    </Box>
                   </Card>
                 </>
               )}

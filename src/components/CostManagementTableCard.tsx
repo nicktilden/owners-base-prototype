@@ -284,6 +284,33 @@ const Th = styled.th`
   color: var(--color-text-primary);
  `;
 
+ const SegmentedControllerWrap = styled.div`
+  /* default (unselected) segment label */
+  [role="radiogroup"] label {
+    background-color: var(--color-surface-secondary) !important;
+    color: var(--color-text-secondary) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background-color: var(--color-surface-tertiary) !important;
+      color: var(--color-text-primary) !important;
+    }
+  }
+
+  /* selected segment — the label that contains a checked radio input */
+  [role="radiogroup"] label:has(input:checked) {
+    background-color: var(--color-action-primary) !important;
+    border-color: var(--color-action-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background-color: var(--color-action-primary) !important;
+      color: #ffffff !important;
+    }
+  }
+`;
+
 type ColumnKey =
   | "projectNumber"
   | "project"
@@ -484,14 +511,16 @@ export default function CostManagementTableCard() {
                 </Select.Option>
               ))}
             </Select>
-            <SegmentedController>
-              <SegmentedController.Segment selected={viewMode === "rows"} onClick={() => setViewMode("rows")} tooltip="List view">
-                <ViewRows />
-              </SegmentedController.Segment>
-              <SegmentedController.Segment selected={viewMode === "map"} onClick={() => setViewMode("map")} tooltip="Map view">
-                <Location />
-              </SegmentedController.Segment>
-            </SegmentedController>
+            {/* <SegmentedControllerWrap className="b_segmented"> 
+                <SegmentedController>
+                <SegmentedController.Segment selected={viewMode === "rows"} onClick={() => setViewMode("rows")} tooltip="List view">
+                  <ViewRows />
+                </SegmentedController.Segment>
+                <SegmentedController.Segment selected={viewMode === "map"} onClick={() => setViewMode("map")} tooltip="Map view">
+                  <Location />
+                </SegmentedController.Segment>
+              </SegmentedController>
+            </SegmentedControllerWrap> */}
             <ToggleButton
               className="b_toggle"
               selected={configOpen}
@@ -580,7 +609,7 @@ export default function CostManagementTableCard() {
                 <BulkCountLabel>{selectedIds.size} {selectedIds.size === 1 ? "item" : "items"} selected</BulkCountLabel>
               </BulkActionBar>
             )}
-            <Table.Container>
+            <Table.Container className="table_container">
               <Table>
                 <Table.Header>
                   <Table.HeaderRow>
@@ -612,9 +641,9 @@ export default function CostManagementTableCard() {
                               <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
                             </Table.BodyCell>
                             {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("stage") && <Table.BodyCell><Table.TextCell>{r.stage}</Table.TextCell></Table.BodyCell>}
+                            {!hiddenCols.has("stage") && <Table.BodyCell style={{ minWidth: 160 }}><Table.TextCell style={{ whiteSpace: "nowrap" }}>{r.stage}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("spent") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.spent)}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("forecastEAC") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.forecastEAC)}</Table.TextCell></Table.BodyCell>}
@@ -672,9 +701,9 @@ export default function CostManagementTableCard() {
                           <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
                         </Table.BodyCell>
                         {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("stage") && <Table.BodyCell><Table.TextCell>{r.stage}</Table.TextCell></Table.BodyCell>}
+                        {!hiddenCols.has("stage") && <Table.BodyCell style={{ minWidth: 160 }}><Table.TextCell style={{ whiteSpace: "nowrap" }}>{r.stage}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("spent") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.spent)}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("forecastEAC") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.forecastEAC)}</Table.TextCell></Table.BodyCell>}

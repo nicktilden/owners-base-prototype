@@ -540,7 +540,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
 
               <TableLayout>
                 <TableArea>
-                  <Table.Container>
+                  <Table.Container className="table_container">
                     <Table>
                       <Table.Header>
                         <Table.HeaderRow>

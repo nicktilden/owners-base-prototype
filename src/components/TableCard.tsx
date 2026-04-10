@@ -33,7 +33,7 @@ export default function TableCard({
   return (
     <DetailPage.Card navigationLabel={navigationLabel}>
       <DetailPage.Section heading={heading}>
-        <Table.Container>
+        <Table.Container className="table_container">
           <Table>
             <Table.Header>
               <Table.HeaderRow>

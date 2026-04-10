@@ -99,6 +99,7 @@ const ItemLinkButton = styled.button`
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-link);
+  text-decoration: underline;
   letter-spacing: 0.15px;
   line-height: 20px;
   overflow: hidden;
@@ -311,7 +312,7 @@ export default function MyOpenItemsCard() {
                     onClick={() => setSelectedItem(item)}
                     aria-label={`Open details for ${item.number}`}
                   >
-                    {item.number}: {item.title}
+                    {item.number}: {item.title.length > 30 ? `${item.title.slice(0, 30)}…` : item.title}
                   </ItemLinkButton>
                 </TitleCell>
 

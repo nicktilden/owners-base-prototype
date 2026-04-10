@@ -272,6 +272,33 @@ const BulkCountLabel = styled.span`
   color: #1a2226;
 `;
 
+const SegmentedControllerWrap = styled.div`
+  /* default (unselected) segment label */
+  [role="radiogroup"] label {
+    background-color: var(--color-surface-secondary) !important;
+    color: var(--color-text-secondary) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background-color: var(--color-surface-tertiary) !important;
+      color: var(--color-text-primary) !important;
+    }
+  }
+
+  /* selected segment — the label that contains a checked radio input */
+  [role="radiogroup"] label:has(input:checked) {
+    background-color: var(--color-action-primary) !important;
+    border-color: var(--color-action-primary) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    &:hover {
+      background-color: var(--color-action-primary) !important;
+      color: #ffffff !important;
+    }
+  }
+`;
+
 type ColumnKey =
   | "number"
   | "name"
@@ -518,22 +545,26 @@ export default function ProjectsTableCard() {
                 </Select.Option>
               ))}
             </Select>
-            <SegmentedController>
-              <SegmentedController.Segment
-                selected={viewMode === "rows"}
-                onClick={() => setViewMode("rows")}
-                tooltip="List view"
-              >
-                <ViewRows />
-              </SegmentedController.Segment>
-              <SegmentedController.Segment
-                selected={viewMode === "map"}
-                onClick={() => setViewMode("map")}
-                tooltip="Map view"
-              >
-                <Location />
-              </SegmentedController.Segment>
-            </SegmentedController>
+            {/* <SegmentedControllerWrap className="b_segmented">
+              <SegmentedController>
+                <SegmentedController.Segment
+                  className="b_segmented_segment"
+                  selected={viewMode === "rows"}
+                  onClick={() => setViewMode("rows")}
+                  tooltip="List view"
+                >
+                  <ViewRows />
+                </SegmentedController.Segment>
+                <SegmentedController.Segment
+                  className="b_segmented_segment"
+                  selected={viewMode === "map"}
+                  onClick={() => setViewMode("map")}
+                  tooltip="Map view"
+                >
+                  <Location />
+                </SegmentedController.Segment>
+              </SegmentedController>
+            </SegmentedControllerWrap> */}
             <ToggleButton
               className="b_toggle"
               selected={configOpen}
@@ -694,15 +725,15 @@ export default function ProjectsTableCard() {
                             {!hiddenCols.has("name") && (
                               <Table.BodyCell>
                                 <Table.TextCell>
-                                  <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{p.name}</span>
+                                  <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{p.name}</span>
                                 </Table.TextCell>
                               </Table.BodyCell>
                             )}
                             {!hiddenCols.has("program") && <Table.BodyCell><Table.TextCell>{p.program}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{p.city}, {p.state}</Table.TextCell></Table.BodyCell>}
                             {!hiddenCols.has("stage") && (
-                              <Table.BodyCell>
-                                <Pill color={STAGE_COLORS[p.stage] ?? "gray"} data-pill-color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
+                              <Table.BodyCell style={{ minWidth: 160 }}>
+                                <Pill style={{ whiteSpace: "nowrap" }} color={STAGE_COLORS[p.stage] ?? "gray"} data-pill-color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
                               </Table.BodyCell>
                             )}
                             {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.startDate)}</Table.TextCell></Table.BodyCell>}
@@ -790,15 +821,15 @@ export default function ProjectsTableCard() {
                         {!hiddenCols.has("name") && (
                           <Table.BodyCell>
                             <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" }}>{p.name}</span>
+                              <span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{p.name}</span>
                             </Table.TextCell>
                           </Table.BodyCell>
                         )}
                         {!hiddenCols.has("program") && <Table.BodyCell><Table.TextCell>{p.program}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{p.city}, {p.state}</Table.TextCell></Table.BodyCell>}
                         {!hiddenCols.has("stage") && (
-                          <Table.BodyCell>
-                            <Pill color={STAGE_COLORS[p.stage] ?? "gray"} data-pill-color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
+                          <Table.BodyCell style={{ minWidth: 160 }}>
+                            <Pill style={{ whiteSpace: "nowrap" }} color={STAGE_COLORS[p.stage] ?? "gray"} data-pill-color={STAGE_COLORS[p.stage] ?? "gray"}>{p.stage}</Pill>
                           </Table.BodyCell>
                         )}
                         {!hiddenCols.has("startDate") && <Table.BodyCell><Table.TextCell>{formatDateMMDDYYYY(p.startDate)}</Table.TextCell></Table.BodyCell>}

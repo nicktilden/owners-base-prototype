@@ -37,7 +37,7 @@
   --p-orange-30: #6f3520;
   --p-orange-40: #91472d;
   --p-orange-45: #c45a2e;
-  --p-orange-50: #f47e42;
+  --p-orange-50: #FF5200; 
   --p-orange-60: #f69565;
   --p-orange-70: #f8ac88;
   --p-orange-85: #fcd5c2;
@@ -146,6 +146,29 @@
 
   /* Focus ring */
   --color-focus-ring: var(--p-blue-40);
+
+  /* Pills */
+  --color-pill-bg-green: #E8F7E9;
+  --color-pill-bg-red: #FAE5E5;
+  --color-pill-bg-gray: #EEF0F1;
+  --color-pill-bg-blue: #E4ECFB;
+  --color-pill-bg-yellow: #FBF0D0;
+  --color-pill-bg-magenta: #F9E6F6;
+  --color-pill-bg-cyan: #EFFBF9;
+  --color-pill-border-green: #8CD993;
+  --color-pill-border-red: #F3BEBE;
+  --color-pill-border-gray: #D6DADC;
+  --color-pill-border-blue: #BCD1F5;
+  --color-pill-border-yellow: #F0C442;
+  --color-pill-border-magenta: #F0C2E8;
+  --color-pill-border-cyan: #C0F2E9;
+  --color-pill-text-green: #26732D;
+  --color-pill-text-red: #C42223;
+  --color-pill-text-gray: #464F53;
+  --color-pill-text-blue: #1D5CC9;
+  --color-pill-text-yellow: #993000;
+  --color-pill-text-magenta: #A3298F;
+  --color-pill-text-cyan: #1B7E6E;
 }
 
 /* ── WCAG 2.2 AA Contrast Validation ────────────────────────────
@@ -176,6 +199,7 @@
   --color-action-primary: var(--p-metal-40);
   --color-action-primary-hover: var(--p-metal-30);
   --color-action-primary-disabled: var(--p-metal-85);
+  --color-text-link: var(--p-metal-20);
 
   /* Brand → Metal */
   --color-brand: var(--p-metal-50);
@@ -254,6 +278,13 @@
   --color-pill-bg-yellow: #785420;
   --color-pill-bg-magenta: #642F54;
   --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #2F2F2F;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
   --color-pill-text-green: #E1F6DF;
   --color-pill-text-red: #FDE3E3;
   --color-pill-text-gray: #F8F8F8;
@@ -305,7 +336,7 @@
   --color-icon-success: var(--p-green-50);
   --color-icon-alert: var(--p-red-70);
 
-  --color-nav-bg: var(--p-metal-10);
+  --color-nav-bg: #0E0F15;
   --color-nav-hover: rgba(86, 101, 120, 0.3);
   --color-nav-surface: var(--p-metal-20);
   --color-nav-surface-hover: var(--p-metal-30);
@@ -323,6 +354,13 @@
   --color-pill-bg-yellow: #785420;
   --color-pill-bg-magenta: #642F54;
   --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #2F2F2F;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
   --color-pill-text-green: #E1F6DF;
   --color-pill-text-red: #FDE3E3;
   --color-pill-text-gray: #F8F8F8;
@@ -385,6 +423,11 @@ table th *,
   font-size: 12px !important;
   line-height: 16px !important;
   color: var(--color-text-primary);
+}
+
+button.b_primary {
+  color: var(--color-text-on-action) !important;
+  background-color: var(--color-action-primary) !important;
 }
 
 /* ── 8. Core-React Dark Mode Overrides ────────────────────────────
@@ -622,6 +665,11 @@ table th *,
   background-color: var(--color-action-primary) !important;
 }
 
+[data-color-scheme="owner"] button.b_primary {
+  background-color: var(--color-action-primary) !important;
+  color: #ffffff !important;
+}
+
 [data-color-scheme="dark"] button.b_primary span,
 [data-color-scheme="dark"] button.b_primary span span {
   color: #000 !important;
@@ -637,7 +685,8 @@ table th *,
 }
 
 [data-color-scheme="dark"] button.b_tertiary,
-[data-color-scheme="dark"] button.b_toggle {
+[data-color-scheme="dark"] button.b_toggle,
+[data-color-scheme="dark"] .Tabs__TabsList button[class][aria-haspopup="menu"] {
   background-color: transparent !important;
 }
 
@@ -646,11 +695,6 @@ table th *,
 [data-color-scheme="dark"] button.b_toggle span,
 [data-color-scheme="dark"] button.b_toggle span span {
   color: var(--color-text-primary) !important;
-}
-
-
-[data-color-scheme="dark"] div.alert-banner {
-  background-color: var(--color-surface-secondary) !important; 
 }
 
 /* Card and Menu containers */
@@ -662,7 +706,7 @@ table th *,
   color: var(--color-text-primary) !important;
 }
 
-[data-color-scheme="dark"] .card_container div[class]:not(header *, table *, [role="table"] *, [role="grid"] *, td *, th *),
+[data-color-scheme="dark"] .card_container div,
 [data-color-scheme="dark"] .card_container main[class],
 [data-color-scheme="dark"] .card_container input[class],
 [data-color-scheme="dark"] .card_container textarea[class],
@@ -674,7 +718,7 @@ table th *,
 [data-color-scheme="dark"] .card_container fieldset[class],
 [data-color-scheme="dark"] .card_container aside[class],
 [data-color-scheme="dark"] .card_container article[class] {
-  background-color: var(--color-surface-card) !important;
+  background-color: inherit !important;
 }
 
 /* Pills */
@@ -715,6 +759,24 @@ table th *,
 }
 
 /* Alert Banner */
-[data-color-scheme="dark"] .alert-date-text {
+[data-color-scheme="dark"] .card_container div.alert-banner {
+  background-color: var(--color-surface-secondary) !important;
+}
+
+[data-color-scheme="dark"] .card_container div.alert-banner span.text-primary {
   color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] .card_container div.alert-banner span.alert-date-text {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="owner"] .card_container div.alert-banner,
+[data-color-scheme="owner"] .card_container div.alert-banner span,
+[data-color-scheme="owner"] .card_container div.alert-banner p {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="owner"] .card_container div.alert-banner span.alert-date-text {
+  background-color: var(--color-action-primary) !important;
 }

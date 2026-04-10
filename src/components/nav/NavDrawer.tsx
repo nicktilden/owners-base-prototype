@@ -33,7 +33,7 @@ import {
   Home,
 } from '@procore/core-icons';
 import styled, { keyframes, css } from 'styled-components';
-import { ProcoreLogoSvg } from './ProcoreLogoSvg';
+import ProcoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 import { useLevel } from '@/context/LevelContext';
 import { usePersona } from '@/context/PersonaContext';
 import { canAccessTool } from '@/utils/permissions';
@@ -283,7 +283,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
             <Clear size="sm" />
           </CloseButton>
           <LogoWrap>
-            <ProcoreLogoSvg />
+            <img src={ProcoreOwnersLogo.src} alt="Procore Owners" />
           </LogoWrap>
         </DrawerHeader>
 

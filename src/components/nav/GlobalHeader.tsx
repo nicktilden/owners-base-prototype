@@ -20,7 +20,7 @@ import {
   Search,
 } from '@procore/core-icons';
 import styled from 'styled-components';
-import { ProcoreLogoSvg } from './ProcoreLogoSvg';
+import ProcoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 import NavDrawer from './NavDrawer';
 import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
@@ -78,6 +78,7 @@ const ProcoreLogo = styled(Link)`
   display: flex;
   align-items: center;
   margin: 0 12px 0 4px;
+  padding: 8px;
   flex-shrink: 0;
   text-decoration: none;
   border-radius: 4px;
@@ -315,7 +316,7 @@ export default function GlobalHeader() {
         </MenuButton>
 
         <ProcoreLogo href="/portfolio">
-          <ProcoreLogoSvg />
+          <img src={ProcoreOwnersLogo.src} alt="Procore Owners" style={{ height: 24 }} />
         </ProcoreLogo>
 
         {/* Project / portfolio picker */}

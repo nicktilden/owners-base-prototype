@@ -553,7 +553,7 @@ export function ScheduleRiskGHubCard() {
                   <td style={{ padding: "8px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                     <button
                       onClick={() => setOpenProjectId(row.id)}
-                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
+                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", textDecoration: "underline", cursor: "pointer", textAlign: "left" }}
                     >
                       {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                     </button>
@@ -789,7 +789,7 @@ export function ScheduleVariance2HubCard() {
               <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                 <button
                   onClick={() => setOpenProjectId(r.id)}
-                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
+                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", textDecoration: "underline", cursor: "pointer", textAlign: "left" }}
                 >
                   {r.name}
                 </button>

@@ -10,8 +10,10 @@ import { useHubFilters } from "@/context/HubFilterContext";
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 48px 24px;
+  gap: 24px 24px;
   width: 100%;
+  height: 90%;
+  margin: 24px 0 0 0;
 `;
 
 const KpiLabel = styled.div`
@@ -38,8 +40,6 @@ const KpiValue = styled.div`
 
 const InvoiceList = styled.div`
   width: 100%;
-  border: 1px solid var(--color-border-separator);
-  border-radius: 8px;
   overflow: hidden;
 `;
 
@@ -56,10 +56,11 @@ const InvoiceRow = styled.div`
 `;
 
 const InvoiceLink = styled.a`
-  color: var(--color-text-tinted);
-  text-decoration: underline;
+  color: var(--color-text-link);
   font-size: 14px;
   line-height: 20px;
+  text-decoration: underline;
+  font-weight: 600;
   cursor: pointer;
   display: inline-block;
   width: 100%;
@@ -118,25 +119,33 @@ export function FinancialScorecardCard() {
       (sum, p) => sum + p.estimatedCostAtCompletion,
       0
     );
+    const totalCommitted = filteredProjectRows.reduce(
+      (sum, p) => sum + p.jobToDateCost + p.forecastToComplete * 0.35,
+      0
+    );
+    const invoicedToDate = filteredProjectRows.reduce(
+      (sum, p) => sum + p.jobToDateCost * 0.72,
+      0
+    );
     const forecastVsBudget =
       revisedBudget > 0 ? (estCostAtCompletion / revisedBudget) * 100 : 0;
     const projectedOverUnder = estCostAtCompletion - revisedBudget;
 
     return [
-      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Total Committed", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "+2.4%", tone: "positive" as const, trendValue: 1 },
+      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "-3.1%", tone: "positive" as const, trendValue: -1 },
+      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "+5.7%", tone: "negative" as const, trendValue: 1 },
+      { label: "Total Committed", value: formatCurrency(totalCommitted), delta: "+1.8%", tone: "negative" as const, trendValue: 1 },
+      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "-0.6%", tone: "positive" as const, trendValue: -1 },
       {
         label: "Projected Over/Under",
         value: `${projectedOverUnder >= 0 ? "+" : "-"}${formatCurrency(Math.abs(projectedOverUnder))}`,
-        delta: "0%",
+        delta: projectedOverUnder > 0 ? "+4.2%" : "-4.2%",
         tone: projectedOverUnder > 0 ? ("negative" as const) : projectedOverUnder < 0 ? ("positive" as const) : ("neutral" as const),
         trendValue: projectedOverUnder > 0 ? -1 : projectedOverUnder < 0 ? 1 : 0,
       },
-      { label: "Invoiced to Date", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Invoiced to Date", value: formatCurrency(invoicedToDate), delta: "+8.3%", tone: "positive" as const, trendValue: 1 },
+      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "-1.2%", tone: "positive" as const, trendValue: -1 },
     ];
   }, [filteredProjectRows]);
 
@@ -144,11 +153,7 @@ export function FinancialScorecardCard() {
     <HubCardFrame
       title="Financial Scorecard"
       infoTooltip="Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
-      titleSuffix={
-        <>
-          <Pill color={valuePillColor} data-pill-color={valuePillColor}>Value</Pill>
-        </>
-      }
+      titleSuffix={null}
       actions={
         <Button
           className="b_tertiary"

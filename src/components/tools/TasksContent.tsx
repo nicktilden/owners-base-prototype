@@ -568,7 +568,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                   </ToggleButton>
                 </ToolbarLeft>
                 <ToolbarRight>
-                  <SegmentedController>
+                  {/* <SegmentedController>
                     <SegmentedController.Segment
                       selected={true}
                       onClick={() => {}}
@@ -576,7 +576,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                     >
                       <ViewRows />
                     </SegmentedController.Segment>
-                  </SegmentedController>
+                  </SegmentedController> */}
                   <ToggleButton
                     className="b_toggle"
                     selected={configOpen}
