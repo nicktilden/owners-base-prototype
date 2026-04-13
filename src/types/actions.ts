@@ -12,7 +12,8 @@ export type ActionCardType =
   | 'budget'
   | 'submittals'
   | 'financial_scorecard'
-  | 'schedule_variance';
+  | 'schedule_variance'
+  | 'open_items';
 
 /**
  * RBAC roles used in the action permission model.

@@ -166,6 +166,7 @@ export default function ActionPanel({
     submittals: 'Submittals',
     financial_scorecard: 'Financial Scorecard',
     schedule_variance: 'Schedule Variance',
+    open_items: 'Open Items',
   };
 
   return (
