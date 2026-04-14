@@ -3,6 +3,7 @@ import {
   Button,
   Checkbox,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -156,6 +157,11 @@ export default function CapitalPlanningContent() {
     <>
     <ToolPageLayout
       title="Capital Planning"
+      titleAddon={
+        <Pill color="magenta" style={{ flexShrink: 0 }}>
+          Beta
+        </Pill>
+      }
       icon={<CapitalPlanningIcon size="md" />}
       breadcrumbs={breadcrumbs}
       actions={actions}
