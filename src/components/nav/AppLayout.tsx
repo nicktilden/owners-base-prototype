@@ -19,13 +19,18 @@ const Layout = styled.div`
 
 const Main = styled.main`
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
   overflow-y: auto;
 `;
 
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <Layout>
-      <Main>{children}</Main>
+      <Main className="app-shell-main">{children}</Main>
     </Layout>
   );
 }
