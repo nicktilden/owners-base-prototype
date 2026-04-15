@@ -20,12 +20,12 @@ import {
   Search,
 } from '@procore/core-icons';
 import styled from 'styled-components';
-import ProcoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 import NavDrawer from './NavDrawer';
 import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
 import avatarImg from '@/images/avatar-XL.png';
+import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 
 const ProjectPickerPopover = dynamic(() => import('./ProjectPickerPopover'), { ssr: false });
 const AppPickerPopover = dynamic(() => import('./AppPickerPopover'), { ssr: false });
@@ -316,7 +316,7 @@ export default function GlobalHeader() {
         </MenuButton>
 
         <ProcoreLogo href="/portfolio">
-          <img src={ProcoreOwnersLogo.src} alt="Procore Owners" style={{ height: 24 }} />
+          <img src={procoreOwnersLogo.src} alt="Procore Owners" height={32} />
         </ProcoreLogo>
 
         {/* Project / portfolio picker */}

@@ -1,753 +1,305 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Button,
-  Checkbox,
   DetailPage,
-  SegmentedController,
+  Search,
   Select,
-  Switch,
-  Table,
+  SegmentedController,
   ToggleButton,
 } from "@procore/core-react";
-import {
-  CaretDown,
-  CaretRight,
-  Clear,
-  Filter,
-  Location,
-  Pencil,
-  Sliders,
-  ViewRows,
-} from "@procore/core-icons";
-import styled from "styled-components";
-import { sampleProjectRows } from "@/data/projects";
-import {
-  PINNED_BODY_CELL_STYLE,
-  PINNED_HEADER_CELL_STYLE,
-  StandardRowActions,
-} from "@/components/table/TableActions";
+import { Filter, Location, Sliders, ViewRows } from "@procore/core-icons";
+import type { GridApi } from "ag-grid-community";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import { costColumnDefs } from "@/components/SmartGrid/costColumnDefs";
+import CostFiltersPanel, {
+  type CostFilterValues,
+} from "@/components/SmartGrid/CostFiltersPanel";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
+import type { ProjectRow } from "@/data/projects";
 import { useHubFilters } from "@/context/HubFilterContext";
+import styled from "styled-components";
 
-function formatCurrency(n: number): string {
-  if (n === 0) return "$0";
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-interface CostRow {
-  id: number;
-  projectNumber: string;
-  project: string;
-  location: string;
-  originalBudget: number;
-  spent: number;
-  forecastEAC: number;
-  variance: number;
-  stage: string;
-  program: string;
-  state: string;
-}
-
-const SearchInputWrap = styled.div`
-  display: flex;
-  align-items: center;
-  border: 1px solid #c4cbcf;
-  border-radius: 4px;
-  padding: 0 8px;
-  height: 36px;
-  gap: 8px;
-  min-width: 260px;
-  background: var(--color-surface-primary);
-  &:focus-within {
-    border-color: var(--color-text-link);
-    box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
-  }
-`;
-
-const SearchInput = styled.input`
-  border: none;
-  outline: none;
-  flex: 1;
-  font-size: 14px;
-  background: transparent;
-`;
-
-const Toolbar = styled.div`
+const ToolbarRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 0 0 8px;
   gap: 8px;
+  background: #fff;
 `;
 
 const ToolbarLeft = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
 `;
 
 const ToolbarRight = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-const TableLayout = styled.div`
-  display: flex;
-  flex-direction: row;
-  min-height: 0;
-  overflow: hidden;
-`;
-
-const TableArea = styled.div`
-  flex: 1;
-  min-width: 0;
-  overflow: auto;
-`;
-
-const SidePanel = styled.div`
-  width: 280px;
   flex-shrink: 0;
-  border: 1px solid var(--color-border-separator);
-  background: var(--color-surface-primary);
+`;
+
+const GridArea = styled.div`
   display: flex;
-  flex-direction: column;
+  height: 640px;
+  border: 1px solid #E0E4E7;
+  border-radius: 0;
   overflow: hidden;
 `;
 
-const PanelHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border-separator);
-`;
-
-const PanelTitle = styled.span`
-  font-size: 20px;
-  line-height: 28px;
-  font-weight: 600;
-  color: #1a2226;
-`;
-
-const PanelHeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const PanelBody = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const FilterSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-const FilterLabel = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2226;
-`;
-
-const ConfigSectionHeading = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-`;
-
-const ConfigSectionTitle = styled.span`
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a2226;
-`;
-
-const ShowAllLink = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2226;
-  padding: 0;
-  &:hover { text-decoration: underline; }
-`;
-
-const ColumnToggleRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f2f3;
-  &:last-child { border-bottom: none; }
-`;
-
-const ColumnToggleLabel = styled.span`
-  font-size: 14px;
-  color: #1a2226;
-`;
-
-const GroupHeaderCell = styled.td<{ $depth: number }>`
-  background: var(--color-surface-primary);
-  padding: 0 8px 0 ${({ $depth }) => $depth * 12}px;
-  height: 44px;
-  border-bottom: 1px solid var(--color-border-separator);
-  border-top: 1px solid var(--color-border-separator);
-  position: relative;
-  &::before {
-    content: "";
-    position: absolute;
-    left: ${({ $depth }) => ($depth - 1) * 12}px;
-    top: 0;
-    bottom: 0;
-    width: ${({ $depth }) => ($depth > 0 ? 12 : 0)}px;
-    background: var(--color-surface-secondary);
-    border-right: 1px solid var(--color-border-separator);
-    display: ${({ $depth }) => ($depth > 0 ? "block" : "none")};
-  }
-`;
-
-const GroupHeaderContent = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2226;
-  &:hover { color: var(--color-text-link); }
-`;
-
-const DepthRail = styled.td<{ $depth: number }>`
-  position: relative;
-  padding: 0;
-  width: 0;
-  border: none;
-  &::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: ${({ $depth }) => $depth * 12}px;
-    background: repeating-linear-gradient(
-      to right,
-      #f4f5f6 0px,
-      #f4f5f6 11px,
-      var(--color-border-separator) 11px,
-      var(--color-border-separator) 12px
-    );
-  }
-`;
-
-const BulkActionBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: rgb(246, 249, 254);
-  margin-bottom: 8px;
-`;
-
-const BulkEditLabel = styled.span`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a2226;
-`;
-
-const BulkCountLabel = styled.span`
-  font-size: 14px;
-  color: #1a2226;
-`;
-
-const Th = styled.th`
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-primary);
- `;
-
- const SegmentedControllerWrap = styled.div`
-  /* default (unselected) segment label */
-  [role="radiogroup"] label {
-    background-color: var(--color-surface-secondary) !important;
-    color: var(--color-text-secondary) !important;
-    transition: background-color 0.15s ease, color 0.15s ease;
-
-    &:hover {
-      background-color: var(--color-surface-tertiary) !important;
-      color: var(--color-text-primary) !important;
-    }
-  }
-
-  /* selected segment — the label that contains a checked radio input */
-  [role="radiogroup"] label:has(input:checked) {
-    background-color: var(--color-action-primary) !important;
-    border-color: var(--color-action-primary) !important;
-    color: #ffffff !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-
-    &:hover {
-      background-color: var(--color-action-primary) !important;
-      color: #ffffff !important;
-    }
-  }
-`;
-
-type ColumnKey =
-  | "projectNumber"
-  | "project"
-  | "location"
-  | "stage"
-  | "originalBudget"
-  | "spent"
-  | "forecastEAC"
-  | "variance";
 type ViewMode = "rows" | "map";
-type GroupByKey = "stage" | "program" | "state";
-type FilterKey = "stage" | "program" | "state";
-
-interface FilterState {
-  stage: string[];
-  program: string[];
-  state: string[];
-}
 
 interface GroupByOption {
-  id: GroupByKey;
+  id: "stage" | "program" | "state";
   label: string;
 }
 
-const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: "projectNumber", label: "Project Number" },
-  { key: "project", label: "Project" },
-  { key: "location", label: "Location" },
-  { key: "stage", label: "Stage" },
-  { key: "originalBudget", label: "Original Budget" },
-  { key: "spent", label: "Spent to Date" },
-  { key: "forecastEAC", label: "Forecast EAC" },
-  { key: "variance", label: "Budget Variance" },
-];
-
-const EMPTY_FILTERS: FilterState = { stage: [], program: [], state: [] };
 const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "stage", label: "Stage" },
   { id: "program", label: "Program" },
   { id: "state", label: "State" },
 ];
 
-function toggleFilterArrayValue<K extends FilterKey>(
-  prev: FilterState,
-  key: K,
-  value: FilterState[K][number]
-): FilterState {
-  const arr = prev[key] as string[];
-  return {
-    ...prev,
-    [key]: arr.includes(value as string) ? arr.filter((v) => v !== value) : [...arr, value],
-  };
-}
-
 export default function CostManagementTableCard() {
-  const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("rows");
-  const [groupBy, setGroupBy] = useState<GroupByOption[]>([]);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [hiddenCols, setHiddenCols] = useState<Set<ColumnKey>>(new Set());
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const gridApiRef = useRef<GridApi<ProjectRow> | null>(null);
   const { filteredProjectRows } = useHubFilters();
 
-  const rows = useMemo<CostRow[]>(() => {
-    let base = filteredProjectRows.map((p) => {
-      const variance = p.originalBudget - p.estimatedCostAtCompletion;
-      return {
-        id: p.id,
-        projectNumber: p.number,
-        project: p.name,
-        location: `${p.city}, ${p.state}`,
-        originalBudget: p.originalBudget,
-        spent: p.jobToDateCost,
-        forecastEAC: p.estimatedCostAtCompletion,
-        variance,
-        stage: p.stage,
-        program: p.program,
-        state: p.state,
-      };
-    });
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      base = base.filter(
-        (r) =>
-          r.project.toLowerCase().includes(q) ||
-          r.stage.toLowerCase().includes(q) ||
-          r.program.toLowerCase().includes(q) ||
-          r.state.toLowerCase().includes(q)
-      );
-    }
-    if (filters.stage.length) base = base.filter((r) => filters.stage.includes(r.stage));
-    if (filters.program.length) base = base.filter((r) => filters.program.includes(r.program));
-    if (filters.state.length) base = base.filter((r) => filters.state.includes(r.state));
-    return base;
-  }, [filteredProjectRows, search, filters]);
+  const rowData = useMemo(() => [...filteredProjectRows], [filteredProjectRows]);
 
   const stageOptions = useMemo(
-    () => [...new Set(filteredProjectRows.map((p) => p.stage))].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(filteredProjectRows.map((p) => p.stage))].sort(),
     [filteredProjectRows]
   );
   const programOptions = useMemo(
-    () => [...new Set(filteredProjectRows.map((p) => p.program))].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(filteredProjectRows.map((p) => p.program))].sort(),
     [filteredProjectRows]
   );
   const stateOptions = useMemo(
-    () => [...new Set(filteredProjectRows.map((p) => p.state))].filter(Boolean).sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(filteredProjectRows.map((p) => p.state))].filter(Boolean).sort(),
     [filteredProjectRows]
   );
 
-  const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
-  const visibleColCount = COLUMNS.length - hiddenCols.size + 2;
-  const allVisibleIds = rows.map((r) => r.id);
-  const allSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.has(id));
-  const someSelected = !allSelected && allVisibleIds.some((id) => selectedIds.has(id));
+  const getRowId = useCallback(
+    (params: { data: ProjectRow }) => String(params.data.id),
+    []
+  );
 
-  function toggleColumn(key: ColumnKey) {
-    setHiddenCols((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchText(value);
+      gridApiRef.current?.setGridOption("quickFilterText", value);
+    },
+    []
+  );
+
+  const handleSearchClear = useCallback(() => {
+    setSearchText("");
+    gridApiRef.current?.setGridOption("quickFilterText", "");
+  }, []);
+
+  const handleFiltersToggle = useCallback(() => {
+    setFiltersOpen((prev) => {
+      if (!prev) setConfigOpen(false);
+      return !prev;
     });
-  }
+  }, []);
 
-  function toggleGroupCollapse(label: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label); else next.add(label);
-      return next;
+  const handleFilterApply = useCallback(
+    async (filterValues: CostFilterValues) => {
+      const api = gridApiRef.current;
+      if (!api) return;
+
+      await api.setColumnFilterModel(
+        "stage",
+        filterValues.stages.length > 0 ? { values: filterValues.stages } : null
+      );
+
+      await api.setColumnFilterModel(
+        "program",
+        filterValues.programs.length > 0 ? { values: filterValues.programs } : null
+      );
+
+      await api.setColumnFilterModel(
+        "state",
+        filterValues.states.length > 0 ? { values: filterValues.states } : null
+      );
+
+      api.onFilterChanged();
+    },
+    []
+  );
+
+  const handleFilterClear = useCallback(async () => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    await api.setFilterModel(null);
+    api.onFilterChanged();
+  }, []);
+
+  const handleConfigToggle = useCallback(() => {
+    setConfigOpen((prev) => {
+      if (!prev) setFiltersOpen(false);
+      return !prev;
     });
-  }
+  }, []);
 
-  function toggleSelectRow(id: number) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    if (allSelected) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        allVisibleIds.forEach((id) => next.delete(id));
-        return next;
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) {
+          return { ...col, rowGroup: true, hide: true };
+        }
+        if (prevId && col.colId === prevId) {
+          return { ...col, rowGroup: false, hide: false };
+        }
+        return { ...col, rowGroup: false };
       });
-      return;
-    }
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      allVisibleIds.forEach((id) => next.add(id));
-      return next;
-    });
-  }
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
+
+  const sideBar = useMemo(() => false, []);
 
   return (
-    <DetailPage.Card navigationLabel="Cost Management" className="card_container">
+    <DetailPage.Card navigationLabel="Cost Management">
       <DetailPage.Section heading="Cost Management">
-        <Toolbar>
+        <ToolbarRow>
           <ToolbarLeft>
-            <SearchInputWrap>
-              <SearchInput className="i_search" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </SearchInputWrap>
+            <div style={{ maxWidth: 260 }}>
+              <Search
+                placeholder="Search"
+                value={searchText}
+                onChange={handleSearchChange}
+                onClear={handleSearchClear}
+              />
+            </div>
             <ToggleButton
-              className="b_toggle"
-              selected={filterOpen}
+              selected={filtersOpen}
               icon={<Filter />}
-              onClick={() => {
-                setFilterOpen((v) => !v);
-                if (configOpen) setConfigOpen(false);
-              }}
+              onClick={handleFiltersToggle}
             >
-              Filter{hasActiveFilters ? " •" : ""}
+              Filters
             </ToggleButton>
           </ToolbarLeft>
           <ToolbarRight>
-            <Select
-              placeholder="Group by..."
-              label={groupBy.length ? groupBy.map((g) => g.label).join(" > ") : undefined}
-              onSelect={(selection) => {
-                const opt = selection.item as GroupByOption;
-                setGroupBy((prev) =>
-                  prev.some((g) => g.id === opt.id) ? prev.filter((g) => g.id !== opt.id) : [...prev, opt]
-                );
-              }}
-              onClear={() => {
-                setGroupBy([]);
-                setCollapsedGroups(new Set());
-              }}
-              style={{ minWidth: 200 }}
-            >
-              {GROUP_BY_OPTIONS.map((opt) => (
-                <Select.Option key={opt.id} value={opt} selected={groupBy.some((g) => g.id === opt.id)}>
-                  {opt.label}
-                </Select.Option>
-              ))}
-            </Select>
-            {/* <SegmentedControllerWrap className="b_segmented"> 
-                <SegmentedController>
-                <SegmentedController.Segment selected={viewMode === "rows"} onClick={() => setViewMode("rows")} tooltip="List view">
-                  <ViewRows />
-                </SegmentedController.Segment>
-                <SegmentedController.Segment selected={viewMode === "map"} onClick={() => setViewMode("map")} tooltip="Map view">
-                  <Location />
-                </SegmentedController.Segment>
-              </SegmentedController>
-            </SegmentedControllerWrap> */}
+            <div style={{ width: 226 }}>
+              <Select
+                placeholder="Group by"
+                label={groupBy?.label}
+                onSelect={handleGroupBySelect}
+                onClear={handleGroupByClear}
+                block
+              >
+                {GROUP_BY_OPTIONS.map((opt) => (
+                  <Select.Option
+                    key={opt.id}
+                    value={opt}
+                    selected={groupBy?.id === opt.id}
+                  >
+                    {opt.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+            <SegmentedController>
+              <SegmentedController.Segment
+                selected={viewMode === "rows"}
+                onClick={() => setViewMode("rows")}
+                tooltip="List view"
+              >
+                <ViewRows />
+              </SegmentedController.Segment>
+              <SegmentedController.Segment
+                selected={viewMode === "map"}
+                onClick={() => setViewMode("map")}
+                tooltip="Map view"
+              >
+                <Location />
+              </SegmentedController.Segment>
+            </SegmentedController>
             <ToggleButton
-              className="b_toggle"
               selected={configOpen}
               icon={<Sliders />}
-              onClick={() => {
-                setConfigOpen((v) => !v);
-                if (filterOpen) setFilterOpen(false);
-              }}
+              onClick={handleConfigToggle}
             >
               Configure
             </ToggleButton>
           </ToolbarRight>
-        </Toolbar>
+        </ToolbarRow>
 
-        <TableLayout>
-          {filterOpen && (
-            <SidePanel style={{ marginRight: 16 }}>
-              <PanelHeader>
-                <PanelTitle>Filters</PanelTitle>
-                <PanelHeaderActions>
-                  {hasActiveFilters && (
-                    <Button className="b_tertiary" variant="tertiary" size="md" onClick={() => setFilters(EMPTY_FILTERS)}>
-                      Clear All
-                    </Button>
-                  )}
-                  <Button className="b_tertiary" variant="tertiary" icon={<Clear />} onClick={() => setFilterOpen(false)} />
-                </PanelHeaderActions>
-              </PanelHeader>
-              <PanelBody>
-                <FilterSection>
-                  <FilterLabel>Stage</FilterLabel>
-                  <Select
-                    placeholder="Select values"
-                    label={filters.stage.length ? `${filters.stage.length} selected` : undefined}
-                    onSelect={(s) => setFilters((f) => toggleFilterArrayValue(f, "stage", s.item as string))}
-                    onClear={() => setFilters((f) => ({ ...f, stage: [] }))}
-                    block
-                  >
-                    {stageOptions.map((v) => (
-                      <Select.Option key={v} value={v} selected={filters.stage.includes(v)}>
-                        {v}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </FilterSection>
-                <FilterSection>
-                  <FilterLabel>Program</FilterLabel>
-                  <Select
-                    placeholder="Select values"
-                    label={filters.program.length ? `${filters.program.length} selected` : undefined}
-                    onSelect={(s) => setFilters((f) => toggleFilterArrayValue(f, "program", s.item as string))}
-                    onClear={() => setFilters((f) => ({ ...f, program: [] }))}
-                    block
-                  >
-                    {programOptions.map((v) => (
-                      <Select.Option key={v} value={v} selected={filters.program.includes(v)}>
-                        {v}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </FilterSection>
-                <FilterSection>
-                  <FilterLabel>State</FilterLabel>
-                  <Select
-                    placeholder="Select values"
-                    label={filters.state.length ? `${filters.state.length} selected` : undefined}
-                    onSelect={(s) => setFilters((f) => toggleFilterArrayValue(f, "state", s.item as string))}
-                    onClear={() => setFilters((f) => ({ ...f, state: [] }))}
-                    block
-                  >
-                    {stateOptions.map((v) => (
-                      <Select.Option key={v} value={v} selected={filters.state.includes(v)}>
-                        {v}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </FilterSection>
-              </PanelBody>
-            </SidePanel>
-          )}
-
-          <TableArea>
-            {selectedIds.size > 0 && (
-              <BulkActionBar>
-                <BulkEditLabel><Pencil size="sm" />Edit</BulkEditLabel>
-                <BulkCountLabel>{selectedIds.size} {selectedIds.size === 1 ? "item" : "items"} selected</BulkCountLabel>
-              </BulkActionBar>
-            )}
-            <Table.Container className="table_container">
-              <Table>
-                <Table.Header>
-                  <Table.HeaderRow>
-                    <Table.HeaderCell snugfit style={{ paddingLeft: 16 }}>
-                      <Checkbox checked={allSelected} indeterminate={someSelected} onChange={toggleSelectAll} aria-label="Select all rows" />
-                    </Table.HeaderCell>
-                    {COLUMNS.filter((c) => !hiddenCols.has(c.key)).map((c) => (
-                      <Table.HeaderCell key={c.key}>{c.label}</Table.HeaderCell>
-                    ))}
-                    <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                  </Table.HeaderRow>
-                </Table.Header>
-                <Table.Body>
-                  {viewMode === "map" ? (
-                    <Table.BodyRow>
-                      <Table.BodyCell colSpan={visibleColCount}><Table.TextCell>Map view coming soon.</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  ) : rows.length === 0 ? (
-                    <Table.BodyRow>
-                      <Table.BodyCell colSpan={visibleColCount}><Table.TextCell>No rows match your search or filters.</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  ) : groupBy.length > 0 ? (
-                    (() => {
-                      function renderRow(r: CostRow, depth = 0): React.ReactNode {
-                        return (
-                          <Table.BodyRow key={`${r.id}-${depth}`}>
-                            {depth > 0 && <DepthRail $depth={depth} />}
-                            <Table.BodyCell snugfit style={{ paddingLeft: 16 }}>
-                              <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
-                            </Table.BodyCell>
-                            {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("stage") && <Table.BodyCell style={{ minWidth: 160 }}><Table.TextCell style={{ whiteSpace: "nowrap" }}>{r.stage}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("spent") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.spent)}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("forecastEAC") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.forecastEAC)}</Table.TextCell></Table.BodyCell>}
-                            {!hiddenCols.has("variance") && (
-                              <Table.BodyCell>
-                                <Table.TextCell>
-                                  <span style={{ color: r.variance > 0 ? "#1a7d3a" : r.variance < 0 ? "#b91c1c" : undefined }}>
-                                    {`${r.variance >= 0 ? "+" : ""}${formatCurrency(r.variance)}`}
-                                  </span>
-                                </Table.TextCell>
-                              </Table.BodyCell>
-                            )}
-                            <Table.BodyCell style={PINNED_BODY_CELL_STYLE}><StandardRowActions /></Table.BodyCell>
-                          </Table.BodyRow>
-                        );
-                      }
-
-                      function renderGroups(list: CostRow[], keys: GroupByOption[], depth: number, pathPrefix: string): React.ReactNode[] {
-                        const key = keys[0];
-                        const rest = keys.slice(1);
-                        const grouped = new Map<string, CostRow[]>();
-                        for (const r of list) {
-                          const rawLabel = r[key.id];
-                          const label = rawLabel || "—";
-                          if (!grouped.has(label)) grouped.set(label, []);
-                          grouped.get(label)!.push(r);
-                        }
-                        const rendered: React.ReactNode[] = [];
-                        grouped.forEach((groupRows, label) => {
-                          const collapseKey = `${pathPrefix}::${label}`;
-                          const isCollapsed = collapsedGroups.has(collapseKey);
-                          rendered.push(
-                            <tr key={`group-${collapseKey}`}>
-                              <GroupHeaderCell $depth={depth} colSpan={visibleColCount}>
-                                <GroupHeaderContent onClick={() => toggleGroupCollapse(collapseKey)} aria-expanded={!isCollapsed}>
-                                  {isCollapsed ? <CaretRight size="sm" /> : <CaretDown size="sm" />}
-                                  {label} ({groupRows.length})
-                                </GroupHeaderContent>
-                              </GroupHeaderCell>
-                            </tr>
-                          );
-                          if (!isCollapsed) {
-                            if (rest.length > 0) rendered.push(...renderGroups(groupRows, rest, depth + 1, collapseKey));
-                            else groupRows.forEach((r) => rendered.push(renderRow(r, depth + 1)));
-                          }
-                        });
-                        return rendered;
-                      }
-                      return renderGroups(rows, groupBy, 0, "root");
-                    })()
-                  ) : (
-                    rows.map((r) => (
-                      <Table.BodyRow key={r.id}>
-                        <Table.BodyCell snugfit style={{ paddingLeft: 16 }}>
-                          <Checkbox checked={selectedIds.has(r.id)} onChange={() => toggleSelectRow(r.id)} aria-label={`Select ${r.project}`} />
-                        </Table.BodyCell>
-                        {!hiddenCols.has("projectNumber") && <Table.BodyCell><Table.TextCell>{r.projectNumber}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("project") && <Table.BodyCell><Table.TextCell><span style={{ fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" }}>{r.project}</span></Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("location") && <Table.BodyCell><Table.TextCell>{r.location}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("stage") && <Table.BodyCell style={{ minWidth: 160 }}><Table.TextCell style={{ whiteSpace: "nowrap" }}>{r.stage}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("originalBudget") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.originalBudget)}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("spent") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.spent)}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("forecastEAC") && <Table.BodyCell><Table.TextCell>{formatCurrency(r.forecastEAC)}</Table.TextCell></Table.BodyCell>}
-                        {!hiddenCols.has("variance") && (
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ color: r.variance > 0 ? "#1a7d3a" : r.variance < 0 ? "#b91c1c" : undefined }}>
-                                {`${r.variance >= 0 ? "+" : ""}${formatCurrency(r.variance)}`}
-                              </span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                        )}
-                        <Table.BodyCell style={PINNED_BODY_CELL_STYLE}><StandardRowActions /></Table.BodyCell>
-                      </Table.BodyRow>
-                    ))
-                  )}
-                </Table.Body>
-              </Table>
-            </Table.Container>
-          </TableArea>
-
-          {configOpen && (
-            <SidePanel style={{ marginLeft: 16 }}>
-              <PanelHeader>
-                <PanelTitle>Table Settings</PanelTitle>
-                <Button className="b_tertiary" variant="tertiary" icon={<Clear />} onClick={() => setConfigOpen(false)} />
-              </PanelHeader>
-              <PanelBody>
-                <div>
-                  <ConfigSectionHeading>
-                    <ConfigSectionTitle>Configure Columns</ConfigSectionTitle>
-                    <ShowAllLink onClick={() => setHiddenCols(new Set())}>Show All</ShowAllLink>
-                  </ConfigSectionHeading>
-                  {COLUMNS.map((col) => (
-                    <ColumnToggleRow key={col.key}>
-                      <Switch checked={!hiddenCols.has(col.key)} onChange={() => toggleColumn(col.key)} />
-                      <ColumnToggleLabel>{col.label}</ColumnToggleLabel>
-                    </ColumnToggleRow>
-                  ))}
-                </div>
-              </PanelBody>
-            </SidePanel>
-          )}
-        </TableLayout>
+        {viewMode === "map" ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
+            Map view coming soon.
+          </div>
+        ) : (
+          <GridArea>
+            <CostFiltersPanel
+              open={filtersOpen}
+              stageOptions={stageOptions}
+              programOptions={programOptions}
+              stateOptions={stateOptions}
+              onApply={handleFilterApply}
+              onClear={handleFilterClear}
+            />
+            <div style={{ flex: 1, minWidth: 0, transition: "flex 0.25s ease" }}>
+              <SmartGridWrapper<ProjectRow>
+                id="cost-management-grid"
+                localStorageKey="owner-prototype-cost-grid"
+                height="100%"
+                rowData={rowData}
+                columnDefs={costColumnDefs}
+                getRowId={getRowId}
+                groupDisplayType="groupRows"
+                autoGroupColumnDef={{
+                  headerName: "Group",
+                  minWidth: 200,
+                }}
+                sideBar={sideBar}
+                onGridReady={(event) => {
+                  gridApiRef.current = event.api;
+                }}
+                statusBar={{
+                  statusPanels: [
+                    { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                    { statusPanel: "agSelectedRowCountComponent", align: "left" },
+                  ],
+                }}
+              />
+            </div>
+            <ConfigureColumnsPanel
+              open={configOpen}
+              gridApi={gridApiRef.current}
+              onClose={() => setConfigOpen(false)}
+            />
+          </GridArea>
+        )}
       </DetailPage.Section>
     </DetailPage.Card>
   );

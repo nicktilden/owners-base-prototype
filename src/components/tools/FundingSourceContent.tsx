@@ -1,8 +1,34 @@
 import React from "react";
-import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
+import { Button, Dropdown, SplitViewCard } from "@procore/core-react";
 import { Building as FundingSourceIcon, Plus } from "@procore/core-icons";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import type { ColDef } from "ag-grid-community";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+
+const columnDefs: ColDef[] = [
+  { field: "name", headerName: "Name", minWidth: 200 },
+  { field: "type", headerName: "Type", width: 120 },
+  { field: "status", headerName: "Status", width: 120 },
+  { field: "totalAmount", headerName: "Total Amount", width: 140 },
+  { field: "drawnToDate", headerName: "Drawn to Date", width: 140 },
+  { field: "expiration", headerName: "Expiration", width: 120 },
+  {
+    colId: "actions",
+    headerName: "Actions",
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    resizable: false,
+    sortable: false,
+    filter: false,
+    suppressMovable: true,
+    suppressHeaderMenuButton: true,
+    pinned: "right",
+    cellRenderer: CostActionsCellRenderer,
+    lockPosition: true,
+  },
+];
 
 export default function FundingSourceContent() {
   const breadcrumbs = [
@@ -29,28 +55,13 @@ export default function FundingSourceContent() {
       <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
         <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
           <SplitViewCard.Section heading="Funding Sources">
-            <Table.Container>
-              <Table>
-                <Table.Header>
-                  <Table.HeaderRow>
-                    <Table.HeaderCell>Name</Table.HeaderCell>
-                    <Table.HeaderCell>Type</Table.HeaderCell>
-                    <Table.HeaderCell>Status</Table.HeaderCell>
-                    <Table.HeaderCell>Total Amount</Table.HeaderCell>
-                    <Table.HeaderCell>Drawn to Date</Table.HeaderCell>
-                    <Table.HeaderCell>Expiration</Table.HeaderCell>
-                    <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                  </Table.HeaderRow>
-                </Table.Header>
-                <Table.Body>
-                  <Table.BodyRow>
-                    <Table.BodyCell colSpan={7}>
-                      <Table.TextCell>No funding sources have been created.</Table.TextCell>
-                    </Table.BodyCell>
-                  </Table.BodyRow>
-                </Table.Body>
-              </Table>
-            </Table.Container>
+            <SmartGridWrapper
+              id="funding-source-grid"
+              columnDefs={columnDefs}
+              rowData={[]}
+              height={400}
+              sideBar={false}
+            />
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>

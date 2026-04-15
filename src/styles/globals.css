@@ -383,6 +383,89 @@
 
 /* ── 7. Global Base Styles (tokenized) ─────────────────────────── */
 
+/* ─── Procore SmartGrid refinements (theme params set in SmartGridWrapper.tsx) ─ */
+
+/* Header text letter-spacing */
+.ag-header-cell-text {
+  letter-spacing: 0.25px;
+}
+
+/* Body cell vertical centering */
+.ag-cell {
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.25px;
+}
+
+/* Selection column: center checkbox horizontally and vertically */
+.ag-selection-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Group row indent: 14px spacer per nesting level */
+.ag-root-wrapper,
+[class*="ag-theme-"] {
+  --ag-row-group-indent-size: 14px !important;
+}
+
+/* Group expand/collapse: replace default chevrons with Procore CaretRight / CaretDown */
+.ag-icon-contracted,
+.ag-icon-expanded {
+  font-size: 0 !important;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.ag-icon-contracted::before,
+.ag-icon-expanded::before {
+  content: "" !important;
+  display: none !important;
+}
+
+.ag-icon-contracted {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23464F53'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M10 17L10 7L15 12L10 17Z'/%3E%3C/svg%3E");
+}
+
+.ag-icon-expanded {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23464F53'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 9.5H17L12 14.5L7 9.5Z'/%3E%3C/svg%3E");
+}
+
+/* Group row styling */
+.ag-row-group {
+  font-weight: 600;
+}
+
+.ag-group-child-count {
+  font-weight: 400;
+  color: #464F53;
+  margin-left: 2px;
+}
+
+/* Full-width group rows: align checkbox with selection column */
+.ag-full-width-row .ag-group-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+/* Child rows under a group: indent to align with group content */
+.ag-row:not(.ag-row-group):not(.ag-row-level-0) .ag-cell {
+  padding-left: calc(var(--ag-cell-horizontal-padding, 12px) + 14px);
+}
+
+/* Status bar min-height */
+.ag-status-bar {
+  min-height: 40px;
+}
+
+
 html,
 body {
   font-family:
@@ -410,15 +493,63 @@ header {
   box-sizing: border-box;
 }
 
+/*
+ * Tool landing layout (ToolPageLayout / @procore/core-react ToolLandingPage):
+ * - Header stays viewport width (no horizontal scroll with wide tables).
+ * - Title strip is sticky while body scrolls.
+ * - Wide content scrolls inside the body region only.
+ */
+.app-shell-main > [data-core-react="tool-landing-page"] {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+[data-core-react="tool-landing-page"] [data-core-page-layout-root] {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+[data-core-react="tool-landing-page"] [data-core-page-layout-root] > :first-child {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background-color: #ffffff;
+}
+
+[data-core-react="tool-landing-page"] [data-core-page-layout-root] > :not(:first-child) {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  /* Vertical scroll for long tool pages; horizontal scroll only in inner regions (e.g. Capital Planning table) */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
-table th,
-table th *,
-[role="columnheader"],
-[role="columnheader"] * {
+/* core-react Table header styling (scoped to avoid AG Grid conflict) */
+table:not(.ag-header-row) th,
+table:not(.ag-header-row) th * {
   font-weight: 600 !important;
   font-size: 12px !important;
   line-height: 16px !important;
@@ -779,4 +910,818 @@ button.b_primary {
 
 [data-color-scheme="owner"] .card_container div.alert-banner span.alert-date-text {
   background-color: var(--color-action-primary) !important;
+}
+
+/* Horizontal scrolling for core-react Table */
+[class*="StyledTableWrapper"] {
+  overflow-x: auto;
+}
+
+/* Capital Planning: horizontal scroll only on the table region (not filter panel) */
+
+/* Merged / single FY forecast header — FY label left, CaretsIn toggle right (Capital Planning Figma) */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group {
+  text-align: left !important;
+  background-color: #f5f7f8 !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #d6dadc !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group .capital-planning-forecast-cost-group-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-cost-group
+  .capital-planning-forecast-cost-group-inner--toggle-only {
+  justify-content: flex-end;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group .capital-planning-forecast-fy-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #232729;
+  white-space: nowrap;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Second header row: one cell per program FY (spans that year’s FQ / month leaf columns) */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-fy-subheader {
+  text-align: left !important;
+  /* Match `.capital-planning-forecast-cost-group` / `.capital-planning-forecast-period-header` */
+  background-color: #f5f7f8 !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #d6dadc !important;
+  padding: 0 8px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-fy-subheader .capital-planning-forecast-fy-subheader-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-weight: 600;
+  font-size: 12px;
+  color: #232729;
+  white-space: nowrap;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-fy-subheader .capital-planning-forecast-fy-subheader-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-fy-subheader .capital-planning-forecast-fy-toggle {
+  flex-shrink: 0;
+}
+
+/* Forecast period columns: identical width (FQ1–FQ4 and other granularities) */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-period-header,
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-period-cell {
+  width: 396px;
+  min-width: 396px;
+  max-width: 396px;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-period-header {
+  text-align: left !important;
+  vertical-align: middle !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 16px !important;
+  color: #6a767c !important;
+  background-color: #f5f7f8 !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-period-header .capital-planning-forecast-period-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-period-header .capital-planning-forecast-period-label {
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Collapsed quarter FQ row: one leaf column — same 132px as month headers (overrides 396px period-header) */
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-period-header.capital-planning-forecast-period-header--fq-month-width {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+}
+
+/* Quarter view: third header row — same 32px band height as FY + FQ rows */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+  box-sizing: border-box !important;
+  overflow: hidden;
+  text-align: left !important;
+  vertical-align: middle !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 16px !important;
+  color: #6a767c !important;
+  background-color: #f5f7f8 !important;
+  padding: 0 8px !important;
+  border-top: 1px solid #d6dadc !important;
+  white-space: nowrap;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  [class*="StyledTableHeaderCellLabel"] {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: 16px !important;
+  color: inherit !important;
+  text-align: left !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-month-cell {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Collapsed FQ: single leaf column — same 132px band + 32px row height as month headers */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-fq-rollup-header {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: #6a767c !important;
+  background-color: #f5f7f8 !important;
+  padding: 0 8px !important;
+  border-top: 1px solid #d6dadc !important;
+  white-space: nowrap;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-fq-rollup-cell {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Collapsed FY: second header row stays (band under FY) without FQ labels */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-period-header--collapsed {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+/* Collapsed quarter: third row — month band, no labels (still shows border under FQ strip) */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header--collapsed {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+/* Capital Planning tool body: stay viewport-wide; do not grow with the wide table */
+.capital-planning-tool-section {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.capital-planning-toolbar-stack {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* Group by — Capital Planning filter panel (slate border, 4px radius; DS handles placeholder/caret gray) */
+.capital-planning-group-by-select {
+  width: 100%;
+  max-width: 100%;
+}
+
+.capital-planning-group-by-select [role="combobox"] {
+  border: 1px solid #6a7b83 !important;
+  border-radius: 4px !important;
+  min-height: 36px !important;
+  height: auto !important;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.capital-planning-group-by-select [role="combobox"]:hover {
+  border-color: #5c6d75 !important;
+  background-color: #ffffff !important;
+}
+
+.capital-planning-group-by-select [role="combobox"][aria-expanded="true"] {
+  border-color: #6a7b83 !important;
+  background-color: #ffffff !important;
+}
+
+.capital-planning-main-with-filter {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.capital-planning-table-scroll-region {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  /* Bounded vertical scrollport so `tfoot` `position: sticky; bottom: 0` pins to this region */
+  max-height: min(72vh, calc(100dvh - 14rem));
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Full screen: flex parent supplies height — drop max-height so the grid fills the overlay */
+.capital-planning-table-scroll-region.capital-planning-table-scroll-region--fullscreen {
+  max-height: none;
+}
+
+/* Procore page body / card chain: allow flex children to shrink so table does not stretch the page */
+[data-core-react="tool-landing-page"] [class*="StyledDetailPageBody"],
+[data-core-react="tool-landing-page"] [class*="StyledToolLandingPageBodyContent"],
+[data-core-react="tool-landing-page"] [class*="StyledSplitViewCardContainer"],
+[data-core-react="tool-landing-page"] [class*="StyledSplitViewCardMain"],
+[data-core-react="tool-landing-page"] [class*="StyledSectionInner"] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+[data-core-react="tool-landing-page"] [class*="StyledGridCol"] {
+  min-width: 0;
+}
+
+/* One scroll track: region scrolls; inner DS table wrapper does not clip/scroll again */
+.capital-planning-table-scroll-region [class*="StyledTableWrapper"] {
+  overflow-x: visible !important;
+}
+
+/* Capital Planning (portfolio tool): auto-sized columns from content */
+.capital-planning-table-scroll {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  /* Sticky first two columns: col2 `left` must match col1 width */
+  --cp-sticky-col1-width: 260px;
+  /* Second sticky baseline column (Planned Amount when planning is on; else first visible baseline) */
+  --cp-sticky-col2-width: 250px;
+  /*
+   * Procore Card / getShadow(2, 'right') — @procore/core-react _styles/shadows.js
+   * Right-edge elevation for the Planned Amount sticky column (visible at scroll 0 and when scrolled).
+   */
+  --cp-planned-amount-column-shadow: 4px 0 16px -2px hsla(200, 10%, 15%, 0.32);
+}
+
+.capital-planning-table-scroll > table {
+  table-layout: auto;
+  width: max-content;
+}
+
+.capital-planning-table-scroll th,
+.capital-planning-table-scroll td {
+  white-space: nowrap;
+}
+
+.capital-planning-table-scroll th {
+  resize: none;
+}
+
+/* Capital Planning: full-row hover (matches DS table row hover tone, gray96) */
+.capital-planning-table-scroll tbody tr td {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.capital-planning-table-scroll tbody tr:hover td {
+  background-color: #f5f7f8;
+}
+
+/* Capital Planning: sticky project column + second “split” baseline column (Planned Amount or first visible baseline) */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: var(--cp-sticky-col1-width);
+  min-width: var(--cp-sticky-col1-width);
+  max-width: var(--cp-sticky-col1-width);
+  box-sizing: border-box;
+  background-color: #ffffff;
+  vertical-align: middle;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project {
+  z-index: 6;
+  background-color: #f5f7f8;
+}
+
+/* Baseline columns that scroll horizontally under the sticky pair */
+.capital-planning-table-scroll thead tr:first-child > th.capital-planning-col-scroll,
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-scroll {
+  position: relative;
+  z-index: 0;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-split,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-sticky-split {
+  position: sticky;
+  left: var(--cp-sticky-col1-width);
+  z-index: 12;
+  width: var(--cp-sticky-col2-width);
+  min-width: var(--cp-sticky-col2-width);
+  max-width: var(--cp-sticky-col2-width);
+  box-sizing: border-box;
+  background-color: #ffffff;
+  vertical-align: middle;
+  overflow: visible;
+  box-shadow: var(--cp-planned-amount-column-shadow);
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-split {
+  z-index: 14;
+  background-color: #f5f7f8;
+}
+
+/* Extra 1px edge above row backgrounds — ensures the rule reads in header/body/hover */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-split::after,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-sticky-split::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #d6dadc;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capital-planning-table-scroll tbody tr:hover td.capital-planning-col-project:not([colspan]),
+.capital-planning-table-scroll tbody tr:hover td.capital-planning-col-sticky-split {
+  background-color: #f5f7f8;
+}
+
+/* Vertical rule between last visible baseline column and forecast (header row 1) */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-last-baseline {
+  border-right: 1px solid #d6dadc !important;
+}
+
+/* Sticky totals row — stays at bottom of the scroll region; matches column alignment on horizontal scroll */
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer tr {
+  position: sticky;
+  bottom: 0;
+  /* Above body rows and sticky body columns so the totals band stays visible while scrolling */
+  z-index: 30;
+  /* Single top rule (Procore table / gray96 band); avoid heavy “card” shadow */
+  box-shadow: 0 -1px 0 #d6dadc;
+}
+
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td {
+  /* Match thead `tableHeaderBgColor` (gray96) — same band as Procore data table headers */
+  background-color: #f5f7f8 !important;
+  border-top: 1px solid #d6dadc;
+  vertical-align: middle;
+  height: 32px;
+  max-height: 32px;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Same as tbody: reset core Table.TextCell / CurrencyCell vertical margins for 32px density */
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer tr td > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer tr td > div > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td.capital-planning-table-footer-forecast-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer: same horizontal sticky columns as body so totals stay aligned when scrolling */
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-project:not([colspan]) {
+  position: sticky;
+  left: 0;
+  z-index: 22;
+  width: var(--cp-sticky-col1-width);
+  min-width: var(--cp-sticky-col1-width);
+  max-width: var(--cp-sticky-col1-width);
+  box-sizing: border-box;
+  background-color: #f5f7f8 !important;
+}
+
+.capital-planning-table-scroll tfoot tr > td.capital-planning-col-scroll {
+  position: relative;
+  z-index: 0;
+}
+
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-sticky-split {
+  position: sticky;
+  left: var(--cp-sticky-col1-width);
+  z-index: 24;
+  width: var(--cp-sticky-col2-width);
+  min-width: var(--cp-sticky-col2-width);
+  max-width: var(--cp-sticky-col2-width);
+  box-sizing: border-box;
+  background-color: #f5f7f8 !important;
+  overflow: visible;
+  box-shadow: var(--cp-planned-amount-column-shadow);
+}
+
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-sticky-split::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #d6dadc;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-last-baseline {
+  border-right: 1px solid #d6dadc !important;
+}
+
+/* Procore Data Table density: 32px row height (body + header), Capital Planning grid */
+.capital-planning-table-scroll thead tr th {
+  height: 32px !important;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  line-height: 16px !important;
+  font-size: 12px !important;
+}
+
+.capital-planning-table-scroll thead tr th button {
+  min-height: 32px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Planned amount DropdownFlyout: caption row — non-interactive, no hover/highlight (Capital Planning) */
+[role="listitem"]:has(.capital-planning-planned-amount-flyout-description) {
+  cursor: default !important;
+  background-color: transparent !important;
+}
+
+[role="listitem"]:has(.capital-planning-planned-amount-flyout-description):hover,
+[role="listitem"]:has(.capital-planning-planned-amount-flyout-description)[data-highlighted="true"],
+[role="listitem"]:has(.capital-planning-planned-amount-flyout-description):focus-visible {
+  background-color: transparent !important;
+}
+
+/* Planned amount DropdownFlyout: caption text (Figma helper / secondary) */
+.capital-planning-planned-amount-flyout-description {
+  display: block;
+  white-space: normal;
+  max-width: 220px;
+  margin: 0;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  font-weight: 400 !important;
+  font-style: italic !important;
+  color: #6a767c !important;
+}
+
+/* FY collapse: match Planned Amount row DropdownFlyout trigger (24×24), not header 32px button rule */
+.capital-planning-table-scroll thead tr th button.capital-planning-forecast-fy-toggle {
+  min-height: 24px !important;
+  height: 24px !important;
+  max-height: 24px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  max-width: 24px !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll tbody tr {
+  height: 32px;
+}
+
+.capital-planning-table-scroll tbody tr td {
+  height: 32px;
+  max-height: 32px;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Table.TextCell / Table.CurrencyCell wrapper uses spacing.lg (16px) vertical margin by default */
+.capital-planning-table-scroll tbody tr td > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.capital-planning-table-scroll tbody tr td > div > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.capital-planning-table-scroll .capital-planning-planned-amount-cell {
+  max-height: 32px;
+  min-height: 0;
+}
+
+/*
+ * Lump sum manual entry: `Table.InputCell` + `size="block"` fills the cell next to the flyout;
+ * core inline-edit margins / input min-height default to ~36px — tighten to match 32px row + Select.
+ */
+.capital-planning-table-scroll .capital-planning-planned-amount-cell--lump-sum .capital-planning-planned-amount-input-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.capital-planning-table-scroll
+  .capital-planning-planned-amount-cell--lump-sum
+  .capital-planning-planned-amount-input-wrap
+  [class*="StyledTableInlineEditContainer"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.capital-planning-table-scroll
+  .capital-planning-planned-amount-cell--lump-sum
+  .capital-planning-planned-amount-input-wrap
+  [class*="StyledTableCellInput"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+  text-align: right !important;
+}
+
+/* Forecast columns: `Table.InputCell` fills cell; match 32px row + right-aligned currency */
+.capital-planning-table-scroll .capital-planning-forecast-number-input[class*="StyledTableInlineEditContainer"],
+.capital-planning-table-scroll .capital-planning-forecast-number-input [class*="StyledTableInlineEditContainer"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.capital-planning-table-scroll .capital-planning-forecast-number-input[class*="StyledTableCellInput"],
+.capital-planning-table-scroll .capital-planning-forecast-number-input [class*="StyledTableCellInput"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+  text-align: right !important;
+}
+
+/* Table.SelectCell: compact trigger height so Select fits 32px data-table rows */
+.capital-planning-table-scroll tbody tr td [role="combobox"] {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  font-size: 12px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+/* Table.SelectCell: read-only look until hover, keyboard focus, or menu open (then full edit chrome) */
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:where(:not(:hover):not(:focus):not([aria-expanded="true"])),
+.capital-planning-table-scroll tbody tr td [role="combobox"]:where(:not(:hover):not(:focus):not([aria-expanded="true"])) {
+  border-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/*
+ * Ghost chevron: hide only the inner triangle. Core `StyledTableCellSelect` sets it to opacity:0
+ * until :focus-within, so hover never revealed it. Do not set the arrow *container* to opacity:0 —
+ * that also hides descendants regardless of child opacity.
+ */
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:where(:not(:hover):not(:focus):not([aria-expanded="true"])) > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"]:where(:not(:hover):not(:focus):not([aria-expanded="true"])) > *:last-child * {
+  opacity: 0 !important;
+  transition: opacity 0.12s ease;
+}
+
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:hover,
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:focus,
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table[aria-expanded="true"],
+.capital-planning-table-scroll tbody tr td [role="combobox"]:hover,
+.capital-planning-table-scroll tbody tr td [role="combobox"]:focus,
+.capital-planning-table-scroll tbody tr td [role="combobox"][aria-expanded="true"] {
+  border-color: #bcc8cc !important;
+  background-color: #ffffff !important;
+}
+
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:hover > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table:focus > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"].select--table[aria-expanded="true"] > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"]:hover > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"]:focus > *:last-child *,
+.capital-planning-table-scroll tbody tr td [role="combobox"][aria-expanded="true"] > *:last-child * {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Table.DateSelectCell: compact DateInput; typography aligned so segments / delimiters / icon share one rhythm */
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  overflow: visible !important;
+}
+
+/* Segment row: single vertical centerline for mm / dd / yyyy */
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 0 !important;
+  line-height: 16px !important;
+}
+
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) [role="spinbutton"] {
+  font-size: 12px !important;
+  line-height: 16px !important;
+  min-height: 0 !important;
+  padding: 0 1px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Delimiters (/) — same line metrics as segments so slashes align with digits */
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) > div:first-child > span {
+  font-size: 12px !important;
+  line-height: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  align-self: center !important;
+  min-height: 16px !important;
+}
+
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) > div:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  margin-left: 2px !important;
+}
+
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) > div:last-child svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.capital-planning-table-scroll tbody tr td [role="group"]:has([role="spinbutton"]) > div:last-child button {
+  min-height: 22px !important;
+  height: 22px !important;
+  width: 22px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[class*="StyledTableWrapper"] table {
+  table-layout: fixed;
+  min-width: 100%;
+  width: max-content;
+}
+
+/* Column resizing for core-react Table */
+[class*="StyledTableWrapper"] table th {
+  overflow: hidden;
+  resize: horizontal;
+  min-width: 60px;
+  position: relative;
+}
+
+/* Checkbox / snugfit columns for core-react Table */
+[class*="StyledTableWrapper"] table th[snugfit],
+[class*="StyledTableWrapper"] table th:has(input[type="checkbox"]),
+[class*="StyledTableWrapper"] table th:has([role="checkbox"]) {
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  resize: none;
+}
+
+/* Resize handle styling for core-react Table */
+[class*="StyledTableWrapper"] table th::-webkit-resizer {
+  cursor: col-resize;
+  background: transparent;
+  border: none;
 }

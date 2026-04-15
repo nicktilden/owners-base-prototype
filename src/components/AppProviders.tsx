@@ -6,9 +6,34 @@
 
 import React, { useEffect } from 'react';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { createGlobalStyle } from 'styled-components';
 import { PersonaProvider, usePersona } from '@/context/PersonaContext';
 import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
+
+const TearsheetAnimationOverride = createGlobalStyle`
+  /* Tearsheet panel: use CSS transitions instead of keyframe animations */
+  [class*="StyledTearsheetContent"] {
+    animation: none !important;
+    transition-property: width, transform !important;
+    transition-duration: 200ms !important;
+    transition-timing-function: ease !important;
+  }
+
+  /* Close button: no animation or delay */
+  [class*="StyledButtonCard"] {
+    animation: none !important;
+    animation-delay: 0ms !important;
+    transition: none !important;
+    transition-delay: 0ms !important;
+  }
+
+  /* Scrim fade transition */
+  [class*="sc-1ijdug2-0"] {
+    transition-duration: 200ms !important;
+    transition-timing-function: ease !important;
+  }
+`;
 
 // Seed data imports — loaded once at app root
 import { account } from '@/data/seed/account';
@@ -55,6 +80,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       <DataProvider>
         <PersonaProvider>
           <LevelProvider>
+            <TearsheetAnimationOverride />
             <SeedLoader>
               {children}
             </SeedLoader>

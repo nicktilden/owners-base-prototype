@@ -211,7 +211,7 @@ const Td = styled.td<{ $sticky?: boolean }>`
 const TdMilestone = styled.td`
   padding: 3px 2px;
   border-bottom: 1px solid #e8eaeb;
-  border-right: 1px solid #e8eaeb;
+  border-right: 0px solid #e8eaeb;
   background: var(--color-surface-primary);
   text-align: center;
   vertical-align: middle;

@@ -1,9 +1,35 @@
 import React, { useMemo } from "react";
-import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
+import { Button, Dropdown, SplitViewCard } from "@procore/core-react";
 import { NotepadList as ChangeOrdersIcon, Plus } from "@procore/core-icons";
 import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import type { ColDef } from "ag-grid-community";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+
+const columnDefs: ColDef[] = [
+  { field: "number", headerName: "#", width: 80 },
+  { field: "title", headerName: "Title", minWidth: 200 },
+  { field: "status", headerName: "Status", width: 120 },
+  { field: "amount", headerName: "Amount", width: 130 },
+  { field: "reason", headerName: "Reason", width: 150 },
+  { field: "created", headerName: "Created", width: 120 },
+  {
+    colId: "actions",
+    headerName: "Actions",
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    resizable: false,
+    sortable: false,
+    filter: false,
+    suppressMovable: true,
+    suppressHeaderMenuButton: true,
+    pinned: "right",
+    cellRenderer: CostActionsCellRenderer,
+    lockPosition: true,
+  },
+];
 
 interface ChangeOrdersContentProps {
   projectId: string;
@@ -38,28 +64,13 @@ export default function ChangeOrdersContent({ projectId }: ChangeOrdersContentPr
       <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
         <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
           <SplitViewCard.Section heading="Change Orders">
-            <Table.Container>
-              <Table>
-                <Table.Header>
-                  <Table.HeaderRow>
-                    <Table.HeaderCell>#</Table.HeaderCell>
-                    <Table.HeaderCell>Title</Table.HeaderCell>
-                    <Table.HeaderCell>Status</Table.HeaderCell>
-                    <Table.HeaderCell>Amount</Table.HeaderCell>
-                    <Table.HeaderCell>Reason</Table.HeaderCell>
-                    <Table.HeaderCell>Created</Table.HeaderCell>
-                    <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                  </Table.HeaderRow>
-                </Table.Header>
-                <Table.Body>
-                  <Table.BodyRow>
-                    <Table.BodyCell colSpan={7}>
-                      <Table.TextCell>No change orders have been created for this project.</Table.TextCell>
-                    </Table.BodyCell>
-                  </Table.BodyRow>
-                </Table.Body>
-              </Table>
-            </Table.Container>
+            <SmartGridWrapper
+              id="change-orders-grid"
+              columnDefs={columnDefs}
+              rowData={[]}
+              height={400}
+              sideBar={false}
+            />
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>

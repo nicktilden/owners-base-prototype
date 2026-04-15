@@ -3,15 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@procore/core-icons": "^12.15.0",
-    "@procore/core-react": "^12.43.0",
+    "@procore/core-react": "^12.45.0",
     "@procore/globalization-toolkit": "^3.6.1",
+    "ag-grid-community": "^35.2.1",
+    "ag-grid-enterprise": "^35.2.1",
+    "ag-grid-react": "^35.2.1",
     "formik": "^2.4.9",
     "next": "16.2.1",
     "react": "^18.2.0",

@@ -39,6 +39,8 @@ export interface BreadcrumbItem {
 export interface ToolPageLayoutProps {
   /** Page title, e.g. "Assets" */
   title: string;
+  /** Optional content after the title text inside the H1 (e.g. a Beta pill). */
+  titleAddon?: React.ReactNode;
   /** Icon rendered before the H1, e.g. <Assets size="md" /> */
   icon?: React.ReactNode;
   /** Breadcrumb trail leading up to the current tool */
@@ -61,6 +63,7 @@ const ActionsRow = styled.div`
 
 export default function ToolPageLayout({
   title,
+  titleAddon,
   icon,
   breadcrumbs = [],
   actions,
@@ -90,6 +93,7 @@ export default function ToolPageLayout({
                     <H1 style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-primary)' }}>
                       {icon}
                       {title}
+                      {titleAddon}
                     </H1>
                   </Title.Text>
                   {actions && (

@@ -1,26 +1,29 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
-  SplitViewCard,
-  Table,
+  Search,
   Select,
+  SplitViewCard,
 } from "@procore/core-react";
 import {
   ChartBar as BudgetIcon,
   Plus,
 } from "@procore/core-icons";
+import type { ColDef, GridApi, ValueFormatterParams, ValueGetterParams } from "ag-grid-community";
+import styled from "styled-components";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import { budgetLineItems } from "@/data/seed/budget";
 import { projects } from "@/data/seed/projects";
 import type { BudgetLineItem } from "@/types/budget";
 import { calculateBudget } from "@/types/budget";
-import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatCurrency(n: number): string {
+function formatCurrency(n: number | null | undefined): string {
+  if (n == null) return "—";
   if (n === 0) return "$0";
   if (Math.abs(n) >= 1_000_000) {
     return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -47,10 +50,29 @@ const PROGRAM_LABELS: Record<string, string> = {
   FA: "Facilities",
 };
 
-const TotalsRow = styled.tr`
-  background: var(--color-surface-secondary);
-  font-weight: 700;
-  border-top: 2px solid #c4cbcf;
+// ─── Styled components ────────────────────────────────────────────────────────
+
+const ToolbarRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  gap: 8px;
+  background: #fff;
+`;
+
+const ToolbarLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+`;
+
+const GridArea = styled.div`
+  display: flex;
+  height: 640px;
+  border: 1px solid #E0E4E7;
+  overflow: hidden;
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -62,6 +84,9 @@ interface BudgetContentProps {
 export default function BudgetContent({ projectId }: BudgetContentProps) {
   const isPortfolio = projectId === "";
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const gridApiRef = useRef<GridApi<BudgetLineItem> | null>(null);
+
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
   const projectLabel = project ? `${project.number} ${project.name}` : projectId;
   const projectMap = useMemo(() => {
@@ -74,7 +99,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     return projects.filter((p) => ids.has(p.id));
   }, []);
 
-  const lineItems = useMemo<BudgetLineItem[]>(() => {
+  const rowData = useMemo<BudgetLineItem[]>(() => {
     let base = isPortfolio
       ? [...budgetLineItems]
       : budgetLineItems.filter((b) => b.projectId === projectId);
@@ -84,22 +109,150 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     return base;
   }, [projectId, isPortfolio, selectedProjectIds]);
 
-  const totals = useMemo(() => {
-    return lineItems.reduce(
-      (acc, item) => {
-        const calc = calculateBudget(item);
-        return {
-          originalBudgetAmount: acc.originalBudgetAmount + item.originalBudgetAmount,
-          approvedCOs: acc.approvedCOs + item.approvedCOs,
-          revisedBudget: acc.revisedBudget + calc.revisedBudget,
-          committedCosts: acc.committedCosts + item.committedCosts,
-          directCosts: acc.directCosts + item.directCosts,
-          projectedOverUnder: acc.projectedOverUnder + calc.projectedOverUnder,
-        };
+  const columnDefs = useMemo<ColDef<BudgetLineItem>[]>(() => {
+    const cols: ColDef<BudgetLineItem>[] = [];
+
+    if (isPortfolio) {
+      cols.push({
+        colId: "project",
+        headerName: "Project",
+        minWidth: 180,
+        filter: "agSetColumnFilter",
+        valueGetter: (params: ValueGetterParams<BudgetLineItem>) =>
+          params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
+        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+      });
+    }
+
+    cols.push(
+      {
+        field: "programCode",
+        headerName: "Program",
+        filter: "agSetColumnFilter",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          PROGRAM_LABELS[params.value] ?? params.value ?? "",
       },
-      { originalBudgetAmount: 0, approvedCOs: 0, revisedBudget: 0, committedCosts: 0, directCosts: 0, projectedOverUnder: 0 }
+      {
+        field: "costTypeCode",
+        headerName: "Cost Type",
+        filter: "agSetColumnFilter",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          COST_TYPE_LABELS[params.value] ?? params.value ?? "",
+      },
+      {
+        field: "costCode",
+        headerName: "Cost Code",
+        width: 120,
+        filter: "agTextColumnFilter",
+        cellStyle: { color: "#6a767c", fontSize: "13px" },
+      },
+      {
+        field: "originalBudgetAmount",
+        headerName: "Original Budget",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          formatCurrency(params.value),
+      },
+      {
+        field: "approvedCOs",
+        headerName: "Approved COs",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          formatCurrency(params.value),
+      },
+      {
+        colId: "revisedBudget",
+        headerName: "Revised Budget",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueGetter: (params: ValueGetterParams<BudgetLineItem>) => {
+          if (!params.data) return 0;
+          return calculateBudget(params.data).revisedBudget;
+        },
+        valueFormatter: (params: ValueFormatterParams) =>
+          formatCurrency(params.value),
+        cellStyle: { fontWeight: 600 },
+      },
+      {
+        field: "committedCosts",
+        headerName: "Committed Costs",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          formatCurrency(params.value),
+      },
+      {
+        field: "directCosts",
+        headerName: "Direct Costs",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueFormatter: (params: ValueFormatterParams<BudgetLineItem>) =>
+          formatCurrency(params.value),
+      },
+      {
+        colId: "overUnder",
+        headerName: "Over / Under",
+        filter: "agNumberColumnFilter",
+        type: "rightAligned",
+        aggFunc: "sum",
+        valueGetter: (params: ValueGetterParams<BudgetLineItem>) => {
+          if (!params.data) return 0;
+          return calculateBudget(params.data).projectedOverUnder;
+        },
+        valueFormatter: (params: ValueFormatterParams) =>
+          formatCurrency(params.value),
+        cellStyle: (params) => {
+          const base = { fontWeight: 600 as const };
+          if (params.value > 0) return { ...base, color: "#1a7d3a" };
+          if (params.value < 0) return { ...base, color: "#b91c1c" };
+          return base;
+        },
+      },
+      {
+        colId: "actions",
+        headerName: "Actions",
+        width: 90,
+        minWidth: 90,
+        maxWidth: 90,
+        resizable: false,
+        sortable: false,
+        filter: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        pinned: "right",
+        cellRenderer: CostActionsCellRenderer,
+        lockPosition: true,
+      }
     );
-  }, [lineItems]);
+
+    return cols;
+  }, [isPortfolio, projectMap]);
+
+  const getRowId = useCallback(
+    (params: { data: BudgetLineItem }) => params.data.id,
+    []
+  );
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchText(value);
+      gridApiRef.current?.setGridOption("quickFilterText", value);
+    },
+    []
+  );
+
+  const handleSearchClear = useCallback(() => {
+    setSearchText("");
+    gridApiRef.current?.setGridOption("quickFilterText", "");
+  }, []);
 
   const breadcrumbs = [
     { label: "Portfolio", href: "/portfolio" },
@@ -108,11 +261,11 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary" className="b_secondary">
+      <Dropdown label="Export" variant="secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" className="b_primary" icon={<Plus />}>Add Line Item</Button>
+      <Button variant="primary" icon={<Plus />}>Add Line Item</Button>
     </>
   );
 
@@ -123,156 +276,67 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
       breadcrumbs={breadcrumbs}
       actions={actions}
     >
-      <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
-        <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
+      <SplitViewCard>
+        <SplitViewCard.Main>
           <SplitViewCard.Section heading="Budget">
-            {isPortfolio && (
-              <div style={{ marginBottom: 12, maxWidth: 320 }}>
-                <Select
-                  placeholder="Filter by project"
-                  label={selectedProjectIds.length ? `${selectedProjectIds.length} selected` : undefined}
-                  onSelect={(s) => {
-                    const id = s.item as string;
-                    setSelectedProjectIds((prev) =>
-                      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                    );
-                  }}
-                  onClear={() => setSelectedProjectIds([])}
-                  block
-                >
-                  {projectOptions.map((p) => (
-                    <Select.Option key={p.id} value={p.id} selected={selectedProjectIds.includes(p.id)}>
-                      {p.number} {p.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            )}
-            <Table.Container>
-              <Table>
-                <Table.Header>
-                  <Table.HeaderRow>
-                    {isPortfolio && <Table.HeaderCell>Project</Table.HeaderCell>}
-                    <Table.HeaderCell>Program</Table.HeaderCell>
-                    <Table.HeaderCell>Cost Type</Table.HeaderCell>
-                    <Table.HeaderCell>Cost Code</Table.HeaderCell>
-                    <Table.HeaderCell>Original Budget</Table.HeaderCell>
-                    <Table.HeaderCell>Approved COs</Table.HeaderCell>
-                    <Table.HeaderCell>Revised Budget</Table.HeaderCell>
-                    <Table.HeaderCell>Committed Costs</Table.HeaderCell>
-                    <Table.HeaderCell>Direct Costs</Table.HeaderCell>
-                    <Table.HeaderCell>Over / Under</Table.HeaderCell>
-                    <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                  </Table.HeaderRow>
-                </Table.Header>
-                <Table.Body>
-                  {lineItems.length === 0 ? (
-                    <Table.BodyRow>
-                      <Table.BodyCell colSpan={isPortfolio ? 11 : 10}>
-                        <Table.TextCell>No budget line items have been added to this project.</Table.TextCell>
-                      </Table.BodyCell>
-                    </Table.BodyRow>
-                  ) : (
-                    <>
-                      {lineItems.map((item) => {
-                        const calc = calculateBudget(item);
-                        const overUnderColor =
-                          calc.projectedOverUnder > 0
-                            ? "#1a7d3a"
-                            : calc.projectedOverUnder < 0
-                            ? "#b91c1c"
-                            : undefined;
-                        return (
-                          <Table.BodyRow key={item.id}>
-                            {isPortfolio && (
-                              <Table.BodyCell>
-                                <Table.TextCell>
-                                  <span style={{ color: "var(--color-text-link)", cursor: "pointer" }}>
-                                    {projectMap.get(item.projectId) ?? item.projectId}
-                                  </span>
-                                </Table.TextCell>
-                              </Table.BodyCell>
-                            )}
-                            <Table.BodyCell>
-                              <Table.TextCell>
-                                {PROGRAM_LABELS[item.programCode] ?? item.programCode}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell>
-                                {COST_TYPE_LABELS[item.costTypeCode] ?? item.costTypeCode}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell>
-                                <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{item.costCode}</span>
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right" }}>
-                                {formatCurrency(item.originalBudgetAmount)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right" }}>
-                                {formatCurrency(item.approvedCOs)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right", fontWeight: 600 }}>
-                                {formatCurrency(calc.revisedBudget)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right" }}>
-                                {formatCurrency(item.committedCosts)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right" }}>
-                                {formatCurrency(item.directCosts)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell>
-                              <Table.TextCell style={{ textAlign: "right", color: overUnderColor, fontWeight: 600 }}>
-                                {formatCurrency(calc.projectedOverUnder)}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                            <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                              <StandardRowActions />
-                            </Table.BodyCell>
-                          </Table.BodyRow>
+            <ToolbarRow>
+              <ToolbarLeft>
+                <div style={{ maxWidth: 260 }}>
+                  <Search
+                    placeholder="Search"
+                    value={searchText}
+                    onChange={handleSearchChange}
+                    onClear={handleSearchClear}
+                  />
+                </div>
+                {isPortfolio && (
+                  <div style={{ width: 260 }}>
+                    <Select
+                      placeholder="Filter by project"
+                      label={selectedProjectIds.length ? `${selectedProjectIds.length} selected` : undefined}
+                      onSelect={(s) => {
+                        const id = s.item as string;
+                        setSelectedProjectIds((prev) =>
+                          prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
                         );
-                      })}
-                      <TotalsRow>
-                        <td colSpan={isPortfolio ? 4 : 3} style={{ padding: "12px 16px", fontSize: 14 }}>Totals</td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right" }}>
-                          {formatCurrency(totals.originalBudgetAmount)}
-                        </td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right" }}>
-                          {formatCurrency(totals.approvedCOs)}
-                        </td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right" }}>
-                          {formatCurrency(totals.revisedBudget)}
-                        </td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right" }}>
-                          {formatCurrency(totals.committedCosts)}
-                        </td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right" }}>
-                          {formatCurrency(totals.directCosts)}
-                        </td>
-                        <td style={{ padding: "12px 16px", fontSize: 14, textAlign: "right",
-                          color: totals.projectedOverUnder > 0 ? "#1a7d3a" : totals.projectedOverUnder < 0 ? "#b91c1c" : undefined,
-                        }}>
-                          {formatCurrency(totals.projectedOverUnder)}
-                        </td>
-                        <td style={{ ...PINNED_BODY_CELL_STYLE, padding: "12px 16px" }} />
-                      </TotalsRow>
-                    </>
-                  )}
-                </Table.Body>
-              </Table>
-            </Table.Container>
+                      }}
+                      onClear={() => setSelectedProjectIds([])}
+                      block
+                    >
+                      {projectOptions.map((p) => (
+                        <Select.Option key={p.id} value={p.id} selected={selectedProjectIds.includes(p.id)}>
+                          {p.number} {p.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+              </ToolbarLeft>
+            </ToolbarRow>
+
+            <GridArea>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SmartGridWrapper<BudgetLineItem>
+                  id="budget-grid"
+                  localStorageKey="owner-prototype-budget-grid"
+                  height="100%"
+                  rowData={rowData}
+                  columnDefs={columnDefs}
+                  getRowId={getRowId}
+                  sideBar={false}
+                  grandTotalRow="bottom"
+                  onGridReady={(event) => {
+                    gridApiRef.current = event.api;
+                  }}
+                  statusBar={{
+                    statusPanels: [
+                      { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                      { statusPanel: "agSelectedRowCountComponent", align: "left" },
+                    ],
+                  }}
+                />
+              </div>
+            </GridArea>
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>

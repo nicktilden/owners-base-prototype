@@ -20,30 +20,29 @@ const BUTTON_STYLE: React.CSSProperties = {
 export const PINNED_HEADER_CELL_STYLE: React.CSSProperties = {
   position: "sticky",
   right: 0,
-  zIndex: 3,
-  background: "var(--color-surface-hover)",
-  borderLeft: "2px solid var(--color-border-separator)",
-  boxShadow: "-8px 0 12px -10px rgba(35, 39, 41, 0.35)",
+  background: "#f5f6f7",
   paddingLeft: 16,
   paddingRight: 16,
+  zIndex: 2,
+  borderLeft: "1px solid #d6dadc",
+  boxShadow: "-2px 0 4px rgba(0,0,0,0.06)",
 };
 
 export const PINNED_BODY_CELL_STYLE: React.CSSProperties = {
   position: "sticky",
   right: 0,
-  zIndex: 2,
-  background: "var(--color-surface-primary)",
-  borderLeft: "2px solid var(--color-border-separator)",
-  boxShadow: "-8px 0 12px -10px rgba(35, 39, 41, 0.25)",
+  background: "#F4F5F6",
   paddingLeft: 16,
   paddingRight: 16,
+  zIndex: 1,
+  borderLeft: "1px solid #e0e4e7",
+  boxShadow: "-2px 0 4px rgba(0,0,0,0.06)",
 };
 
 export function StandardRowActions() {
   return (
     <div style={ACTIONS_WRAP_STYLE}>
       <Button
-        className="b_tertiary"
         variant="tertiary"
         size="sm"
         icon={<Eye size="sm" />}
@@ -51,7 +50,6 @@ export function StandardRowActions() {
         style={BUTTON_STYLE}
       />
       <Button
-        className="b_tertiary"
         variant="tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
@@ -72,7 +70,6 @@ export function ProjectRowActions({
   return (
     <div style={ACTIONS_WRAP_STYLE}>
       <Button
-        className="b_tertiary"
         variant="tertiary"
         size="sm"
         icon={isFavorite ? <Star size="sm" /> : <StarOff size="sm" />}
@@ -81,7 +78,6 @@ export function ProjectRowActions({
         onClick={onToggleFavorite}
       />
       <Button
-        className="b_tertiary"
         variant="tertiary"
         size="sm"
         icon={<NotepadList size="sm" />}
@@ -89,7 +85,6 @@ export function ProjectRowActions({
         style={BUTTON_STYLE}
       />
       <Button
-        className="b_tertiary"
         variant="tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
