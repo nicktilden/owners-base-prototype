@@ -1,5 +1,8 @@
-import { DetailPage, Table } from "@procore/core-react";
-import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
+import { useMemo } from "react";
+import { DetailPage } from "@procore/core-react";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import type { ColDef } from "ag-grid-community";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 
 export interface TableCardColumn {
   key: string;
@@ -17,11 +20,20 @@ interface TableCardProps {
   navigationLabel?: string;
 }
 
-const TABLE_HEADER_CELL_STYLE: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 600,
-  lineHeight: "16px",
-  color: "#232729",
+const actionsColDef: ColDef = {
+  colId: "actions",
+  headerName: "Actions",
+  width: 90,
+  minWidth: 90,
+  maxWidth: 90,
+  resizable: false,
+  sortable: false,
+  filter: false,
+  suppressMovable: true,
+  suppressHeaderMenuButton: true,
+  pinned: "right",
+  cellRenderer: CostActionsCellRenderer,
+  lockPosition: true,
 };
 
 export default function TableCard({
@@ -30,41 +42,28 @@ export default function TableCard({
   rows,
   navigationLabel,
 }: TableCardProps) {
+  const columnDefs: ColDef[] = useMemo(
+    () => [
+      ...columns.map((col, i) => ({
+        field: col.key,
+        headerName: col.label,
+        ...(i === 0 ? { width: 100 } : { minWidth: 120 }),
+      })),
+      actionsColDef,
+    ],
+    [columns]
+  );
+
   return (
     <DetailPage.Card navigationLabel={navigationLabel}>
       <DetailPage.Section heading={heading}>
-        <Table.Container>
-          <Table>
-            <Table.Header>
-              <Table.HeaderRow>
-                {columns.map((col) => (
-                  <Table.HeaderCell key={col.key} style={TABLE_HEADER_CELL_STYLE}>
-                    {col.label}
-                  </Table.HeaderCell>
-                ))}
-                <Table.HeaderCell
-                  style={{ ...TABLE_HEADER_CELL_STYLE, ...PINNED_HEADER_CELL_STYLE }}
-                >
-                  Actions
-                </Table.HeaderCell>
-              </Table.HeaderRow>
-            </Table.Header>
-            <Table.Body>
-              {rows.map((row, i) => (
-                <Table.BodyRow key={i}>
-                  {columns.map((col) => (
-                    <Table.TextCell key={col.key}>
-                      {String(row[col.key] ?? "")}
-                    </Table.TextCell>
-                  ))}
-                  <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                    <StandardRowActions />
-                  </Table.BodyCell>
-                </Table.BodyRow>
-              ))}
-            </Table.Body>
-          </Table>
-        </Table.Container>
+        <SmartGridWrapper
+          id={`table-card-${heading.toLowerCase().replace(/\s+/g, "-")}`}
+          columnDefs={columnDefs}
+          rowData={rows}
+          height={400}
+          sideBar={false}
+        />
       </DetailPage.Section>
     </DetailPage.Card>
   );

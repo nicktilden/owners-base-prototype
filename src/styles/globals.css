@@ -1,3 +1,85 @@
+/* ─── Procore SmartGrid refinements (theme params set in SmartGridWrapper.tsx) ─ */
+
+/* Header text letter-spacing */
+.ag-header-cell-text {
+  letter-spacing: 0.25px;
+}
+
+/* Body cell vertical centering */
+.ag-cell {
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.25px;
+}
+
+/* Selection column: center checkbox horizontally and vertically */
+.ag-selection-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Group row indent: 14px spacer per nesting level */
+.ag-root-wrapper,
+[class*="ag-theme-"] {
+  --ag-row-group-indent-size: 14px !important;
+}
+
+/* Group expand/collapse: replace default chevrons with Procore CaretRight / CaretDown */
+.ag-icon-contracted,
+.ag-icon-expanded {
+  font-size: 0 !important;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-size: 16px 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.ag-icon-contracted::before,
+.ag-icon-expanded::before {
+  content: "" !important;
+  display: none !important;
+}
+
+.ag-icon-contracted {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23464F53'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M10 17L10 7L15 12L10 17Z'/%3E%3C/svg%3E");
+}
+
+.ag-icon-expanded {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23464F53'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 9.5H17L12 14.5L7 9.5Z'/%3E%3C/svg%3E");
+}
+
+/* Group row styling */
+.ag-row-group {
+  font-weight: 600;
+}
+
+.ag-group-child-count {
+  font-weight: 400;
+  color: #464F53;
+  margin-left: 2px;
+}
+
+/* Full-width group rows: align checkbox with selection column */
+.ag-full-width-row .ag-group-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+/* Child rows under a group: indent to align with group content */
+.ag-row:not(.ag-row-group):not(.ag-row-level-0) .ag-cell {
+  padding-left: calc(var(--ag-cell-horizontal-padding, 12px) + 14px);
+}
+
+/* Status bar min-height */
+.ag-status-bar {
+  min-height: 40px;
+}
+
 /* Design-system baseline: sans-serif so @procore/core-react (font-family: inherit) matches. */
 html,
 body {
@@ -75,17 +157,16 @@ a {
   text-decoration: none;
 }
 
-table th,
-table th *,
-[role="columnheader"],
-[role="columnheader"] * {
+/* core-react Table header styling (scoped to avoid AG Grid conflict) */
+table:not(.ag-header-row) th,
+table:not(.ag-header-row) th * {
   font-weight: 600 !important;
   font-size: 12px !important;
   line-height: 16px !important;
   color: #232729;
 }
 
-/* Horizontal scrolling: table extends beyond its container */
+/* Horizontal scrolling for core-react Table */
 [class*="StyledTableWrapper"] {
   overflow-x: auto;
 }
@@ -868,34 +949,32 @@ table th *,
   justify-content: center !important;
 }
 
-table {
+[class*="StyledTableWrapper"] table {
   table-layout: fixed;
   min-width: 100%;
   width: max-content;
 }
 
-/* Column resizing: draggable right edge on header cells */
-table th,
-[role="columnheader"] {
+/* Column resizing for core-react Table */
+[class*="StyledTableWrapper"] table th {
   overflow: hidden;
   resize: horizontal;
   min-width: 60px;
   position: relative;
 }
 
-/* Checkbox / snugfit columns: fixed narrow width, no resize */
-table th[snugfit],
-table th:has(input[type="checkbox"]),
-table th:has([role="checkbox"]) {
+/* Checkbox / snugfit columns for core-react Table */
+[class*="StyledTableWrapper"] table th[snugfit],
+[class*="StyledTableWrapper"] table th:has(input[type="checkbox"]),
+[class*="StyledTableWrapper"] table th:has([role="checkbox"]) {
   width: 55px;
   min-width: 55px;
   max-width: 55px;
   resize: none;
 }
 
-/* Style the resize handle area */
-table th::-webkit-resizer,
-[role="columnheader"]::-webkit-resizer {
+/* Resize handle styling for core-react Table */
+[class*="StyledTableWrapper"] table th::-webkit-resizer {
   cursor: col-resize;
   background: transparent;
   border: none;
