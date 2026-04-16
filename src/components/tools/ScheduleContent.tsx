@@ -1,34 +1,28 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
   Pill,
-  SplitViewCard,
+  Search,
   Select,
-  Table,
+  SplitViewCard,
   Tabs,
 } from "@procore/core-react";
 import {
   Calendar as ScheduleIcon,
   Plus,
 } from "@procore/core-icons";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import styled from "styled-components";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import { scheduleEntries } from "@/data/seed/schedule";
 import { projects } from "@/data/seed/projects";
 import type { ScheduleEntry, ScheduleItem, Milestone, ScheduleStatus } from "@/types/schedule";
-import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(d: Date | null): string {
-  return formatDateMMDDYYYY(d);
-}
-
-function formatPercent(n: number): string {
-  return `${n}%`;
-}
 
 const STATUS_COLORS: Record<ScheduleStatus, "green" | "yellow" | "red" | "gray" | "blue"> = {
   not_started: "gray",
@@ -45,6 +39,31 @@ const STATUS_LABELS: Record<ScheduleStatus, string> = {
   delayed: "Delayed",
   complete: "Complete",
 };
+
+// ─── Styled components ────────────────────────────────────────────────────────
+
+const ToolbarRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  gap: 8px;
+  background: #fff;
+`;
+
+const ToolbarLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+`;
+
+const GridArea = styled.div`
+  display: flex;
+  height: 640px;
+  border: 1px solid #E0E4E7;
+  overflow: hidden;
+`;
 
 const ProgressBarWrap = styled.div`
   display: flex;
@@ -74,6 +93,36 @@ const ProgressLabel = styled.span`
   white-space: nowrap;
 `;
 
+// ─── Cell renderers ───────────────────────────────────────────────────────────
+
+function ScheduleStatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as ScheduleStatus | undefined;
+  if (!status) return null;
+  return <Pill color={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Pill>;
+}
+
+function PercentCompleteRenderer(params: ICellRendererParams<ScheduleItem>) {
+  if (!params.data) return null;
+  const pct = params.data.percentComplete;
+  return (
+    <ProgressBarWrap>
+      <ProgressBarOuter>
+        <ProgressBarInner $pct={pct} />
+      </ProgressBarOuter>
+      <ProgressLabel>{pct}%</ProgressLabel>
+    </ProgressBarWrap>
+  );
+}
+
+function ActualDateRenderer(params: ICellRendererParams<Milestone>) {
+  if (!params.data) return null;
+  const d = params.data.actualMilestoneDate;
+  if (d) {
+    return <span style={{ color: "#1a7d3a" }}>{formatDateMMDDYYYY(d)}</span>;
+  }
+  return <span style={{ color: "#6a767c" }}>—</span>;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type TabKey = "schedule" | "milestones";
@@ -86,6 +135,8 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
   const isPortfolio = projectId === "";
   const [activeTab, setActiveTab] = useState<TabKey>("schedule");
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const gridApiRef = useRef<GridApi | null>(null);
 
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -107,8 +158,177 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
     return base;
   }, [projectId, isPortfolio, selectedProjectIds]);
 
-  const scheduleItems = projectEntries.filter((e): e is ScheduleItem => e.type === "item");
-  const milestones = projectEntries.filter((e): e is Milestone => e.type === "milestone");
+  const scheduleItems = useMemo(
+    () => projectEntries.filter((e): e is ScheduleItem => e.type === "item"),
+    [projectEntries]
+  );
+  const milestones = useMemo(
+    () => projectEntries.filter((e): e is Milestone => e.type === "milestone"),
+    [projectEntries]
+  );
+
+  const getScheduleRowId = useCallback(
+    (params: { data: ScheduleItem }) => params.data.id,
+    []
+  );
+
+  const getMilestoneRowId = useCallback(
+    (params: { data: Milestone }) => params.data.id,
+    []
+  );
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchText(value);
+      gridApiRef.current?.setGridOption("quickFilterText", value);
+    },
+    []
+  );
+
+  const handleSearchClear = useCallback(() => {
+    setSearchText("");
+    gridApiRef.current?.setGridOption("quickFilterText", "");
+  }, []);
+
+  const scheduleColumnDefs = useMemo<ColDef<ScheduleItem>[]>(() => {
+    const cols: ColDef<ScheduleItem>[] = [];
+
+    if (isPortfolio) {
+      cols.push({
+        colId: "project",
+        headerName: "Project",
+        minWidth: 180,
+        filter: "agSetColumnFilter",
+        valueGetter: (params) =>
+          params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
+        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+      });
+    }
+
+    cols.push(
+      {
+        field: "wbs",
+        headerName: "WBS",
+        width: 100,
+        filter: "agTextColumnFilter",
+        cellStyle: { color: "#6a767c", fontSize: "13px" },
+      },
+      {
+        field: "name",
+        headerName: "Name",
+        minWidth: 220,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        filter: "agSetColumnFilter",
+        cellRenderer: ScheduleStatusPillRenderer,
+      },
+      {
+        colId: "percentComplete",
+        headerName: "% Complete",
+        minWidth: 150,
+        filter: "agNumberColumnFilter",
+        valueGetter: (params) => params.data?.percentComplete ?? 0,
+        cellRenderer: PercentCompleteRenderer,
+      },
+      {
+        field: "startDate",
+        headerName: "Start Date",
+        filter: "agDateColumnFilter",
+        valueFormatter: (params) => formatDateMMDDYYYY(params.value),
+      },
+      {
+        field: "finishDate",
+        headerName: "Finish Date",
+        filter: "agDateColumnFilter",
+        valueFormatter: (params) => formatDateMMDDYYYY(params.value),
+      },
+      {
+        colId: "actions",
+        headerName: "Actions",
+        width: 90,
+        minWidth: 90,
+        maxWidth: 90,
+        resizable: false,
+        sortable: false,
+        filter: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        pinned: "right",
+        cellRenderer: CostActionsCellRenderer,
+        lockPosition: true,
+      }
+    );
+
+    return cols;
+  }, [isPortfolio, projectMap]);
+
+  const milestoneColumnDefs = useMemo<ColDef<Milestone>[]>(() => {
+    const cols: ColDef<Milestone>[] = [];
+
+    if (isPortfolio) {
+      cols.push({
+        colId: "project",
+        headerName: "Project",
+        minWidth: 180,
+        filter: "agSetColumnFilter",
+        valueGetter: (params) =>
+          params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
+        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+      });
+    }
+
+    cols.push(
+      {
+        field: "wbs",
+        headerName: "WBS",
+        width: 100,
+        filter: "agTextColumnFilter",
+        cellStyle: { color: "#6a767c", fontSize: "13px" },
+      },
+      {
+        field: "name",
+        headerName: "Name",
+        minWidth: 220,
+        filter: "agTextColumnFilter",
+        cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+      },
+      {
+        field: "milestoneDate",
+        headerName: "Planned Date",
+        filter: "agDateColumnFilter",
+        valueFormatter: (params) => formatDateMMDDYYYY(params.value),
+      },
+      {
+        colId: "actualDate",
+        headerName: "Actual Date",
+        filter: "agDateColumnFilter",
+        valueGetter: (params) => params.data?.actualMilestoneDate ?? null,
+        cellRenderer: ActualDateRenderer,
+      },
+      {
+        colId: "actions",
+        headerName: "Actions",
+        width: 90,
+        minWidth: 90,
+        maxWidth: 90,
+        resizable: false,
+        sortable: false,
+        filter: false,
+        suppressMovable: true,
+        suppressHeaderMenuButton: true,
+        pinned: "right",
+        cellRenderer: CostActionsCellRenderer,
+        lockPosition: true,
+      }
+    );
+
+    return cols;
+  }, [isPortfolio, projectMap]);
 
 
   const actions = (
@@ -132,6 +352,29 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
     </Tabs>
   );
 
+  const projectFilter = isPortfolio && (
+    <div style={{ width: 260 }}>
+      <Select
+        placeholder="Filter by project"
+        label={selectedProjectIds.length ? `${selectedProjectIds.length} selected` : undefined}
+        onSelect={(s) => {
+          const id = s.item as string;
+          setSelectedProjectIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+          );
+        }}
+        onClear={() => setSelectedProjectIds([])}
+        block
+      >
+        {projectOptions.map((p) => (
+          <Select.Option key={p.id} value={p.id} selected={selectedProjectIds.includes(p.id)}>
+            {p.number} {p.name}
+          </Select.Option>
+        ))}
+      </Select>
+    </div>
+  );
+
   return (
     <ToolPageLayout
       title="Schedule"
@@ -143,99 +386,42 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         <SplitViewCard>
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Schedule Items">
-              {isPortfolio && (
-                <div style={{ marginBottom: 12, maxWidth: 320 }}>
-                  <Select
-                    placeholder="Filter by project"
-                    label={selectedProjectIds.length ? `${selectedProjectIds.length} selected` : undefined}
-                    onSelect={(s) => {
-                      const id = s.item as string;
-                      setSelectedProjectIds((prev) =>
-                        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                      );
+              <ToolbarRow>
+                <ToolbarLeft>
+                  <div style={{ maxWidth: 260 }}>
+                    <Search
+                      placeholder="Search"
+                      value={searchText}
+                      onChange={handleSearchChange}
+                      onClear={handleSearchClear}
+                    />
+                  </div>
+                  {projectFilter}
+                </ToolbarLeft>
+              </ToolbarRow>
+
+              <GridArea>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SmartGridWrapper<ScheduleItem>
+                    id="schedule-items-grid"
+                    localStorageKey="owner-prototype-schedule-grid"
+                    height="100%"
+                    rowData={scheduleItems}
+                    columnDefs={scheduleColumnDefs}
+                    getRowId={getScheduleRowId}
+                    sideBar={false}
+                    onGridReady={(event) => {
+                      gridApiRef.current = event.api;
                     }}
-                    onClear={() => setSelectedProjectIds([])}
-                    block
-                  >
-                    {projectOptions.map((p) => (
-                      <Select.Option key={p.id} value={p.id} selected={selectedProjectIds.includes(p.id)}>
-                        {p.number} {p.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    statusBar={{
+                      statusPanels: [
+                        { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                        { statusPanel: "agSelectedRowCountComponent", align: "left" },
+                      ],
+                    }}
+                  />
                 </div>
-              )}
-              <Table.Container>
-                <Table>
-                  <Table.Header>
-                    <Table.HeaderRow>
-                      {isPortfolio && <Table.HeaderCell>Project</Table.HeaderCell>}
-                      <Table.HeaderCell>WBS</Table.HeaderCell>
-                      <Table.HeaderCell>Name</Table.HeaderCell>
-                      <Table.HeaderCell>Status</Table.HeaderCell>
-                      <Table.HeaderCell>% Complete</Table.HeaderCell>
-                      <Table.HeaderCell>Start Date</Table.HeaderCell>
-                      <Table.HeaderCell>Finish Date</Table.HeaderCell>
-                      <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                    </Table.HeaderRow>
-                  </Table.Header>
-                  <Table.Body>
-                    {scheduleItems.length === 0 ? (
-                      <Table.BodyRow>
-                        <Table.BodyCell colSpan={isPortfolio ? 8 : 7}>
-                          <Table.TextCell>No schedule items have been added to this project.</Table.TextCell>
-                        </Table.BodyCell>
-                      </Table.BodyRow>
-                    ) : (
-                      scheduleItems.map((item) => (
-                        <Table.BodyRow key={item.id}>
-                          {isPortfolio && (
-                            <Table.BodyCell>
-                              <Table.TextCell>
-                                <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
-                                  {projectMap.get(item.projectId) ?? item.projectId}
-                                </span>
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                          )}
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{item.wbs}</span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
-                                {item.name}
-                              </span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Pill color={STATUS_COLORS[item.status]}>{STATUS_LABELS[item.status]}</Pill>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <ProgressBarWrap>
-                              <ProgressBarOuter>
-                                <ProgressBarInner $pct={item.percentComplete} />
-                              </ProgressBarOuter>
-                              <ProgressLabel>{formatPercent(item.percentComplete)}</ProgressLabel>
-                            </ProgressBarWrap>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{formatDate(item.startDate)}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{formatDate(item.finishDate)}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                            <StandardRowActions />
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                      ))
-                    )}
-                  </Table.Body>
-                </Table>
-              </Table.Container>
+              </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
@@ -245,92 +431,42 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         <SplitViewCard>
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Milestones">
-              {isPortfolio && (
-                <div style={{ marginBottom: 12, maxWidth: 320 }}>
-                  <Select
-                    placeholder="Filter by project"
-                    label={selectedProjectIds.length ? `${selectedProjectIds.length} selected` : undefined}
-                    onSelect={(s) => {
-                      const id = s.item as string;
-                      setSelectedProjectIds((prev) =>
-                        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                      );
+              <ToolbarRow>
+                <ToolbarLeft>
+                  <div style={{ maxWidth: 260 }}>
+                    <Search
+                      placeholder="Search"
+                      value={searchText}
+                      onChange={handleSearchChange}
+                      onClear={handleSearchClear}
+                    />
+                  </div>
+                  {projectFilter}
+                </ToolbarLeft>
+              </ToolbarRow>
+
+              <GridArea>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SmartGridWrapper<Milestone>
+                    id="milestones-grid"
+                    localStorageKey="owner-prototype-milestones-grid"
+                    height="100%"
+                    rowData={milestones}
+                    columnDefs={milestoneColumnDefs}
+                    getRowId={getMilestoneRowId}
+                    sideBar={false}
+                    onGridReady={(event) => {
+                      gridApiRef.current = event.api;
                     }}
-                    onClear={() => setSelectedProjectIds([])}
-                    block
-                  >
-                    {projectOptions.map((p) => (
-                      <Select.Option key={p.id} value={p.id} selected={selectedProjectIds.includes(p.id)}>
-                        {p.number} {p.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
+                    statusBar={{
+                      statusPanels: [
+                        { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                        { statusPanel: "agSelectedRowCountComponent", align: "left" },
+                      ],
+                    }}
+                  />
                 </div>
-              )}
-              <Table.Container>
-                <Table>
-                  <Table.Header>
-                    <Table.HeaderRow>
-                      {isPortfolio && <Table.HeaderCell>Project</Table.HeaderCell>}
-                      <Table.HeaderCell>WBS</Table.HeaderCell>
-                      <Table.HeaderCell>Name</Table.HeaderCell>
-                      <Table.HeaderCell>Planned Date</Table.HeaderCell>
-                      <Table.HeaderCell>Actual Date</Table.HeaderCell>
-                      <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                    </Table.HeaderRow>
-                  </Table.Header>
-                  <Table.Body>
-                    {milestones.length === 0 ? (
-                      <Table.BodyRow>
-                        <Table.BodyCell colSpan={isPortfolio ? 6 : 5}>
-                          <Table.TextCell>No milestones have been added to this project.</Table.TextCell>
-                        </Table.BodyCell>
-                      </Table.BodyRow>
-                    ) : (
-                      milestones.map((m) => (
-                        <Table.BodyRow key={m.id}>
-                          {isPortfolio && (
-                            <Table.BodyCell>
-                              <Table.TextCell>
-                                <span style={{ color: "#1d5cc9", cursor: "pointer" }}>
-                                  {projectMap.get(m.projectId) ?? m.projectId}
-                                </span>
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                          )}
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{m.wbs}</span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
-                                {m.name}
-                              </span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{formatDate(m.milestoneDate)}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              {m.actualMilestoneDate ? (
-                                <span style={{ color: "#1a7d3a" }}>{formatDate(m.actualMilestoneDate)}</span>
-                              ) : (
-                                <span style={{ color: "#6a767c" }}>—</span>
-                              )}
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                            <StandardRowActions />
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                      ))
-                    )}
-                  </Table.Body>
-                </Table>
-              </Table.Container>
+              </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
