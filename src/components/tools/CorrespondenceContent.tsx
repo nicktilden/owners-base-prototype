@@ -1,9 +1,35 @@
 import React, { useMemo } from "react";
-import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
+import { Button, Dropdown, SplitViewCard } from "@procore/core-react";
 import { Envelope as CorrespondenceIcon, Plus } from "@procore/core-icons";
 import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import type { ColDef } from "ag-grid-community";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+
+const columnDefs: ColDef[] = [
+  { field: "number", headerName: "#", width: 80 },
+  { field: "subject", headerName: "Subject", minWidth: 200 },
+  { field: "type", headerName: "Type", width: 120 },
+  { field: "status", headerName: "Status", width: 120 },
+  { field: "from", headerName: "From", width: 150 },
+  { field: "date", headerName: "Date", width: 120 },
+  {
+    colId: "actions",
+    headerName: "Actions",
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    resizable: false,
+    sortable: false,
+    filter: false,
+    suppressMovable: true,
+    suppressHeaderMenuButton: true,
+    pinned: "right",
+    cellRenderer: CostActionsCellRenderer,
+    lockPosition: true,
+  },
+];
 
 interface CorrespondenceContentProps {
   projectId: string;
@@ -38,28 +64,13 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
       <SplitViewCard>
         <SplitViewCard.Main>
           <SplitViewCard.Section heading="Correspondence">
-            <Table.Container>
-              <Table>
-                <Table.Header>
-                  <Table.HeaderRow>
-                    <Table.HeaderCell>#</Table.HeaderCell>
-                    <Table.HeaderCell>Subject</Table.HeaderCell>
-                    <Table.HeaderCell>Type</Table.HeaderCell>
-                    <Table.HeaderCell>Status</Table.HeaderCell>
-                    <Table.HeaderCell>From</Table.HeaderCell>
-                    <Table.HeaderCell>Date</Table.HeaderCell>
-                    <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                  </Table.HeaderRow>
-                </Table.Header>
-                <Table.Body>
-                  <Table.BodyRow>
-                    <Table.BodyCell colSpan={7}>
-                      <Table.TextCell>No correspondence has been created for this project.</Table.TextCell>
-                    </Table.BodyCell>
-                  </Table.BodyRow>
-                </Table.Body>
-              </Table>
-            </Table.Container>
+            <SmartGridWrapper
+              id="correspondence-grid"
+              columnDefs={columnDefs}
+              rowData={[]}
+              height={400}
+              sideBar={false}
+            />
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>

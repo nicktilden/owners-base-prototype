@@ -15,6 +15,8 @@ import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
+import { getProjectConnection } from "@/data/procoreConnect";
+import { ConnectIconWithPopover } from "@/components/ConnectPopover";
 
 const TearsheetWide = createGlobalStyle`
   .sc-ljrxoq-1 {
@@ -106,9 +108,12 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
           {project ? (
             <>
               <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
-              <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block" }}>
-                {project.name}
-              </Typography>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block" }}>
+                  {project.name}
+                </Typography>
+                {(() => { const conn = getProjectConnection(project.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
                 <Pill color="blue">{project.stage}</Pill>
                 <Typography intent="small" color="gray45">
@@ -336,12 +341,15 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
                       <tr key={r.number} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                         <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{r.number}</td>
                         <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1" }}>
-                          <button
-                            onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
-                            style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", fontSize: 13, textAlign: "left" }}
-                          >
-                            {r.name}
-                          </button>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <button
+                              onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
+                              style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", fontSize: 13, textAlign: "left" }}
+                            >
+                              {r.name}
+                            </button>
+                            {(() => { const conn = r.projectId !== undefined ? getProjectConnection(r.projectId) : undefined; return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                          </span>
                         </td>
                         <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729", whiteSpace: "nowrap" }}>{r.stage}</td>
                         <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#232729" }}>{r.currentMilestone}</td>
@@ -713,12 +721,15 @@ export function ScheduleRiskGHubCard() {
               {criticalRows.map(({ row, varianceDays, pctComplete, endDate, expectedCompletionDate }, i) => (
                 <tr key={row.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
                   <td style={{ padding: "8px 8px", borderBottom: "1px solid #eee" }}>
-                    <button
-                      onClick={() => setOpenProjectId(row.id)}
-                      style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
-                    >
-                      {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
-                    </button>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <button
+                        onClick={() => setOpenProjectId(row.id)}
+                        style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                      >
+                        {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
+                      </button>
+                      {(() => { const conn = getProjectConnection(row.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                    </span>
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid #eee", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
                     {endDate ? formatDate(endDate) : "—"}
@@ -1007,12 +1018,15 @@ export function ScheduleVariance2HubCard() {
           {rows.map((r, i) => (
             <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1" }}>
-                <button
-                  onClick={() => setOpenProjectId(r.id)}
-                  style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
-                >
-                  {r.name}
-                </button>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <button
+                    onClick={() => setOpenProjectId(r.id)}
+                    style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "#1d5cc9", cursor: "pointer", textAlign: "left" }}
+                  >
+                    {r.name}
+                  </button>
+                  {(() => { const conn = getProjectConnection(r.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                </span>
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
                 {(() => { const c = varianceColors(r.worstVariance); return (

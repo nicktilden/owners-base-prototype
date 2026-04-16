@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
   Pill,
+  Search,
   SplitViewCard,
-  Table,
   Tabs,
 } from "@procore/core-react";
 import {
@@ -12,17 +12,17 @@ import {
   ChevronRight,
   Clear,
   ClipboardCheck as ActionPlansIcon,
-  Filter,
   Plus,
-  Search as SearchIcon,
 } from "@procore/core-icons";
+import type { ColDef, GridApi, ICellRendererParams, RowClickedEvent } from "ag-grid-community";
 import styled from "styled-components";
+import { SmartGridWrapper } from "@/components/SmartGrid";
+import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTypes, actionPlanTemplates } from "@/data/seed/action_plan_types";
 import { projects } from "@/data/seed/projects";
 import type { ActionPlan, ActionPlanItem, ActionPlanStatus, ActionPlanItemStatus } from "@/types/action_plans";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -31,10 +31,6 @@ function formatDate(d: Date | null): string {
   return formatDateMMDDYYYY(d);
 }
 
-/**
- * Map numeric URL project IDs (1–20) to seed project string IDs (proj-001 to proj-020).
- * Pass-through for IDs already in proj-XXX format.
- */
 function resolveSeedProjectId(urlId: string): string {
   const num = parseInt(urlId, 10);
   if (!isNaN(num) && num >= 1 && num <= 20) {
@@ -98,92 +94,27 @@ function planHasOverdue(plan: ActionPlan): boolean {
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
-const SearchInputWrap = styled.div`
-  display: flex;
-  align-items: center;
-  border: 1px solid #c4cbcf;
-  border-radius: 4px;
-  padding: 0 8px;
-  height: 36px;
-  gap: 6px;
-  min-width: 220px;
-  background: #fff;
-  &:focus-within {
-    border-color: #1d5cc9;
-    box-shadow: 0 0 0 2px rgba(29, 92, 201, 0.2);
-  }
-`;
-
-const SearchInput = styled.input`
-  border: none;
-  outline: none;
-  flex: 1;
-  font-size: 14px;
-  background: transparent;
-`;
-
-const Toolbar = styled.div`
+const ToolbarRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 0 0 8px;
   gap: 8px;
+  background: #fff;
 `;
 
 const ToolbarLeft = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-const FilterChipEl = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  background: #e8f0fe;
-  color: #1d5cc9;
-  border: 1px solid #1d5cc9;
-  border-radius: 4px;
-  padding: 0 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: default;
-  white-space: nowrap;
-`;
-
-const FilterChipRemove = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #1d5cc9;
-  padding: 0;
-  line-height: 1;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  &:hover { color: #0f3a8a; }
-`;
-
-const QuickFilterBar = styled.div`
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px 0 8px 0;
-`;
-
-const TableLayout = styled.div`
-  display: flex;
-  flex-direction: row;
-  min-height: 0;
-  overflow: hidden;
-`;
-
-const TableArea = styled.div`
   flex: 1;
-  min-width: 0;
-  overflow: auto;
+`;
+
+const GridArea = styled.div`
+  display: flex;
+  height: 640px;
+  border: 1px solid #E0E4E7;
+  overflow: hidden;
 `;
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
@@ -191,12 +122,11 @@ const TableArea = styled.div`
 const DetailPanel = styled.div`
   width: 420px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
+  border-left: 1px solid #e0e4e7;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-left: 16px;
 `;
 
 const DetailHeader = styled.div`
@@ -234,6 +164,38 @@ const MetaValue = styled.span`
   color: #232729;
   font-weight: 500;
 `;
+
+// ─── Cell renderers ───────────────────────────────────────────────────────────
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as ActionPlanStatus | undefined;
+  if (!status) return null;
+  return <Pill color={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Pill>;
+}
+
+function ProgressRenderer(params: ICellRendererParams<ActionPlan>) {
+  if (!params.data) return null;
+  const { closed, total, percent } = planProgress(params.data);
+  const overdue = planHasOverdue(params.data);
+  const barColor = progressBarColor(percent, overdue);
+
+  if (total === 0) {
+    return <span style={{ color: "#6a767c", fontSize: 12 }}>No items</span>;
+  }
+  return (
+    <div style={{ minWidth: 120 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "#eceff1", overflow: "hidden" }}>
+          <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
+      </div>
+      <div style={{ fontSize: 11, color: "#6a767c", marginTop: 2 }}>
+        {closed}/{total} items closed{overdue && <span style={{ color: "#c62828", fontWeight: 600 }}> · overdue</span>}
+      </div>
+    </div>
+  );
+}
 
 // ─── Section accordion ────────────────────────────────────────────────────────
 
@@ -375,6 +337,120 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
   );
 }
 
+// ─── Column defs ──────────────────────────────────────────────────────────────
+
+const planColumnDefs: ColDef<ActionPlan>[] = [
+  {
+    field: "number",
+    headerName: "#",
+    width: 80,
+    filter: "agNumberColumnFilter",
+    valueFormatter: (params) => params.value != null ? `#${params.value}` : "",
+  },
+  {
+    field: "title",
+    headerName: "Title",
+    minWidth: 220,
+    filter: "agTextColumnFilter",
+    cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+  },
+  {
+    colId: "type",
+    headerName: "Type",
+    filter: "agSetColumnFilter",
+    valueGetter: (params) => params.data ? (TYPE_MAP.get(params.data.typeId) ?? params.data.typeId) : "",
+  },
+  {
+    field: "status",
+    headerName: "Status",
+    filter: "agSetColumnFilter",
+    cellRenderer: StatusPillRenderer,
+  },
+  {
+    colId: "progress",
+    headerName: "Progress",
+    minWidth: 160,
+    sortable: false,
+    filter: false,
+    cellRenderer: ProgressRenderer,
+  },
+  {
+    field: "updatedAt",
+    headerName: "Updated",
+    filter: "agDateColumnFilter",
+    valueFormatter: (params) => formatDateMMDDYYYY(params.value),
+  },
+  {
+    colId: "actions",
+    headerName: "Actions",
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    resizable: false,
+    sortable: false,
+    filter: false,
+    suppressMovable: true,
+    suppressHeaderMenuButton: true,
+    pinned: "right",
+    cellRenderer: CostActionsCellRenderer,
+    lockPosition: true,
+  },
+];
+
+const templateColumnDefs: ColDef[] = [
+  {
+    field: "name",
+    headerName: "Name",
+    minWidth: 200,
+    filter: "agTextColumnFilter",
+    cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+  },
+  {
+    colId: "type",
+    headerName: "Type",
+    filter: "agSetColumnFilter",
+    valueGetter: (params) => params.data ? (TYPE_MAP.get(params.data.typeId) ?? params.data.typeId) : "",
+  },
+  {
+    colId: "sections",
+    headerName: "Sections",
+    width: 110,
+    filter: "agNumberColumnFilter",
+    valueGetter: (params) => params.data?.sections?.length ?? 0,
+  },
+  {
+    colId: "items",
+    headerName: "Items",
+    width: 100,
+    filter: "agNumberColumnFilter",
+    valueGetter: (params) =>
+      params.data?.sections?.reduce((sum: number, s: { items: unknown[] }) => sum + s.items.length, 0) ?? 0,
+  },
+  {
+    field: "description",
+    headerName: "Description",
+    minWidth: 200,
+    filter: "agTextColumnFilter",
+    valueFormatter: (params) => params.value ?? "—",
+    cellStyle: { color: "#6a767c", fontSize: "13px" },
+  },
+  {
+    colId: "actions",
+    headerName: "Actions",
+    width: 90,
+    minWidth: 90,
+    maxWidth: 90,
+    resizable: false,
+    sortable: false,
+    filter: false,
+    suppressMovable: true,
+    suppressHeaderMenuButton: true,
+    pinned: "right",
+    cellRenderer: CostActionsCellRenderer,
+    lockPosition: true,
+  },
+];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type TabKey = "list" | "templates";
@@ -386,10 +462,12 @@ interface ActionPlansContentProps {
 
 export default function ActionPlansContent({ projectId }: ActionPlansContentProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("list");
-  const [search, setSearch] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<ActionPlanStatus[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<ActionPlan | null>(null);
+  const gridApiRef = useRef<GridApi<ActionPlan> | null>(null);
+  const templateGridApiRef = useRef<GridApi | null>(null);
 
   const seedProjectId = useMemo(() => resolveSeedProjectId(projectId), [projectId]);
 
@@ -400,21 +478,64 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     return actionPlans.filter((ap) => ap.projectId === seedProjectId);
   }, [seedProjectId]);
 
-  const filteredPlans = useMemo(() => {
-    let base = allProjectPlans;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      base = base.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (TYPE_MAP.get(p.typeId) ?? "").toLowerCase().includes(q)
-      );
-    }
-    if (statusFilter.length > 0) {
-      base = base.filter((p) => statusFilter.includes(p.status));
-    }
-    return base;
-  }, [allProjectPlans, search, statusFilter]);
+  const rowData = useMemo(() => [...allProjectPlans], [allProjectPlans]);
+
+  const getRowId = useCallback(
+    (params: { data: ActionPlan }) => params.data.id,
+    []
+  );
+
+  const getTemplateRowId = useCallback(
+    (params: { data: { id: string } }) => params.data.id,
+    []
+  );
+
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchText(value);
+      gridApiRef.current?.setGridOption("quickFilterText", value);
+    },
+    []
+  );
+
+  const handleSearchClear = useCallback(() => {
+    setSearchText("");
+    gridApiRef.current?.setGridOption("quickFilterText", "");
+  }, []);
+
+  const handleRowClicked = useCallback(
+    (event: RowClickedEvent<ActionPlan>) => {
+      if (!event.data) return;
+      setSelectedPlan((prev) => (prev?.id === event.data!.id ? null : event.data!));
+    },
+    []
+  );
+
+  function toggleStatus(s: ActionPlanStatus) {
+    const next = statusFilter.includes(s)
+      ? statusFilter.filter((v) => v !== s)
+      : [...statusFilter, s];
+    setStatusFilter(next);
+    applyStatusFilter(next);
+  }
+
+  function applyStatusFilter(statuses: ActionPlanStatus[]) {
+    const api = gridApiRef.current;
+    if (!api) return;
+    api.setColumnFilterModel(
+      "status",
+      statuses.length > 0 ? { values: statuses } : null
+    );
+    api.onFilterChanged();
+  }
+
+  function clearStatusFilter() {
+    setStatusFilter([]);
+    applyStatusFilter([]);
+  }
+
+  const hasFilters = statusFilter.length > 0;
 
   const breadcrumbs = [
     { label: "Portfolio", href: "/portfolio" },
@@ -442,18 +563,6 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     </Tabs>
   );
 
-  function toggleStatus(s: ActionPlanStatus) {
-    setStatusFilter((prev) =>
-      prev.includes(s) ? prev.filter((v) => v !== s) : [...prev, s]
-    );
-  }
-
-  function removeStatusChip(s: ActionPlanStatus) {
-    setStatusFilter((prev) => prev.filter((v) => v !== s));
-  }
-
-  const hasFilters = statusFilter.length > 0;
-
   return (
     <ToolPageLayout
       title="Action Plans"
@@ -466,30 +575,26 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
         <SplitViewCard>
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Action Plans">
-
-              {/* Toolbar */}
-              <Toolbar>
+              <ToolbarRow>
                 <ToolbarLeft>
-                  <SearchInputWrap>
-                    <SearchIcon size="sm" style={{ color: "#6a767c", flexShrink: 0 }} />
-                    <SearchInput
+                  <div style={{ maxWidth: 260 }}>
+                    <Search
                       placeholder="Search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      value={searchText}
+                      onChange={handleSearchChange}
+                      onClear={handleSearchClear}
                     />
-                  </SearchInputWrap>
+                  </div>
                   <Button
                     variant={filterOpen || hasFilters ? "primary" : "secondary"}
                     size="md"
-                    icon={<Filter />}
                     onClick={() => setFilterOpen((v) => !v)}
                   >
                     Filter{hasFilters ? ` (${statusFilter.length})` : ""}
                   </Button>
                 </ToolbarLeft>
-              </Toolbar>
+              </ToolbarRow>
 
-              {/* Status filter inline dropdown */}
               {filterOpen && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
@@ -515,133 +620,42 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     </button>
                   ))}
                   {hasFilters && (
-                    <Button variant="tertiary" size="sm" onClick={() => setStatusFilter([])}>
+                    <Button variant="tertiary" size="sm" onClick={clearStatusFilter}>
                       Clear
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* Active filter chips */}
-              {statusFilter.length > 0 && !filterOpen && (
-                <QuickFilterBar>
-                  {statusFilter.map((s) => (
-                    <FilterChipEl key={s}>
-                      Status: {STATUS_LABELS[s]}
-                      <FilterChipRemove onClick={() => removeStatusChip(s)} aria-label={`Remove status filter: ${STATUS_LABELS[s]}`}>
-                        <Clear size="sm" />
-                      </FilterChipRemove>
-                    </FilterChipEl>
-                  ))}
-                </QuickFilterBar>
-              )}
-
-              <TableLayout>
-                <TableArea>
-                  <Table.Container>
-                    <Table>
-                      <Table.Header>
-                        <Table.HeaderRow>
-                          <Table.HeaderCell>#</Table.HeaderCell>
-                          <Table.HeaderCell>Title</Table.HeaderCell>
-                          <Table.HeaderCell>Type</Table.HeaderCell>
-                          <Table.HeaderCell>Status</Table.HeaderCell>
-                          <Table.HeaderCell>Progress</Table.HeaderCell>
-                          <Table.HeaderCell>Updated</Table.HeaderCell>
-                          <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                        </Table.HeaderRow>
-                      </Table.Header>
-                      <Table.Body>
-                        {filteredPlans.length === 0 ? (
-                          <Table.BodyRow>
-                            <Table.BodyCell colSpan={7}>
-                              <Table.TextCell>
-                                {search || hasFilters
-                                  ? "No action plans match your search or filters."
-                                  : "No action plans have been created for this project."}
-                              </Table.TextCell>
-                            </Table.BodyCell>
-                          </Table.BodyRow>
-                        ) : (
-                          filteredPlans.map((plan) => {
-                            const { closed, total, percent } = planProgress(plan);
-                            const overdue = planHasOverdue(plan);
-                            const barColor = progressBarColor(percent, overdue);
-                            const isSelected = selectedPlan?.id === plan.id;
-                            return (
-                              <Table.BodyRow
-                                key={plan.id}
-                                style={{ background: isSelected ? "#f0f4ff" : undefined }}
-                              >
-                                <Table.BodyCell>
-                                  <Table.TextCell>
-                                    <span style={{ color: "#6a767c", fontSize: 13 }}>#{plan.number}</span>
-                                  </Table.TextCell>
-                                </Table.BodyCell>
-                                <Table.BodyCell>
-                                  <Table.TextCell>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedPlan(isSelected ? null : plan)}
-                                      style={{
-                                        background: "none", border: "none", padding: 0,
-                                        fontWeight: 600, color: "#1d5cc9", cursor: "pointer",
-                                        fontSize: 14, textAlign: "left", fontFamily: "inherit",
-                                      }}
-                                    >
-                                      {plan.title}
-                                    </button>
-                                  </Table.TextCell>
-                                </Table.BodyCell>
-                                <Table.BodyCell>
-                                  <Table.TextCell>{TYPE_MAP.get(plan.typeId) ?? plan.typeId}</Table.TextCell>
-                                </Table.BodyCell>
-                                <Table.BodyCell>
-                                  <Pill color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
-                                </Table.BodyCell>
-                                <Table.BodyCell>
-                                  {total === 0 ? (
-                                    <Table.TextCell>
-                                      <span style={{ color: "#6a767c", fontSize: 12 }}>No items</span>
-                                    </Table.TextCell>
-                                  ) : (
-                                    <div style={{ minWidth: 120 }}>
-                                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "#eceff1", overflow: "hidden" }}>
-                                          <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
-                                        </div>
-                                        <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
-                                      </div>
-                                      <div style={{ fontSize: 11, color: "#6a767c", marginTop: 2 }}>
-                                        {closed}/{total} items closed{overdue && <span style={{ color: "#c62828", fontWeight: 600 }}> · overdue</span>}
-                                      </div>
-                                    </div>
-                                  )}
-                                </Table.BodyCell>
-                                <Table.BodyCell>
-                                  <Table.TextCell>{formatDate(plan.updatedAt)}</Table.TextCell>
-                                </Table.BodyCell>
-                                <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                                  <StandardRowActions />
-                                </Table.BodyCell>
-                              </Table.BodyRow>
-                            );
-                          })
-                        )}
-                      </Table.Body>
-                    </Table>
-                  </Table.Container>
-                </TableArea>
-
-                {/* Detail panel */}
+              <GridArea>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SmartGridWrapper<ActionPlan>
+                    id="action-plans-grid"
+                    localStorageKey="owner-prototype-action-plans-grid"
+                    height="100%"
+                    rowData={rowData}
+                    columnDefs={planColumnDefs}
+                    getRowId={getRowId}
+                    sideBar={false}
+                    onGridReady={(event) => {
+                      gridApiRef.current = event.api;
+                    }}
+                    onRowClicked={handleRowClicked}
+                    statusBar={{
+                      statusPanels: [
+                        { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                        { statusPanel: "agSelectedRowCountComponent", align: "left" },
+                      ],
+                    }}
+                  />
+                </div>
                 {selectedPlan && (
                   <PlanDetailPanel
                     plan={selectedPlan}
                     onClose={() => setSelectedPlan(null)}
                   />
                 )}
-              </TableLayout>
-
+              </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
@@ -651,53 +665,27 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
         <SplitViewCard>
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Account Templates">
-              <Table.Container>
-                <Table>
-                  <Table.Header>
-                    <Table.HeaderRow>
-                      <Table.HeaderCell>Name</Table.HeaderCell>
-                      <Table.HeaderCell>Type</Table.HeaderCell>
-                      <Table.HeaderCell>Sections</Table.HeaderCell>
-                      <Table.HeaderCell>Items</Table.HeaderCell>
-                      <Table.HeaderCell>Description</Table.HeaderCell>
-                      <Table.HeaderCell style={PINNED_HEADER_CELL_STYLE}>Actions</Table.HeaderCell>
-                    </Table.HeaderRow>
-                  </Table.Header>
-                  <Table.Body>
-                    {actionPlanTemplates.map((tpl) => {
-                      const itemCount = tpl.sections.reduce((sum, s) => sum + s.items.length, 0);
-                      return (
-                        <Table.BodyRow key={tpl.id}>
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ fontWeight: 600, color: "#1d5cc9", cursor: "pointer" }}>
-                                {tpl.name}
-                              </span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{TYPE_MAP.get(tpl.typeId) ?? tpl.typeId}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{tpl.sections.length}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>{itemCount}</Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell>
-                            <Table.TextCell>
-                              <span style={{ color: "#6a767c", fontSize: 13 }}>{tpl.description ?? "—"}</span>
-                            </Table.TextCell>
-                          </Table.BodyCell>
-                          <Table.BodyCell style={PINNED_BODY_CELL_STYLE}>
-                            <StandardRowActions />
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                      );
-                    })}
-                  </Table.Body>
-                </Table>
-              </Table.Container>
+              <GridArea>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SmartGridWrapper
+                    id="action-plan-templates-grid"
+                    localStorageKey="owner-prototype-action-plan-templates-grid"
+                    height="100%"
+                    rowData={actionPlanTemplates}
+                    columnDefs={templateColumnDefs}
+                    getRowId={getTemplateRowId}
+                    sideBar={false}
+                    onGridReady={(event) => {
+                      templateGridApiRef.current = event.api;
+                    }}
+                    statusBar={{
+                      statusPanels: [
+                        { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
+                      ],
+                    }}
+                  />
+                </div>
+              </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
