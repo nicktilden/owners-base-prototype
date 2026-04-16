@@ -19,7 +19,6 @@ import {
 import styled from "styled-components";
 import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTypes, actionPlanTemplates } from "@/data/seed/action_plan_types";
-import { projects } from "@/data/seed/projects";
 import type { ActionPlan, ActionPlanItem, ActionPlanStatus, ActionPlanItemStatus } from "@/types/action_plans";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_BODY_CELL_STYLE, PINNED_HEADER_CELL_STYLE, StandardRowActions } from "@/components/table/TableActions";
@@ -393,9 +392,6 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
 
   const seedProjectId = useMemo(() => resolveSeedProjectId(projectId), [projectId]);
 
-  const project = useMemo(() => projects.find((p) => p.id === seedProjectId), [seedProjectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
   const allProjectPlans = useMemo<ActionPlan[]>(() => {
     return actionPlans.filter((ap) => ap.projectId === seedProjectId);
   }, [seedProjectId]);
@@ -416,10 +412,6 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     return base;
   }, [allProjectPlans, search, statusFilter]);
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const actions = (
     <>
@@ -458,7 +450,6 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     <ToolPageLayout
       title="Action Plans"
       icon={<ActionPlansIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >

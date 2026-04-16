@@ -62,8 +62,6 @@ interface BudgetContentProps {
 export default function BudgetContent({ projectId }: BudgetContentProps) {
   const isPortfolio = projectId === "";
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
     projects.forEach((p) => m.set(p.id, `${p.number} ${p.name}`));
@@ -101,10 +99,6 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     );
   }, [lineItems]);
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const actions = (
     <>
@@ -120,7 +114,6 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     <ToolPageLayout
       title="Budget"
       icon={<BudgetIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

@@ -91,7 +91,7 @@ const TableArea = styled.div`
 // ─── Side panel shared styles ─────────────────────────────────────────────────
 
 const SidePanel = styled.div`
-  width: 280px;
+  width: 340px;
   flex-shrink: 0;
   border: 1px solid #e0e4e7;
   background: #fff;
@@ -397,10 +397,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
   const [hiddenCols, setHiddenCols]   = useState<Set<ColumnKey>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const project = useMemo(
-    () => projects.find((p) => p.id === projectId),
-    [projectId]
-  );
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
     projects.forEach((p) => m.set(p.id, `${p.number} ${p.name}`));
@@ -434,8 +430,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
 
     return base;
   }, [projectId, isPortfolio, search, filters]);
-
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
 
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
 
@@ -503,10 +497,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
   const allSelected = projectTasks.length > 0 && selectedIds.size === projectTasks.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < projectTasks.length;
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const actions = (
     <>
@@ -534,7 +524,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
     <ToolPageLayout
       title="Tasks"
       icon={<TasksIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >

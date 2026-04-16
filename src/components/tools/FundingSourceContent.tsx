@@ -5,9 +5,6 @@ import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
 
 export default function FundingSourceContent() {
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-  ];
 
   const actions = (
     <>
@@ -23,7 +20,6 @@ export default function FundingSourceContent() {
     <ToolPageLayout
       title="Funding Source"
       icon={<FundingSourceIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

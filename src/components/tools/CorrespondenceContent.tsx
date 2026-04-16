@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
 import { Envelope as CorrespondenceIcon, Plus } from "@procore/core-icons";
-import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
 
@@ -10,14 +9,6 @@ interface CorrespondenceContentProps {
 }
 
 export default function CorrespondenceContent({ projectId }: CorrespondenceContentProps) {
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
-
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary">
@@ -32,7 +23,6 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
     <ToolPageLayout
       title="Correspondence"
       icon={<CorrespondenceIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

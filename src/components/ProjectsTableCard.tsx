@@ -104,7 +104,7 @@ const TableArea = styled.div`
 `;
 
 const SidePanel = styled.div`
-  width: 280px;
+  width: 340px;
   flex-shrink: 0;
   border: 1px solid #e0e4e7;
   background: #fff;

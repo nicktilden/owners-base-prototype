@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
 import { NotepadPencil as SpecificationsIcon, Plus } from "@procore/core-icons";
-import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
 
@@ -10,14 +9,6 @@ interface SpecificationsContentProps {
 }
 
 export default function SpecificationsContent({ projectId }: SpecificationsContentProps) {
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
-
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary">
@@ -32,7 +23,6 @@ export default function SpecificationsContent({ projectId }: SpecificationsConte
     <ToolPageLayout
       title="Specifications"
       icon={<SpecificationsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

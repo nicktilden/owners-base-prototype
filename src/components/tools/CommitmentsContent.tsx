@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Button, Dropdown, SplitViewCard, Table } from "@procore/core-react";
 import { People as CommitmentsIcon, Plus } from "@procore/core-icons";
-import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { PINNED_HEADER_CELL_STYLE } from "@/components/table/TableActions";
 
@@ -10,14 +9,6 @@ interface CommitmentsContentProps {
 }
 
 export default function CommitmentsContent({ projectId }: CommitmentsContentProps) {
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
-
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary">
@@ -32,7 +23,6 @@ export default function CommitmentsContent({ projectId }: CommitmentsContentProp
     <ToolPageLayout
       title="Commitments"
       icon={<CommitmentsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

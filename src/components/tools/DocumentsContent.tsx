@@ -78,7 +78,7 @@ const TableArea = styled.div`
 `;
 
 const SidePanel = styled.div`
-  width: 280px;
+  width: 340px;
   flex-shrink: 0;
   border: 1px solid #e0e4e7;
   background: #fff;
@@ -173,9 +173,6 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
 
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
   // Build project lookup map
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -215,10 +212,6 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
 
   const hasActiveFilters = selectedProjectIds.length > 0;
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const colSpan = isPortfolio ? 9 : 8;
 
@@ -250,7 +243,6 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
     <ToolPageLayout
       title="Documents"
       icon={<DocumentsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >
