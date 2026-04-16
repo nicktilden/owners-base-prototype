@@ -91,6 +91,49 @@ export interface OpenItemRow {
 }
 
 // ---------------------------------------------------------------------------
+// Extended RFI Detail Data (for tearsheet / detail pane view)
+// ---------------------------------------------------------------------------
+
+export interface RfiAttachment {
+  id: string;
+  filename: string;
+  url: string;
+}
+
+export interface RfiResponse {
+  id: string;
+  author: string;
+  date: string;
+  body: string;
+  attachments: RfiAttachment[];
+  isOfficial: boolean;
+}
+
+export interface RfiDetailData {
+  subject: string;
+  question: string;
+  attachments: RfiAttachment[];
+  responses: RfiResponse[];
+  stageAndNumber: string;
+  rfiManager: string;
+  receivedFrom: string;
+  assignees: string;
+  assigneeStatus: string;
+  distributionList: string[];
+  ballInCourt: string;
+  responsibleContractor: string;
+  location: string;
+  createdBy: string;
+  drawingNumber: string;
+  subJob: string;
+  costCode: string;
+  dateInitiated: string;
+  scheduleImpact: string;
+  costImpact: string;
+  reference: string;
+}
+
+// ---------------------------------------------------------------------------
 // Sample data helpers
 // ---------------------------------------------------------------------------
 
@@ -264,56 +307,56 @@ interface ProjectSeed {
 
 /** Subset of project data needed here; kept in sync with projects.ts by project id. */
 const PROJECT_SEEDS: ProjectSeed[] = [
-  { id: 1, number: "MA-1001", name: "Northern Virginia Data Center Phase 2", startDate: "2024-01-08", itemCount: 7 },
-  { id: 2, number: "MW-1006", name: "Ohio Region Campus Expansion", startDate: "2024-02-01", itemCount: 6 },
-  { id: 3, number: "MW-1012", name: "Roastery Chicago", startDate: "2024-01-15", itemCount: 4 },
-  { id: 4, number: "SW-1019", name: "Drive-Thru Store Prototype Phoenix", startDate: "2024-03-01", itemCount: 3 },
-  { id: 5, number: "SE-1027", name: "Atlanta Data Hall 3 Buildout", startDate: "2024-02-15", itemCount: 5 },
-  { id: 6, number: "SW-1034", name: "Dallas Critical Facility Upgrade", startDate: "2024-05-01", itemCount: 4 },
-  { id: 7, number: "MW-1042", name: "Denver HQ Fit-Out", startDate: "2024-06-01", itemCount: 3 },
-  { id: 8, number: "SW-1051", name: "Retail Pads Austin Phase 1", startDate: "2024-01-20", itemCount: 5 },
-  { id: 9, number: "MW-1059", name: "Supercenter Grand Rapids", startDate: "2024-02-10", itemCount: 6 },
-  { id: 10, number: "NE-1068", name: "Buffalo Substation Upgrade", startDate: "2024-01-05", itemCount: 5 },
-  { id: 11, number: "SE-1076", name: "Store Orlando", startDate: "2024-03-15", itemCount: 4 },
-  { id: 12, number: "MW-1085", name: "St. Mary's ED Expansion", startDate: "2024-02-01", itemCount: 7 },
-  { id: 13, number: "W-1093", name: "Oregon Region Power & Cooling", startDate: "2024-07-01", itemCount: 3 },
-  { id: 14, number: "W-1102", name: "Support Center Seattle Renovation", startDate: "2024-08-01", itemCount: 3 },
-  { id: 15, number: "MW-1110", name: "Chicago Meet-Me Room Expansion", startDate: "2024-04-01", itemCount: 4 },
-  { id: 16, number: "SW-1119", name: "Houston Office", startDate: "2024-09-01", itemCount: 2 },
-  { id: 17, number: "SE-1127", name: "Multifamily Nashville", startDate: "2024-01-10", itemCount: 5 },
-  { id: 18, number: "MW-1136", name: "Distribution Center Toledo", startDate: "2024-06-15", itemCount: 4 },
-  { id: 19, number: "NE-1144", name: "Boston Gas Main Replacement", startDate: "2024-02-20", itemCount: 5 },
-  { id: 20, number: "SE-1153", name: "Fulfillment Center Atlanta", startDate: "2024-01-12", itemCount: 6 },
-  { id: 21, number: "MW-1161", name: "Mercy Campus OR Renovation", startDate: "2024-03-01", itemCount: 5 },
-  { id: 22, number: "W-1170", name: "San Francisco Bay Area Office", startDate: "2024-05-01", itemCount: 3 },
-  { id: 23, number: "SE-1178", name: "Reserve Store Miami", startDate: "2024-04-10", itemCount: 3 },
-  { id: 24, number: "NE-1187", name: "NYC Metro Edge Site", startDate: "2024-10-01", itemCount: 2 },
-  { id: 25, number: "SE-1195", name: "Atlanta Client Fit-Out", startDate: "2024-02-01", itemCount: 2 },
-  { id: 26, number: "SW-1204", name: "Industrial Shell Dallas", startDate: "2024-01-25", itemCount: 4 },
-  { id: 27, number: "MW-1212", name: "Supercenter Indianapolis", startDate: "2024-07-01", itemCount: 3 },
-  { id: 28, number: "NE-1221", name: "Upstate NY Transmission", startDate: "2024-01-15", itemCount: 6 },
-  { id: 29, number: "MW-1229", name: "Store Minneapolis", startDate: "2024-04-01", itemCount: 4 },
-  { id: 30, number: "MW-1238", name: "Outpatient Pavilion Lansing", startDate: "2024-08-15", itemCount: 3 },
-  { id: 31, number: "MA-1246", name: "Virginia Solar + BESS", startDate: "2024-11-01", itemCount: 2 },
-  { id: 32, number: "SW-1255", name: "Distribution Center Dallas", startDate: "2024-02-15", itemCount: 5 },
-  { id: 33, number: "SW-1263", name: "Phoenix Data Hall 1", startDate: "2024-03-10", itemCount: 4 },
-  { id: 34, number: "SE-1272", name: "Office Building Charlotte", startDate: "2024-01-08", itemCount: 5 },
-  { id: 35, number: "MW-1280", name: "Fuel Station & Convenience Detroit", startDate: "2024-05-01", itemCount: 2 },
-  { id: 36, number: "NE-1289", name: "Rhode Island Substation", startDate: "2024-07-15", itemCount: 3 },
-  { id: 37, number: "MW-1297", name: "Store Denver", startDate: "2024-04-20", itemCount: 4 },
-  { id: 38, number: "MW-1306", name: "Imaging Center Ann Arbor", startDate: "2024-03-15", itemCount: 5 },
-  { id: 39, number: "SW-1314", name: "Texas Region Data Center", startDate: "2024-02-01", itemCount: 7 },
-  { id: 40, number: "SW-1323", name: "Store Las Vegas", startDate: "2024-05-15", itemCount: 2 },
-  { id: 41, number: "W-1331", name: "Salt Lake City Buildout", startDate: "2024-09-01", itemCount: 3 },
-  { id: 42, number: "SW-1340", name: "Phoenix Office", startDate: "2024-06-15", itemCount: 2 },
-  { id: 43, number: "SE-1348", name: "Mixed-Use Raleigh", startDate: "2024-08-01", itemCount: 4 },
-  { id: 44, number: "MW-1357", name: "Supercenter Cincinnati", startDate: "2024-03-01", itemCount: 5 },
-  { id: 45, number: "NE-1365", name: "Brooklyn Network Upgrade", startDate: "2024-01-22", itemCount: 5 },
-  { id: 46, number: "W-1374", name: "Store San Diego", startDate: "2024-04-05", itemCount: 3 },
-  { id: 47, number: "MW-1382", name: "Medical Office Building Port Huron", startDate: "2024-02-10", itemCount: 4 },
-  { id: 48, number: "MA-1391", name: "Virginia HQ2 Phase 2", startDate: "2024-01-01", itemCount: 8 },
-  { id: 49, number: "INT-1399", name: "Farmer Support Center Expansion", startDate: "2024-07-01", itemCount: 3 },
-  { id: 50, number: "SE-1408", name: "Miami Critical Load Upgrade", startDate: "2024-04-01", itemCount: 4 },
+  { id: 1, number: "MA-1001", name: "Northern Virginia Data Center Phase 2", startDate: "2025-01-08", itemCount: 7 },
+  { id: 2, number: "MW-1006", name: "Ohio Region Campus Expansion", startDate: "2025-02-01", itemCount: 6 },
+  { id: 3, number: "MW-1012", name: "Roastery Chicago", startDate: "2025-01-15", itemCount: 4 },
+  { id: 4, number: "SW-1019", name: "Drive-Thru Store Prototype Phoenix", startDate: "2025-03-01", itemCount: 3 },
+  { id: 5, number: "SE-1027", name: "Atlanta Data Hall 3 Buildout", startDate: "2025-02-15", itemCount: 5 },
+  { id: 6, number: "SW-1034", name: "Dallas Critical Facility Upgrade", startDate: "2025-05-01", itemCount: 4 },
+  { id: 7, number: "MW-1042", name: "Denver HQ Fit-Out", startDate: "2025-06-01", itemCount: 3 },
+  { id: 8, number: "SW-1051", name: "Retail Pads Austin Phase 1", startDate: "2025-01-20", itemCount: 5 },
+  { id: 9, number: "MW-1059", name: "Supercenter Grand Rapids", startDate: "2025-02-10", itemCount: 6 },
+  { id: 10, number: "NE-1068", name: "Buffalo Substation Upgrade", startDate: "2025-01-05", itemCount: 5 },
+  { id: 11, number: "SE-1076", name: "Store Orlando", startDate: "2025-03-15", itemCount: 4 },
+  { id: 12, number: "MW-1085", name: "St. Mary's ED Expansion", startDate: "2025-02-01", itemCount: 7 },
+  { id: 13, number: "W-1093", name: "Oregon Region Power & Cooling", startDate: "2025-07-01", itemCount: 3 },
+  { id: 14, number: "W-1102", name: "Support Center Seattle Renovation", startDate: "2025-08-01", itemCount: 3 },
+  { id: 15, number: "MW-1110", name: "Chicago Meet-Me Room Expansion", startDate: "2025-04-01", itemCount: 4 },
+  { id: 16, number: "SW-1119", name: "Houston Office", startDate: "2025-09-01", itemCount: 2 },
+  { id: 17, number: "SE-1127", name: "Multifamily Nashville", startDate: "2025-01-10", itemCount: 5 },
+  { id: 18, number: "MW-1136", name: "Distribution Center Toledo", startDate: "2025-06-15", itemCount: 4 },
+  { id: 19, number: "NE-1144", name: "Boston Gas Main Replacement", startDate: "2025-02-20", itemCount: 5 },
+  { id: 20, number: "SE-1153", name: "Fulfillment Center Atlanta", startDate: "2025-01-12", itemCount: 6 },
+  { id: 21, number: "MW-1161", name: "Mercy Campus OR Renovation", startDate: "2025-03-01", itemCount: 5 },
+  { id: 22, number: "W-1170", name: "San Francisco Bay Area Office", startDate: "2025-05-01", itemCount: 3 },
+  { id: 23, number: "SE-1178", name: "Reserve Store Miami", startDate: "2025-04-10", itemCount: 3 },
+  { id: 24, number: "NE-1187", name: "NYC Metro Edge Site", startDate: "2025-10-01", itemCount: 2 },
+  { id: 25, number: "SE-1195", name: "Atlanta Client Fit-Out", startDate: "2025-02-01", itemCount: 2 },
+  { id: 26, number: "SW-1204", name: "Industrial Shell Dallas", startDate: "2025-01-25", itemCount: 4 },
+  { id: 27, number: "MW-1212", name: "Supercenter Indianapolis", startDate: "2025-07-01", itemCount: 3 },
+  { id: 28, number: "NE-1221", name: "Upstate NY Transmission", startDate: "2025-01-15", itemCount: 6 },
+  { id: 29, number: "MW-1229", name: "Store Minneapolis", startDate: "2025-04-01", itemCount: 4 },
+  { id: 30, number: "MW-1238", name: "Outpatient Pavilion Lansing", startDate: "2025-08-15", itemCount: 3 },
+  { id: 31, number: "MA-1246", name: "Virginia Solar + BESS", startDate: "2025-11-01", itemCount: 2 },
+  { id: 32, number: "SW-1255", name: "Distribution Center Dallas", startDate: "2025-02-15", itemCount: 5 },
+  { id: 33, number: "SW-1263", name: "Phoenix Data Hall 1", startDate: "2025-03-10", itemCount: 4 },
+  { id: 34, number: "SE-1272", name: "Office Building Charlotte", startDate: "2025-01-08", itemCount: 5 },
+  { id: 35, number: "MW-1280", name: "Fuel Station & Convenience Detroit", startDate: "2025-05-01", itemCount: 2 },
+  { id: 36, number: "NE-1289", name: "Rhode Island Substation", startDate: "2025-07-15", itemCount: 3 },
+  { id: 37, number: "MW-1297", name: "Store Denver", startDate: "2025-04-20", itemCount: 4 },
+  { id: 38, number: "MW-1306", name: "Imaging Center Ann Arbor", startDate: "2025-03-15", itemCount: 5 },
+  { id: 39, number: "SW-1314", name: "Texas Region Data Center", startDate: "2025-02-01", itemCount: 7 },
+  { id: 40, number: "SW-1323", name: "Store Las Vegas", startDate: "2025-05-15", itemCount: 2 },
+  { id: 41, number: "W-1331", name: "Salt Lake City Buildout", startDate: "2025-09-01", itemCount: 3 },
+  { id: 42, number: "SW-1340", name: "Phoenix Office", startDate: "2025-06-15", itemCount: 2 },
+  { id: 43, number: "SE-1348", name: "Mixed-Use Raleigh", startDate: "2025-08-01", itemCount: 4 },
+  { id: 44, number: "MW-1357", name: "Supercenter Cincinnati", startDate: "2025-03-01", itemCount: 5 },
+  { id: 45, number: "NE-1365", name: "Brooklyn Network Upgrade", startDate: "2025-01-22", itemCount: 5 },
+  { id: 46, number: "W-1374", name: "Store San Diego", startDate: "2025-04-05", itemCount: 3 },
+  { id: 47, number: "MW-1382", name: "Medical Office Building Port Huron", startDate: "2025-02-10", itemCount: 4 },
+  { id: 48, number: "MA-1391", name: "Virginia HQ2 Phase 2", startDate: "2025-01-01", itemCount: 8 },
+  { id: 49, number: "INT-1399", name: "Farmer Support Center Expansion", startDate: "2025-07-01", itemCount: 3 },
+  { id: 50, number: "SE-1408", name: "Miami Critical Load Upgrade", startDate: "2025-04-01", itemCount: 4 },
 ];
 
 // Per-type sequential counters for item numbers.
@@ -514,3 +557,135 @@ export const topOverdueOpenItems: OpenItemRow[] = [...sampleOpenItemRows]
   .filter((r) => r.daysOverdue > 0)
   .sort((a, b) => b.daysOverdue - a.daysOverdue)
   .slice(0, 10);
+
+// ---------------------------------------------------------------------------
+// Extended RFI Detail — dummy data generator
+// ---------------------------------------------------------------------------
+
+const RFI_MANAGERS = [
+  "Matt Lewis", "Sarah Chen", "James Okafor", "Lisa Ramírez", "Derek Wu",
+] as const;
+
+const CONTRACTORS = [
+  "Dougherty Architecture", "Summit Structural", "BlueLine MEP", "ClearPath Electrical",
+  "Horizon Civil Engineering", "Apex Fire Protection", "TerraFirma Foundations",
+] as const;
+
+const DISTRIBUTION_POOLS = [
+  "Bob Builder (Procore Construction)", "Brenda Taylor", "Irini Zendeli",
+  "Jillian Erhardt", "Marcus Greene", "Priya Patel", "Ryan Kim",
+  "Samantha Ortiz", "Tom Nguyen", "Wendy Foster",
+] as const;
+
+const RESPONDERS = [
+  "Carlos Mendez", "Rachel Kim", "Anton Petrov", "Amara Osei", "Tyrone Jackson",
+] as const;
+
+const COST_CODES = [
+  "03-100", "05-200", "07-300", "09-400", "22-100", "23-200", "26-100", "31-500", "32-100",
+] as const;
+
+const LOCATIONS = [
+  "Level 1 — Zone A", "Level 2 — East Wing", "Level 3 — Mechanical Room",
+  "Roof — Northwest Quadrant", "Basement — Electrical Closet", "Exterior — South Elevation",
+  "Level 4 — Conference Wing", "Parking Structure — Level P2",
+] as const;
+
+const RFI_QUESTIONS: Record<string, string> = {};
+for (const title of RFI_TITLES) {
+  if (title.includes("structural beam")) {
+    RFI_QUESTIONS[title] = "A new loading dock added in Addendum 1 to assist with delivery and installation of major equipment. However, neither the drawings or spec sections \"083323 Overhead Doors\" or \"111300 Loading Dock Equipment\" specify the clearance and weight requirements. Please advise.";
+  } else if (title.includes("MEP coordination")) {
+    RFI_QUESTIONS[title] = "During coordination review we found conflicts between the HVAC ductwork and plumbing risers at the ceiling plenum between grids C-4 and D-6. The mechanical drawings show the main trunk duct at 10'-6\" AFF but the plumbing riser occupies the same space. Please clarify routing priority and any required adjustments.";
+  } else if (title.includes("Grounding")) {
+    RFI_QUESTIONS[title] = "The server room floor specification calls for a raised access floor with static-dissipative tiles but does not specify the grounding method for the pedestal system. Section 26 05 26 references a grounding grid but does not detail connection to the raised floor. Please confirm the grounding approach.";
+  } else {
+    RFI_QUESTIONS[title] = `Regarding ${title.toLowerCase()}: The current drawings and specifications do not provide sufficient detail to proceed with construction. Specifically, the referenced sections do not address the connection methods, material specifications, and dimensional requirements needed for field installation. Please provide clarification and any supplemental details.`;
+  }
+}
+
+function buildRfiDetail(item: OpenItemRow): RfiDetailData {
+  const seed = item.id * 31;
+
+  const rfiManager = RFI_MANAGERS[hash(seed, 20) % RFI_MANAGERS.length];
+  const contractor = CONTRACTORS[hash(seed, 21) % CONTRACTORS.length];
+  const distCount = 3 + (hash(seed, 22) % 3);
+  const distList: string[] = [];
+  for (let i = 0; i < distCount; i++) {
+    const person = DISTRIBUTION_POOLS[(hash(seed, 23 + i)) % DISTRIBUTION_POOLS.length];
+    if (!distList.includes(person)) distList.push(person);
+  }
+
+  const responderA = RESPONDERS[hash(seed, 31) % RESPONDERS.length];
+  let responderB = "Rachel Kim";
+  if (responderA === "Rachel Kim") responderB = "Carlos Mendez";
+
+  const responses: RfiResponse[] = [
+    {
+      id: `resp-${item.id}-0`,
+      author: responderA,
+      date: "2026-03-16",
+      body: `The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+      attachments: [{
+        id: `att-resp-${item.id}-0`,
+        filename: `${Date.now()}_response_markup.pdf`,
+        url: '#',
+      }],
+      isOfficial: false,
+    },
+    {
+      id: `resp-${item.id}-1`,
+      author: responderB,
+      date: "2026-03-18",
+      body: `The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.`,
+      attachments: [],
+      isOfficial: false,
+    },
+  ];
+
+  const attachments: RfiAttachment[] = [{
+    id: `att-${item.id}-0`,
+    filename: `${Date.now()}_tempImage.jpeg`,
+    url: '#',
+  }];
+
+  const location = LOCATIONS[hash(seed, 40) % LOCATIONS.length];
+  const costCode = COST_CODES[hash(seed, 41) % COST_CODES.length];
+  const scheduleImpacts = ["None", "Minor — 1-3 days", "Moderate — 1-2 weeks", "Significant — 2+ weeks"];
+  const costImpacts = ["None", "TBD", "Minor — under $5K", "Moderate — $5K-$25K"];
+
+  return {
+    subject: item.title,
+    question: RFI_QUESTIONS[item.title] ?? RFI_QUESTIONS[RFI_TITLES[0]],
+    attachments,
+    responses,
+    stageAndNumber: `NOD-${100 + item.id}`,
+    rfiManager,
+    receivedFrom: item.submittedBy,
+    assignees: `${item.assignee} (${contractor})`,
+    assigneeStatus: item.status === "Open" ? "Response Required" : "Responded",
+    distributionList: distList,
+    ballInCourt: `${item.assignee} (${contractor})`,
+    responsibleContractor: contractor,
+    location,
+    createdBy: `${item.submittedBy} (${contractor})`,
+    drawingNumber: item.specSection.startsWith("A-") || item.specSection.startsWith("S-") || item.specSection.startsWith("M-") || item.specSection.startsWith("E-") ? item.specSection : "-",
+    subJob: "-",
+    costCode,
+    dateInitiated: item.createdDate,
+    scheduleImpact: scheduleImpacts[hash(seed, 42) % scheduleImpacts.length],
+    costImpact: costImpacts[hash(seed, 43) % costImpacts.length],
+    reference: item.specSection,
+  };
+}
+
+/** Get extended RFI detail data for an open item. Returns null for non-RFI items. */
+export function getRfiDetailData(item: OpenItemRow): RfiDetailData | null {
+  if (item.type !== "RFI") return null;
+  return buildRfiDetail(item);
+}
+
+/** Get RFI detail data for any open item (uses item fields for non-RFI types). */
+export function getItemDetailData(item: OpenItemRow): RfiDetailData {
+  return buildRfiDetail(item);
+}

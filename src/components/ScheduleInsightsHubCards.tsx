@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Avatar, Button, Card, H2, Link, Pill, Select, Tearsheet, Typography } from "@procore/core-react";
-import { Comment, Duplicate, EllipsisVertical, Envelope, ExternalLink, Phone, PhoneMobile } from "@procore/core-icons";
+import { Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -12,6 +12,7 @@ import {
   PROJECT_MANAGER_CONTACTS,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
 import { getProjectConnection } from "@/data/procoreConnect";
@@ -527,6 +528,7 @@ export function ProjectsByStageHubCard() {
 export function ScheduleRiskGHubCard() {
   const [openBucketIdx, setOpenBucketIdx] = useState<number | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const { openPanel: openAiPanel } = useAiPanel();
   const { filteredProjectRows } = useHubFilters();
 
   const counts = useMemo(
@@ -638,6 +640,30 @@ export function ScheduleRiskGHubCard() {
             variant="secondary"
             data-variant="secondary"
             size="sm"
+            icon={<Copilot size="sm" style={{ color: '#FF5100' }} />}
+            onClick={() => openAiPanel({
+              itemName: 'Portfolio Schedule Overview',
+              pills: [
+                { label: `${counts[2] + counts[3]} at risk`, color: 'red' },
+                { label: `${counts[0] + counts[1]} on track`, color: 'green' },
+              ],
+              aiSummary: `${counts[3]} project${counts[3] !== 1 ? 's' : ''} have critical delays (14+ days). ${counts[2]} additional project${counts[2] !== 1 ? 's' : ''} are showing moderate delays (7–14 days). Consider requesting recovery plans for the most impacted projects.`,
+              cardType: 'schedule_variance',
+              userRoles: ['owner', 'owner_admin', 'project_manager'],
+            })}
+            aria-label="Open AI assistant"
+            style={{
+              background: '#FFF8F5',
+              border: '1px solid #FF5100',
+              borderRadius: 4,
+              color: '#232729',
+            }}
+          >
+            AI Actions
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             aria-label="View all schedule variance rows"
           >
             View all
@@ -693,6 +719,7 @@ export function ScheduleRiskGHubCard() {
                 <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Expected Completion</th>
                 <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Variance</th>
                 <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>% Complete</th>
+                <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
               </tr>
             </thead>
             <tbody>
@@ -721,6 +748,34 @@ export function ScheduleRiskGHubCard() {
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "var(--color-text-primary)" }}>
                     {pctComplete}%
                   </td>
+                  <td style={{ padding: "4px 4px", borderBottom: "1px solid #eee", textAlign: "center" }}>
+                    <button
+                      onClick={() => openAiPanel({
+                        itemName: sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
+                        itemId: `#${row.id}`,
+                        projectId: row.id,
+                        pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],
+                        aiSummary: `This project is ${varianceDays} days behind schedule at ${pctComplete}% completion.`,
+                        cardType: 'schedule_variance',
+                        userRoles: ['owner', 'owner_admin', 'project_manager'],
+                      })}
+                      aria-label="AI actions for this project"
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 4,
+                        border: '1px solid #FF5100',
+                        background: '#FFF8F5',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                      }}
+                    >
+                      <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -734,6 +789,7 @@ export function ScheduleRiskGHubCard() {
 export function ScheduleVariance2HubCard() {
   const [openSegment, setOpenSegment] = useState<"average" | "onSchedule" | "delays" | "critical" | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const { openPanel: openAiPanel } = useAiPanel();
   const { filteredProjectRows } = useHubFilters();
 
   const portfolioRows = useMemo(() => {
@@ -862,6 +918,31 @@ export function ScheduleVariance2HubCard() {
             variant="secondary"
             data-variant="secondary"
             size="sm"
+            icon={<Copilot size="sm" style={{ color: '#FF5100' }} />}
+            onClick={() => openAiPanel({
+              itemName: 'Portfolio Schedule Overview',
+              pills: [
+                { label: `${criticalCount} critical`, color: 'red' },
+                { label: `${delaysCount} delayed`, color: 'yellow' },
+                { label: `${onScheduleCount} on schedule`, color: 'green' },
+              ],
+              aiSummary: `Portfolio average variance is +${avgVariance} days. ${criticalCount} project${criticalCount !== 1 ? 's' : ''} are in critical delay territory (14+ days). Consider escalating or requesting recovery plans for the most impacted.`,
+              cardType: 'schedule_variance',
+              userRoles: ['owner', 'owner_admin', 'project_manager'],
+            })}
+            aria-label="Open AI assistant"
+            style={{
+              background: '#FFF8F5',
+              border: '1px solid #FF5100',
+              borderRadius: 4,
+              color: '#232729',
+            }}
+          >
+            AI Actions
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             aria-label="View all schedule variance rows"
           >
             View all
@@ -938,6 +1019,7 @@ export function ScheduleVariance2HubCard() {
             <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Drift</th>
             <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Variance</th>
             <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Cost Delta</th>
+            <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
           </tr>
         </thead>
         <tbody>
@@ -966,6 +1048,37 @@ export function ScheduleVariance2HubCard() {
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
                 {r.costDeltaLabel}
+              </td>
+              <td style={{ padding: "4px 4px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                <button
+                  onClick={() => openAiPanel({
+                    itemName: r.name,
+                    itemId: `#${r.id}`,
+                    projectId: r.id,
+                    pills: [
+                      { label: `+${r.worstVariance}d variance`, color: r.worstVariance >= 14 ? 'red' : r.worstVariance >= 7 ? 'yellow' : 'green' },
+                      { label: `${r.drift}% drift`, color: r.drift >= 50 ? 'red' : 'yellow' },
+                    ],
+                    aiSummary: `This project has a worst-case variance of +${r.worstVariance} days with ${r.drift}% milestone drift and an estimated cost delta of ${r.costDeltaLabel}.`,
+                    cardType: 'schedule_variance',
+                    userRoles: ['owner', 'owner_admin', 'project_manager'],
+                  })}
+                  aria-label="AI actions for this project"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 4,
+                    border: '1px solid #FF5100',
+                    background: '#FFF8F5',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                  }}
+                >
+                  <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
+                </button>
               </td>
             </tr>
           ))}
