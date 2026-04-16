@@ -10,7 +10,7 @@ import type { Project } from "@/types/project";
 import type { ActionPlan } from "@/types/action_plans";
 
 const TearsheetWide = createGlobalStyle`
-  .sc-ljrxoq-1 {
+  [class*="StyledTearsheetBody"]:has(> .action-plans-tearsheet-wide-root) {
     flex: 0 0 80vw !important;
     max-width: 960px !important;
   }
@@ -166,7 +166,7 @@ function ActionPlanDetailTearsheet({ open, onClose, project, templateName, cell 
     <>
       <TearsheetWide />
       <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right" block>
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{project.number}</Typography>
@@ -622,7 +622,7 @@ export function ActionPlansOverdueItemsHubCard() {
         block
       >
         {detailItem && (
-          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                 <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{detailItem.project.number}</Typography>

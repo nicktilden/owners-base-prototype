@@ -1325,3 +1325,142 @@ table:not(.ag-header-row) th * {
   background: transparent;
   border: none;
 }
+
+/*
+ * High Level Budget Items tearsheet — same 32px data-table row + header density as
+ * `.capital-planning-table-scroll` (Capital Planning grid, Table Settings “Small”).
+ */
+.high-level-budget-items-table-shell [class*="StyledTableWrapper"] table.high-level-budget-items-table {
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+
+/*
+ * HLBI column balance (table-layout: fixed): Items is widest; Quantity, Unit type, Unit cost,
+ * % Markup, and Amount share evenly. Widths sum to <100% so the action column keeps ~44–48px
+ * from the remainder (see th:nth-child(7)).
+ */
+.high-level-budget-items-table thead tr th:nth-child(1) {
+  width: 30% !important;
+  min-width: 120px;
+  resize: none !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.high-level-budget-items-table thead tr th:nth-child(2),
+.high-level-budget-items-table thead tr th:nth-child(3),
+.high-level-budget-items-table thead tr th:nth-child(4),
+.high-level-budget-items-table thead tr th:nth-child(5),
+.high-level-budget-items-table thead tr th:nth-child(6) {
+  width: 13% !important;
+  min-width: 0;
+  resize: none !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.high-level-budget-items-table thead tr th:nth-child(7) {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 48px !important;
+  resize: none !important;
+}
+
+.high-level-budget-items-table thead tr th {
+  height: 32px !important;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  line-height: 16px !important;
+  font-size: 12px !important;
+  /* Same header band as Capital Planning data table / AG theme `headerBackgroundColor` */
+  background-color: #f4f5f7 !important;
+  color: #464f53;
+  font-weight: 600;
+}
+
+.high-level-budget-items-table tbody tr {
+  height: 32px;
+}
+
+.high-level-budget-items-table tbody tr td {
+  height: 32px;
+  max-height: 32px;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.high-level-budget-items-table tbody tr td > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.high-level-budget-items-table tbody tr td > div > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.high-level-budget-items-table .high-level-budget-items-percent-markup-field {
+  max-height: 28px;
+  min-height: 0;
+  align-items: center;
+}
+
+.high-level-budget-items-table tbody tr td [class*="StyledTableInlineEditContainer"] {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.high-level-budget-items-table tbody tr td [class*="StyledTableCellInput"] {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.high-level-budget-items-table tbody tr td [role="combobox"] {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  font-size: 12px;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+/* Keep default Select chrome in the tearsheet (show caret); do not apply CP “ghost chevron” here. */
+.high-level-budget-items-table tbody tr td [role="combobox"].select--table:hover,
+.high-level-budget-items-table tbody tr td [role="combobox"].select--table:focus,
+.high-level-budget-items-table tbody tr td [role="combobox"].select--table[aria-expanded="true"],
+.high-level-budget-items-table tbody tr td [role="combobox"]:hover,
+.high-level-budget-items-table tbody tr td [role="combobox"]:focus,
+.high-level-budget-items-table tbody tr td [role="combobox"][aria-expanded="true"] {
+  border-color: #bcc8cc !important;
+  background-color: #ffffff !important;
+}
+
+.high-level-budget-items-table tbody tr.high-level-budget-items-footer-row td {
+  vertical-align: middle;
+  background-color: #f4f5f7 !important;
+  border-top: 1px solid #e0e4e7;
+}
+
+.high-level-budget-items-table tbody tr.high-level-budget-items-footer-row td:first-child {
+  color: #464f53;
+  font-weight: 600;
+}

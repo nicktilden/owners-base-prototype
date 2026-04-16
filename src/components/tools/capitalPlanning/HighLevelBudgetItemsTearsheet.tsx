@@ -10,9 +10,13 @@ import type { CapitalPlanningSampleRow } from "./capitalPlanningData";
  * Empty state (no line items):
  * https://www.figma.com/design/wbjpyOCTw2MQaOzx4ibk6r/Capital-Planning?node-id=4550-93955
  *
- * `Tearsheet` + `block`: panel uses most of the viewport width (`calc(100vw - minScrimSize)`) while
- * keeping the design-system scrim and close control (see @procore/core-react Tearsheet styles).
+ * `Tearsheet` + `block`: Procore sets the panel to **`calc(100vw - minScrimSize)`** (minScrimSize = 3×`spacing.xxl` = 96px
+ * in core-react) so the scrim + close affordance stay usable. Avoid global `[class*="StyledTearsheetBody"]` overrides
+ * unless scoped with `:has(...)`, or they will shrink this sheet.
  */
+
+/** Same as `Page` main surface (`colors.gray96` in @procore/core-react PageLayout). */
+const HLBI_PAGE_SURFACE = "hsl(200, 8%, 96%)";
 
 /** User-added amount-based line: only item + amount are used; other columns are blank. `amountText` is raw input for stable typing. */
 export type HighLevelBudgetLineAmountOnly = {
@@ -335,27 +339,40 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
   return (
     <Tearsheet open={open} onClose={onClose} placement="right" block aria-label="High level budget items">
       {row ? (
-        <div className="high-level-budget-items-tearsheet-layout">
+        <div
+          className="high-level-budget-items-tearsheet-layout"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: "1 1 auto",
+            minHeight: 0,
+            height: "100%",
+            maxHeight: "100%",
+            width: "100%",
+            boxSizing: "border-box",
+            backgroundColor: HLBI_PAGE_SURFACE,
+          }}
+        >
         <Page
           className="high-level-budget-items-page"
           style={{
-            height: "100%",
+            flex: "1 1 auto",
             minHeight: 0,
-            flex: 1,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            backgroundColor: HLBI_PAGE_SURFACE,
           }}
         >
           <Page.Main
             className="high-level-budget-items-page-main"
             style={{
-              height: "100%",
+              flex: "1 1 auto",
               minHeight: 0,
-              flex: 1,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
+              backgroundColor: HLBI_PAGE_SURFACE,
             }}
           >
             <Page.Header style={{ flexShrink: 0 }}>
@@ -375,14 +392,26 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
             <Page.Body
               className="high-level-budget-items-page-body"
               style={{
-                flex: 1,
+                flex: "1 1 auto",
                 minHeight: 0,
-                overflow: "hidden",
+                overflowX: "hidden",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
                 display: "flex",
                 flexDirection: "column",
+                backgroundColor: HLBI_PAGE_SURFACE,
               }}
             >
-              <div className="high-level-budget-items-table-shell">
+              <div
+                className="high-level-budget-items-table-shell"
+                style={{
+                  flex: "1 1 auto",
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                }}
+              >
                 <Table.Container>
                   <Table
                     className={
@@ -650,7 +679,23 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
                         </div>
                       </Table.BodyCell>
                       <Table.BodyCell>
-                        <Table.CurrencyCell value={total} />
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: 8,
+                            width: "100%",
+                            minWidth: 0,
+                            boxSizing: "border-box",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Typography intent="small" weight="bold" as="span" color="gray15">
+                            Grand Total:
+                          </Typography>
+                          <Table.CurrencyCell value={total} style={{ fontWeight: 700 }} />
+                        </div>
                       </Table.BodyCell>
                       <Table.BodyCell
                         style={{ width: 44, maxWidth: 44, boxSizing: "border-box", padding: "0 4px", border: 0 }}
@@ -695,27 +740,35 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
               ) : null}
               </div>
             </Page.Body>
-            <Page.Footer className="high-level-budget-items-page-footer" style={{ flexShrink: 0 }}>
-              <Box
-                className="high-level-budget-items-page-footer-inner"
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "16px 24px",
-                }}
-              >
-                <Button variant="secondary" type="button" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button variant="primary" type="button" onClick={handleSave}>
-                  Save
-                </Button>
-              </Box>
-            </Page.Footer>
           </Page.Main>
         </Page>
+        <Box
+          className="high-level-budget-items-page-footer"
+          style={{
+            flexShrink: 0,
+            flexGrow: 0,
+            borderTop: "1px solid #e0e4e7",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <Box
+            className="high-level-budget-items-page-footer-inner"
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 8,
+              padding: "16px 24px",
+            }}
+          >
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="button" onClick={handleSave}>
+              Save
+            </Button>
+          </Box>
+        </Box>
         </div>
       ) : null}
     </Tearsheet>

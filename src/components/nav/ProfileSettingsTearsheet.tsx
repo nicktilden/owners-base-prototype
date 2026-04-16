@@ -8,7 +8,8 @@ import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
 
 const ProfileTearsheetWidth = createGlobalStyle`
-  [class*="StyledTearsheetBody"] {
+  /* Scope to this tearsheet only — unscoped rules steal width from every Tearsheet (e.g. HLBI). */
+  [class*="StyledTearsheetBody"]:has(> .profile-settings-tearsheet-root) {
     flex: 0 0 50vw !important;
   }
 `;
@@ -600,6 +601,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     <>
       <ProfileTearsheetWidth />
       <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right">
+        <div
+          className="profile-settings-tearsheet-root"
+          style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}
+        >
         <Page style={{ height: '100%' }}>
           <Page.Main style={{ height: '100%', overflow: 'hidden' }}>
             <Page.Header>
@@ -674,6 +679,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
             </Page.Body>
           </Page.Main>
         </Page>
+        </div>
       </Tearsheet>
     </>
   );
