@@ -2,13 +2,12 @@
  * TOOL PAGE LAYOUT
  * Shared chrome for every tool page. Composes GlobalHeader, AppLayout, and
  * ToolLandingPage into a single wrapper so individual tool components only
- * need to supply their title, icon, breadcrumbs, actions, tabs, and body.
+ * need to supply their title, icon, actions, tabs, and body.
  *
  * Usage:
  *   <ToolPageLayout
  *     title="Assets"
  *     icon={<Assets size="md" />}
- *     breadcrumbs={[{ label: 'Portfolio', href: '/portfolio' }, { label: 'Project X', href: '/project/123' }]}
  *     actions={<Button variant="primary" icon={<Plus />}>Add Asset</Button>}
  *     tabs={<Tabs>…</Tabs>}
  *   >
@@ -17,24 +16,13 @@
  */
 import React from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import {
-  Breadcrumbs,
-  H1,
-  Title,
-  ToolLandingPage,
-} from '@procore/core-react';
+import { H1, Title, ToolLandingPage } from '@procore/core-react';
 import styled from 'styled-components';
 import AppLayout from '@/components/nav/AppLayout';
 
 const GlobalHeader = dynamic(() => import('@/components/nav/GlobalHeader'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface BreadcrumbItem {
-  label: string;
-  href?: string;
-}
 
 export interface ToolPageLayoutProps {
   /** Page title, e.g. "Assets" */
@@ -43,8 +31,6 @@ export interface ToolPageLayoutProps {
   titleAddon?: React.ReactNode;
   /** Icon rendered before the H1, e.g. <Assets size="md" /> */
   icon?: React.ReactNode;
-  /** Breadcrumb trail leading up to the current tool */
-  breadcrumbs?: BreadcrumbItem[];
   /** Buttons / dropdowns rendered in the title actions slot */
   actions?: React.ReactNode;
   /** Tab bar rendered below the title */
@@ -65,7 +51,6 @@ export default function ToolPageLayout({
   title,
   titleAddon,
   icon,
-  breadcrumbs = [],
   actions,
   tabs,
   children,
@@ -78,16 +63,6 @@ export default function ToolPageLayout({
           <ToolLandingPage.Main>
             <ToolLandingPage.Header>
               <ToolLandingPage.Title>
-                {breadcrumbs.length > 0 && (
-                  <Breadcrumbs variant="list">
-                    {breadcrumbs.map((crumb) => (
-                      <Breadcrumbs.Crumb key={crumb.label}>
-                        {crumb.href ? <Link href={crumb.href}>{crumb.label}</Link> : crumb.label}
-                      </Breadcrumbs.Crumb>
-                    ))}
-                    <Breadcrumbs.Crumb active>{title}</Breadcrumbs.Crumb>
-                  </Breadcrumbs>
-                )}
                 <Title>
                   <Title.Text>
                     <H1 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

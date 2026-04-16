@@ -406,6 +406,34 @@ table:not(.ag-header-row) th * {
   overflow-x: hidden;
 }
 
+/*
+ * Snapshot selector — Capital Planning toolbar (Figma 4611-94196): bordered trigger, search inside menu via Select `onSearch`.
+ */
+.capital-planning-snapshot-select-wrap {
+  box-sizing: border-box;
+}
+
+.capital-planning-snapshot-select [role="combobox"] {
+  border: 1px solid #6a7b83 !important;
+  border-radius: 4px !important;
+  min-height: 36px !important;
+  height: auto !important;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+}
+
+.capital-planning-snapshot-select [role="combobox"]:hover {
+  border-color: #5c6d75 !important;
+  background-color: #ffffff !important;
+}
+
+.capital-planning-snapshot-select [role="combobox"][aria-expanded="true"] {
+  border-color: #2d87c3 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 1px #2d87c3 inset !important;
+}
+
 /* Group by — Capital Planning filter panel (slate border, 4px radius; DS handles placeholder/caret gray) */
 .capital-planning-group-by-select {
   width: 100%;
@@ -437,7 +465,24 @@ table:not(.ag-header-row) th * {
   min-height: 0;
 }
 
+/*
+ * Side panels (filters left, configuration right): stretch to the same cross-axis height as
+ * `.capital-planning-table-scroll-region` (same max-height cap as the table scrollport).
+ */
+.capital-planning-main-with-filter > .capital-planning-filter-panel,
+.capital-planning-main-with-filter > .capital-planning-configure-panel {
+  align-self: stretch;
+  min-height: 0;
+  max-height: min(72vh, calc(100dvh - 14rem));
+}
+
+.capital-planning-main-with-filter--fullscreen > .capital-planning-filter-panel,
+.capital-planning-main-with-filter--fullscreen > .capital-planning-configure-panel {
+  max-height: none;
+}
+
 .capital-planning-table-scroll-region {
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -448,6 +493,22 @@ table:not(.ag-header-row) th * {
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/*
+ * Fixed 1px left edge on the scrollport (not on the table): table content scrolls horizontally,
+ * but this line stays pinned to the viewport-left of the region so the grid never looks “open” on the left.
+ */
+.capital-planning-table-scroll-region::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #d6dadc;
+  pointer-events: none;
+  z-index: 60;
 }
 
 /* Full screen: flex parent supplies height — drop max-height so the grid fills the overlay */
@@ -470,6 +531,18 @@ table:not(.ag-header-row) th * {
   min-width: 0;
 }
 
+/*
+ * Sticky tool page chrome: breadcrumbs, title row, actions, and optional tabs stay pinned
+ * while scrolling `main.app-shell-main` (see AppLayout). z-index above in-page sticky tables.
+ */
+[data-core-react="tool-landing-page"] [class*="StyledPageHeader"] {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* Opaque surface so gray page body does not show through while scrolling (DS header already adds elevation) */
+  background-color: #ffffff;
+}
+
 /* One scroll track: region scrolls; inner DS table wrapper does not clip/scroll again */
 .capital-planning-table-scroll-region [class*="StyledTableWrapper"] {
   overflow-x: visible !important;
@@ -489,6 +562,19 @@ table:not(.ag-header-row) th * {
    * Right-edge elevation for the Planned Amount sticky column (visible at scroll 0 and when scrolled).
    */
   --cp-planned-amount-column-shadow: 4px 0 16px -2px hsla(200, 10%, 15%, 0.32);
+}
+
+/* Table Settings row height — Capital Planning [Figma 933-153382] */
+.capital-planning-table-scroll.capital-planning-row-height--md tbody tr.capital-planning-table-status-group-child td,
+.capital-planning-table-scroll.capital-planning-row-height--md tfoot tr td {
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--lg tbody tr.capital-planning-table-status-group-child td,
+.capital-planning-table-scroll.capital-planning-row-height--lg tfoot tr td {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
 }
 
 .capital-planning-table-scroll > table {
@@ -514,6 +600,97 @@ table:not(.ag-header-row) th * {
   background-color: #f5f7f8;
 }
 
+/*
+ * Status group header row: one td per column (no colspan) so horizontal scroll/sticky columns match data rows.
+ * Band borders on all cells in the row; chevron + label only in the project column.
+ */
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td {
+  vertical-align: middle;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e4e7;
+  border-bottom: 1px solid #e0e4e7;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group:hover td {
+  background-color: #f5f7f8;
+}
+
+/* 8px from cell border to chevron; TextCell padding reset */
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-table-status-group-header-label-cell {
+  padding: 0 12px 0 8px !important;
+  text-align: left;
+}
+
+.capital-planning-table-scroll
+  td.capital-planning-table-status-group-header-label-cell
+  .capital-planning-status-group-header-text-cell {
+  width: 100%;
+  margin: 0;
+  padding: 0 !important;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll .capital-planning-status-group-header-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.capital-planning-table-scroll .capital-planning-status-group-header-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: #1a2226;
+}
+
+.capital-planning-table-scroll .capital-planning-status-group-header-toggle:focus-visible {
+  outline: 2px solid #1d5cc9;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+ * Rows under an expanded region group: hierarchy indent — gray rail + right rule on project column only.
+ */
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-project:not([colspan]) {
+  position: sticky;
+  left: 0;
+  padding-left: 22px;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-project:not([colspan])::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  box-sizing: border-box;
+  background-color: #eef1f3;
+  border-right: 1px solid #d6dadc;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child:hover td.capital-planning-col-project:not([colspan])::before {
+  background-color: #e8ebee;
+}
+
 /* Capital Planning: sticky project column + second “split” baseline column (Planned Amount or first visible baseline) */
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project,
 .capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) {
@@ -531,6 +708,21 @@ table:not(.ag-header-row) th * {
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project {
   z-index: 6;
   background-color: #f5f7f8;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-region-toggle {
+  flex-shrink: 0;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-label {
+  min-width: 0;
 }
 
 /* Baseline columns that scroll horizontally under the sticky pair */
@@ -623,7 +815,8 @@ table:not(.ag-header-row) th * {
   margin-bottom: 0 !important;
 }
 
-.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td.capital-planning-table-footer-forecast-cell {
+.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td.capital-planning-table-footer-forecast-cell,
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-table-footer-forecast-cell {
   font-variant-numeric: tabular-nums;
 }
 
@@ -718,7 +911,29 @@ table:not(.ag-header-row) th * {
   color: #6a767c !important;
 }
 
-/* FY collapse: match Planned Amount row DropdownFlyout trigger (24×24), not header 32px button rule */
+/* Planned amount DropdownFlyout: option that matches the row’s stored source */
+.capital-planning-planned-amount-flyout-option--selected {
+  font-weight: 700 !important;
+  color: #1952b3 !important;
+}
+
+/* Keep selected styling when row is hovered / keyboard-highlighted */
+[role="listitem"]:hover .capital-planning-planned-amount-flyout-option--selected,
+[role="listitem"][data-highlighted="true"] .capital-planning-planned-amount-flyout-option--selected {
+  color: #1952b3 !important;
+}
+
+/* Project Budget / Original / Revised when that row has no budget data — visible but not selectable */
+.capital-planning-planned-amount-flyout-option--disabled,
+[role="listitem"]:hover .capital-planning-planned-amount-flyout-option--disabled,
+[role="listitem"][data-highlighted="true"] .capital-planning-planned-amount-flyout-option--disabled {
+  font-weight: 400 !important;
+  color: #6a767c !important;
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+/* FY / forecast period collapse + Project column region toggle: 24×24 secondary, not default 32px header buttons */
 .capital-planning-table-scroll thead tr th button.capital-planning-forecast-fy-toggle {
   min-height: 24px !important;
   height: 24px !important;
@@ -758,6 +973,62 @@ table:not(.ag-header-row) th * {
 .capital-planning-table-scroll .capital-planning-planned-amount-cell {
   max-height: 32px;
   min-height: 0;
+}
+
+/*
+ * Planned Amount value column: plain `CurrencyCell value={}` and HLBI (`CurrencyCell` > `LinkCell` > `TextCell`)
+ * must share one numeric right edge. DS `StyledTableCellText` padding / display differs by path — normalize both.
+ */
+.capital-planning-table-scroll tbody td .capital-planning-planned-amount-cell .capital-planning-planned-amount-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.capital-planning-table-scroll tbody tr td .capital-planning-planned-amount-value,
+.capital-planning-table-scroll tfoot tr td .capital-planning-planned-amount-value {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  font-variant-numeric: tabular-nums !important;
+  max-height: 32px;
+}
+
+/*
+ * HLBI: `CurrencyCell` > `LinkCell` wraps content in an inner `TextCell` (`styled.div`).
+ * Do not use `[class*="StyledTableCellText"]` — production class names are hashed (`sc-…`) and won’t match,
+ * so DS `margin: 16px` on `StyledTableCellText` stayed applied and shifted the link left vs plain values.
+ * `LinkCell` yields a single direct `div` child before the anchor.
+ */
+.capital-planning-table-scroll tbody tr td .capital-planning-planned-amount-high-level-link > div {
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: right !important;
+  box-sizing: border-box !important;
+  font-variant-numeric: tabular-nums !important;
+  max-height: 32px;
+}
+
+.capital-planning-table-scroll tbody tr td .capital-planning-planned-amount-high-level-link > div a {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: right !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  font-variant-numeric: tabular-nums !important;
+  text-underline-offset: 2px;
 }
 
 /*
@@ -802,6 +1073,75 @@ table:not(.ag-header-row) th * {
   text-align: right !important;
 }
 
+/* Non-Manual curve: forecast cell is read-only until user switches curve — click opens Manual curve dialog */
+.capital-planning-table-scroll .capital-planning-forecast-curve-blocked-trigger {
+  cursor: pointer;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 2px;
+}
+
+.capital-planning-table-scroll .capital-planning-forecast-curve-blocked-trigger:focus-visible {
+  outline: 2px solid #2d87c3;
+  outline-offset: 1px;
+}
+
+/* Figma 4584-94140: hint above forecast cell after OK on Manual-curve dialog, when editing (Manual curve) */
+.capital-planning-table-scroll .capital-planning-forecast-editable-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Figma 4589-94155 / 4594-94166: Cancel + Update float 1px above the cell so the row stays 32px (no stretch) */
+.capital-planning-table-scroll .capital-planning-forecast-editable-wrap--editing {
+  z-index: 5;
+}
+
+.capital-planning-table-scroll .capital-planning-forecast-edit-actions {
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  bottom: calc(100% + 1px);
+  z-index: 6;
+  box-sizing: border-box;
+  pointer-events: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* inline-flex + same horizontal padding as gap: inset left of Cancel = gap between Cancel & Update */
+.capital-planning-table-scroll .capital-planning-forecast-edit-actions-bar {
+  --forecast-edit-action-gap: 8px;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--forecast-edit-action-gap);
+  box-sizing: border-box;
+  padding: 6px var(--forecast-edit-action-gap);
+  background-color: #f6f9fe;
+  border: 1px solid #d6dadc;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.capital-planning-table-scroll .capital-planning-forecast-edit-actions-bar button {
+  flex-shrink: 0;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-month-cell:has(.capital-planning-forecast-editable-wrap--editing),
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-fq-rollup-cell:has(.capital-planning-forecast-editable-wrap--editing),
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-period-cell:has(.capital-planning-forecast-editable-wrap--editing) {
+  overflow: visible !important;
+  vertical-align: middle !important;
+  z-index: 4;
+}
+
 /* Forecast columns: `Table.InputCell` fills cell; match 32px row + right-aligned currency */
 .capital-planning-table-scroll .capital-planning-forecast-number-input[class*="StyledTableInlineEditContainer"],
 .capital-planning-table-scroll .capital-planning-forecast-number-input [class*="StyledTableInlineEditContainer"] {
@@ -829,6 +1169,12 @@ table:not(.ag-header-row) th * {
 }
 
 /* Table.SelectCell: compact trigger height so Select fits 32px data-table rows */
+/* Curve column: unset curve shows “Select Curve” placeholder (secondary style) */
+.capital-planning-table-scroll .capital-planning-curve-placeholder {
+  color: #6a767c;
+  font-style: italic;
+}
+
 .capital-planning-table-scroll tbody tr td [role="combobox"] {
   height: 28px !important;
   min-height: 28px !important;

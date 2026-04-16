@@ -301,7 +301,6 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
     <ToolPageLayout
       title="Assets"
       icon={<AssetsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >

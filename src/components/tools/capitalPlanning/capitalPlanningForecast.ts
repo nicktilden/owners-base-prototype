@@ -194,6 +194,8 @@ function curveMultipliers(curve: ProjectCurve, k: number, rowId: string): number
   if (k <= 0) return [];
   if (k === 1) return [1];
   switch (curve) {
+    case "":
+      return Array.from({ length: k }, () => 1);
     case "Linear":
       return Array.from({ length: k }, () => 1);
     case "Front-Loaded":
