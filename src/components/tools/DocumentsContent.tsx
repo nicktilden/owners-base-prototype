@@ -223,10 +223,6 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
     gridApiRef.current?.setGridOption("quickFilterText", "");
   }, []);
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const actions = (
     <>
@@ -256,7 +252,6 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
     <ToolPageLayout
       title="Documents"
       icon={<DocumentsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >

@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { Button, Dropdown, SplitViewCard } from "@procore/core-react";
 import { Envelope as CorrespondenceIcon, Plus } from "@procore/core-icons";
-import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import type { ColDef } from "ag-grid-community";
@@ -36,14 +35,6 @@ interface CorrespondenceContentProps {
 }
 
 export default function CorrespondenceContent({ projectId }: CorrespondenceContentProps) {
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
-
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -58,7 +49,6 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
     <ToolPageLayout
       title="Correspondence"
       icon={<CorrespondenceIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>

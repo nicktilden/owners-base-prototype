@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { Button, Dropdown, SplitViewCard } from "@procore/core-react";
 import { People as CommitmentsIcon, Plus } from "@procore/core-icons";
-import { projects } from "@/data/seed/projects";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import type { ColDef } from "ag-grid-community";
@@ -36,14 +35,6 @@ interface CommitmentsContentProps {
 }
 
 export default function CommitmentsContent({ projectId }: CommitmentsContentProps) {
-  const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
-  const projectLabel = project ? `${project.number} ${project.name}` : projectId;
-
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
-
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -58,7 +49,6 @@ export default function CommitmentsContent({ projectId }: CommitmentsContentProp
     <ToolPageLayout
       title="Commitments"
       icon={<CommitmentsIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>

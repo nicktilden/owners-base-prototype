@@ -254,10 +254,6 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     gridApiRef.current?.setGridOption("quickFilterText", "");
   }, []);
 
-  const breadcrumbs = [
-    { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
-  ];
 
   const actions = (
     <>
@@ -273,7 +269,6 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     <ToolPageLayout
       title="Budget"
       icon={<BudgetIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
     >
       <SplitViewCard>

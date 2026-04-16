@@ -244,7 +244,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
     <ToolPageLayout
       title="Tasks"
       icon={<TasksIcon size="md" />}
-      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={tabs}
     >
