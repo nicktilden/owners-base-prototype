@@ -54,10 +54,10 @@ const STATUS_LABELS: Record<ActionPlanStatus, string> = {
 };
 
 const ITEM_STATUS_COLORS: Record<ActionPlanItemStatus, string> = {
-  open: "#6a767c",
-  in_progress: "#1565c0",
-  delayed: "#c62828",
-  closed: "#2e7d32",
+  open: "var(--color-text-secondary)",
+  in_progress: "var(--color-text-link)",
+  delayed: "var(--color-text-error)",
+  closed: "var(--color-icon-success)",
 };
 
 const ITEM_STATUS_LABELS: Record<ActionPlanItemStatus, string> = {
@@ -79,10 +79,10 @@ function sectionProgress(items: ActionPlanItem[]): { closed: number; total: numb
 }
 
 function progressBarColor(percent: number, hasOverdue: boolean): string {
-  if (percent >= 100) return "#2e7d32";
-  if (hasOverdue) return "#c62828";
-  if (percent > 0) return "#1565c0";
-  return "#9e9e9e";
+  if (percent >= 100) return "var(--color-icon-success)";
+  if (hasOverdue) return "var(--color-text-error)";
+  if (percent > 0) return "var(--color-text-link)";
+  return "var(--color-text-disabled)";
 }
 
 function planHasOverdue(plan: ActionPlan): boolean {
@@ -100,7 +100,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -113,7 +113,7 @@ const ToolbarLeft = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   overflow: hidden;
 `;
 
@@ -122,8 +122,8 @@ const GridArea = styled.div`
 const DetailPanel = styled.div`
   width: 420px;
   flex-shrink: 0;
-  border-left: 1px solid #e0e4e7;
-  background: #fff;
+  border-left: 1px solid var(--color-border-default);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -131,7 +131,7 @@ const DetailPanel = styled.div`
 
 const DetailHeader = styled.div`
   padding: 16px 20px 14px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -155,13 +155,13 @@ const MetaRow = styled.div`
 `;
 
 const MetaLabel = styled.span`
-  color: #6a767c;
+  color: var(--color-text-secondary);
   min-width: 120px;
   flex-shrink: 0;
 `;
 
 const MetaValue = styled.span`
-  color: #232729;
+  color: var(--color-text-primary);
   font-weight: 500;
 `;
 
@@ -180,18 +180,18 @@ function ProgressRenderer(params: ICellRendererParams<ActionPlan>) {
   const barColor = progressBarColor(percent, overdue);
 
   if (total === 0) {
-    return <span style={{ color: "#6a767c", fontSize: 12 }}>No items</span>;
+    return <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>No items</span>;
   }
   return (
     <div style={{ minWidth: 120 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "#eceff1", overflow: "hidden" }}>
+        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
           <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
       </div>
-      <div style={{ fontSize: 11, color: "#6a767c", marginTop: 2 }}>
-        {closed}/{total} items closed{overdue && <span style={{ color: "#c62828", fontWeight: 600 }}> · overdue</span>}
+      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
+        {closed}/{total} items closed{overdue && <span style={{ color: "var(--color-text-error)", fontWeight: 600 }}> · overdue</span>}
       </div>
     </div>
   );
@@ -208,21 +208,21 @@ function SectionAccordion({ section, defaultOpen }: {
   const allClosed = closed === total && total > 0;
 
   return (
-    <div style={{ border: "1px solid #d6dadc", borderRadius: 6, marginBottom: 10, overflow: "hidden" }}>
+    <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 6, marginBottom: 10, overflow: "hidden" }}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "10px 14px", background: "#f5f6f7", border: "none", cursor: "pointer",
-          fontWeight: 600, fontSize: 13, color: "#232729", textAlign: "left", fontFamily: "inherit",
+          padding: "10px 14px", background: "var(--color-surface-secondary)", border: "none", cursor: "pointer",
+          fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", textAlign: "left", fontFamily: "inherit",
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {open ? <ChevronDown size="sm" /> : <ChevronRight size="sm" />}
           {section.title}
         </span>
-        <span style={{ fontSize: 12, color: allClosed ? "#2e7d32" : "#6a767c", fontWeight: allClosed ? 600 : 400, flexShrink: 0, marginLeft: 8 }}>
+        <span style={{ fontSize: 12, color: allClosed ? "var(--color-icon-success)" : "var(--color-text-secondary)", fontWeight: allClosed ? 600 : 400, flexShrink: 0, marginLeft: 8 }}>
           {closed}/{total} closed
         </span>
       </button>
@@ -230,25 +230,25 @@ function SectionAccordion({ section, defaultOpen }: {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "7px 14px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Item</th>
-              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12, whiteSpace: "nowrap" }}>Due</th>
-              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Status</th>
+              <th style={{ textAlign: "left", padding: "7px 14px", borderBottom: "1px solid var(--color-surface-tertiary)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Item</th>
+              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid var(--color-surface-tertiary)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12, whiteSpace: "nowrap" }}>Due</th>
+              <th style={{ textAlign: "left", padding: "7px 10px", borderBottom: "1px solid var(--color-surface-tertiary)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {section.items.map((item) => (
-              <tr key={item.id} style={{ borderTop: "1px solid #eef0f1" }}>
+              <tr key={item.id} style={{ borderTop: "1px solid var(--color-surface-tertiary)" }}>
                 <td style={{ padding: "9px 14px", verticalAlign: "top" }}>
-                  <div style={{ color: "#232729", fontWeight: 500, lineHeight: 1.4 }}>{item.title}</div>
+                  <div style={{ color: "var(--color-text-primary)", fontWeight: 500, lineHeight: 1.4 }}>{item.title}</div>
                   {item.acceptanceCriteria && (
-                    <div style={{ marginTop: 3, fontSize: 12, color: "#6a767c", lineHeight: 1.4 }}>
+                    <div style={{ marginTop: 3, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.4 }}>
                       {item.acceptanceCriteria}
                     </div>
                   )}
                 </td>
                 <td style={{
                   padding: "9px 10px", verticalAlign: "top", whiteSpace: "nowrap", fontSize: 12,
-                  color: item.status === "delayed" ? "#c62828" : "#232729",
+                  color: item.status === "delayed" ? "var(--color-text-error)" : "var(--color-text-primary)",
                 }}>
                   {item.dueDate ? item.dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                 </td>
@@ -279,12 +279,13 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
       <DetailHeader>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: "#6a767c", marginBottom: 4, fontWeight: 500 }}>#{plan.number} · {typeName}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#232729", lineHeight: 1.3, marginBottom: 8 }}>{plan.title}</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4, fontWeight: 500 }}>#{plan.number} · {typeName}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.3, marginBottom: 8 }}>{plan.title}</div>
             <Pill color={STATUS_COLORS[plan.status]}>{STATUS_LABELS[plan.status]}</Pill>
           </div>
           <Button
             variant="tertiary"
+            className="b_tertiary"
             icon={<Clear size="sm" />}
             onClick={onClose}
             aria-label="Close detail panel"
@@ -292,7 +293,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
         </div>
         {total > 0 && (
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#eceff1", overflow: "hidden" }}>
+            <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
               <div style={{ width: `${percent}%`, height: "100%", borderRadius: 4, background: barColor, transition: "width 0.2s ease" }} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 600, color: barColor, whiteSpace: "nowrap" }}>
@@ -303,7 +304,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
       </DetailHeader>
       <DetailBody>
         {plan.description && (
-          <div style={{ fontSize: 13, color: "#6a767c", marginBottom: 16, lineHeight: 1.5, fontStyle: "italic" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.5, fontStyle: "italic" }}>
             {plan.description}
           </div>
         )}
@@ -326,7 +327,7 @@ function PlanDetailPanel({ plan, onClose }: { plan: ActionPlan; onClose: () => v
           </MetaRow>
         </DetailMeta>
 
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#232729", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 10 }}>
           Sections ({plan.sections.length})
         </div>
         {plan.sections.map((section, i) => (
@@ -352,7 +353,7 @@ const planColumnDefs: ColDef<ActionPlan>[] = [
     headerName: "Title",
     minWidth: 220,
     filter: "agTextColumnFilter",
-    cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+    cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
   },
   {
     colId: "type",
@@ -403,7 +404,7 @@ const templateColumnDefs: ColDef[] = [
     headerName: "Name",
     minWidth: 200,
     filter: "agTextColumnFilter",
-    cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+    cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
   },
   {
     colId: "type",
@@ -432,7 +433,7 @@ const templateColumnDefs: ColDef[] = [
     minWidth: 200,
     filter: "agTextColumnFilter",
     valueFormatter: (params) => params.value ?? "—",
-    cellStyle: { color: "#6a767c", fontSize: "13px" },
+    cellStyle: { color: "var(--color-text-secondary)", fontSize: "13px" },
   },
   {
     colId: "actions",
@@ -598,10 +599,10 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
               {filterOpen && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-                  background: "#f5f6f7", border: "1px solid #d6dadc", borderRadius: 4,
+                  background: "var(--color-surface-secondary)", border: "1px solid var(--color-border-separator)", borderRadius: 4,
                   marginBottom: 8, flexWrap: "wrap",
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#6a767c", marginRight: 4 }}>Status:</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-secondary)", marginRight: 4 }}>Status:</span>
                   {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s}
@@ -609,9 +610,9 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                       onClick={() => toggleStatus(s)}
                       style={{
                         padding: "4px 12px", fontSize: 13, borderRadius: 4, cursor: "pointer",
-                        border: `1px solid ${statusFilter.includes(s) ? "#1d5cc9" : "#d6dadc"}`,
-                        background: statusFilter.includes(s) ? "#e8f0fe" : "#fff",
-                        color: statusFilter.includes(s) ? "#1d5cc9" : "#232729",
+                        border: `1px solid ${statusFilter.includes(s) ? "var(--color-text-link)" : "var(--color-border-separator)"}`,
+                        background: statusFilter.includes(s) ? "var(--color-surface-active)" : "var(--color-surface-primary)",
+                        color: statusFilter.includes(s) ? "var(--color-text-link)" : "var(--color-text-primary)",
                         fontWeight: statusFilter.includes(s) ? 600 : 400,
                         fontFamily: "inherit",
                       }}
@@ -620,7 +621,7 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     </button>
                   ))}
                   {hasFilters && (
-                    <Button variant="tertiary" size="sm" onClick={clearStatusFilter}>
+                    <Button variant="tertiary" className="b_tertiary" size="sm" onClick={clearStatusFilter}>
                       Clear
                     </Button>
                   )}

@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "@procore/core-react";
-import { NotepadList, Comments, Pencil } from "@procore/core-icons";
+import { Paperclip, EllipsisVertical } from "@procore/core-icons";
 import type { ICellRendererParams } from "ag-grid-community";
 
-export default function ActionsCellRenderer(params: ICellRendererParams) {
+export default function AssetActionsCellRenderer(params: ICellRendererParams) {
   if (!params.data) return null;
 
   return (
@@ -12,24 +12,16 @@ export default function ActionsCellRenderer(params: ICellRendererParams) {
         variant="tertiary"
         className="b_tertiary"
         size="sm"
-        icon={<NotepadList size="sm" />}
-        aria-label="Notes"
+        icon={<Paperclip size="sm" />}
+        aria-label="Attachments"
         style={{ minWidth: 28, width: 28, height: 28, padding: 0 }}
       />
       <Button
         variant="tertiary"
         className="b_tertiary"
         size="sm"
-        icon={<Comments size="sm" />}
-        aria-label="Comments"
-        style={{ minWidth: 28, width: 28, height: 28, padding: 0 }}
-      />
-      <Button
-        variant="tertiary"
-        className="b_tertiary"
-        size="sm"
-        icon={<Pencil size="sm" />}
-        aria-label="Edit"
+        icon={<EllipsisVertical size="sm" />}
+        aria-label="More actions"
         style={{ minWidth: 28, width: 28, height: 28, padding: 0 }}
       />
     </div>

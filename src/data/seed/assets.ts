@@ -10,6 +10,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-001',
+    assetCode: 'CRANE-001',
     accountId: 'acc-001',
     projectId: 'proj-001',
     name: 'Tower Crane #1 — Liebherr 280 EC-H',
@@ -23,6 +24,7 @@ export const assets: Asset[] = [
     installDate: new Date('2023-11-15'),
     warrantyExpiry: new Date('2026-11-15'),
     description: 'Tower crane deployed for structural steel erection and material hoisting on the 12-story tower addition.',
+    imageUrl: null,
     createdBy: 'user-016',
     createdAt: new Date('2023-11-01'),
     updatedAt: new Date('2025-02-01'),
@@ -30,6 +32,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-002',
+    assetCode: 'CHILLR-001',
     accountId: 'acc-001',
     projectId: 'proj-001',
     name: 'Temporary Chiller Unit — Carrier 30XA',
@@ -43,6 +46,7 @@ export const assets: Asset[] = [
     installDate: new Date('2024-06-10'),
     warrantyExpiry: new Date('2027-06-10'),
     description: 'Temporary chiller providing cooling to occupied hospital floors during HVAC system replacement.',
+    imageUrl: null,
     createdBy: 'user-016',
     createdAt: new Date('2024-06-01'),
     updatedAt: new Date('2025-02-15'),
@@ -52,6 +56,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-003',
+    assetCode: 'GENRT-001',
     accountId: 'acc-001',
     projectId: 'proj-005',
     name: 'Emergency Generator — Caterpillar XQ2000',
@@ -65,6 +70,7 @@ export const assets: Asset[] = [
     installDate: new Date('2024-09-20'),
     warrantyExpiry: new Date('2031-09-20'),
     description: 'Primary emergency standby generator providing 2MW backup power for the behavioral health facility.',
+    imageUrl: null,
     createdBy: 'user-013',
     createdAt: new Date('2024-09-01'),
     updatedAt: new Date('2025-01-15'),
@@ -72,6 +78,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-004',
+    assetCode: 'ELVTR-001',
     accountId: 'acc-001',
     projectId: 'proj-005',
     name: 'Hydraulic Elevator — KONE MonoSpace 500',
@@ -85,6 +92,7 @@ export const assets: Asset[] = [
     installDate: new Date('2024-09-01'),
     warrantyExpiry: new Date('2029-09-01'),
     description: 'Three-stop hydraulic elevator installed but awaiting final certification before activation.',
+    imageUrl: null,
     createdBy: 'user-013',
     createdAt: new Date('2024-08-15'),
     updatedAt: new Date('2025-03-01'),
@@ -94,6 +102,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-005',
+    assetCode: 'SCANR-001',
     accountId: 'acc-001',
     projectId: 'proj-007',
     name: 'CT Scanner — Siemens SOMATOM Drive',
@@ -107,6 +116,7 @@ export const assets: Asset[] = [
     installDate: new Date('2024-08-15'),
     warrantyExpiry: new Date('2029-08-15'),
     description: 'Dual-source CT scanner installed in the renovated Emergency Department imaging suite.',
+    imageUrl: null,
     createdBy: 'user-015',
     createdAt: new Date('2024-07-01'),
     updatedAt: new Date('2025-01-20'),
@@ -114,6 +124,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-006',
+    assetCode: 'NCALL-001',
     accountId: 'acc-001',
     projectId: 'proj-007',
     name: 'Nurse Call System — Rauland Responder 5',
@@ -127,6 +138,7 @@ export const assets: Asset[] = [
     installDate: new Date('2024-11-01'),
     warrantyExpiry: new Date('2029-11-01'),
     description: 'IP-based nurse call system covering all 42 patient treatment bays in the modernized ED.',
+    imageUrl: null,
     createdBy: 'user-015',
     createdAt: new Date('2024-10-01'),
     updatedAt: new Date('2025-02-10'),
@@ -136,6 +148,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-007',
+    assetCode: 'LIGHT-001',
     accountId: 'acc-001',
     projectId: 'proj-009',
     name: 'Surgical Light System — Trumpf iLED 7',
@@ -149,6 +162,7 @@ export const assets: Asset[] = [
     installDate: new Date('2025-02-15'),
     warrantyExpiry: new Date('2032-02-15'),
     description: 'LED surgical lighting system installed in OR Suites 1–3 awaiting commissioning.',
+    imageUrl: null,
     createdBy: 'user-016',
     createdAt: new Date('2025-02-01'),
     updatedAt: new Date('2025-03-10'),
@@ -156,6 +170,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-008',
+    assetCode: 'COMPR-001',
     accountId: 'acc-001',
     projectId: 'proj-009',
     name: 'Medical Air Compressor — Atlas Copco GA 22',
@@ -169,6 +184,7 @@ export const assets: Asset[] = [
     installDate: new Date('2019-06-01'),
     warrantyExpiry: new Date('2024-06-01'),
     description: 'Existing medical air compressor scheduled for replacement as part of surgical center upgrade; currently under maintenance assessment.',
+    imageUrl: null,
     createdBy: 'user-013',
     createdAt: new Date('2019-05-15'),
     updatedAt: new Date('2025-01-20'),
@@ -178,6 +194,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-009',
+    assetCode: 'HVAC-001',
     accountId: 'acc-001',
     projectId: 'proj-003',
     name: 'Rooftop HVAC Unit — Trane Intellipak II',
@@ -191,6 +208,7 @@ export const assets: Asset[] = [
     installDate: new Date('2018-04-01'),
     warrantyExpiry: new Date('2023-04-01'),
     description: 'Existing rooftop HVAC unit serving the original MOB; under maintenance pending replacement decision.',
+    imageUrl: null,
     createdBy: 'user-016',
     createdAt: new Date('2018-03-15'),
     updatedAt: new Date('2025-02-01'),
@@ -200,6 +218,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-010',
+    assetCode: 'SWGR-001',
     accountId: 'acc-001',
     projectId: 'proj-002',
     name: 'Electrical Switchgear — ABB UniGear ZS1',
@@ -213,6 +232,7 @@ export const assets: Asset[] = [
     installDate: new Date('2012-01-15'),
     warrantyExpiry: new Date('2022-01-15'),
     description: 'Legacy switchgear from original outpatient building; retired and replaced during renovation.',
+    imageUrl: null,
     createdBy: 'user-013',
     createdAt: new Date('2012-01-01'),
     updatedAt: new Date('2024-08-30'),
@@ -220,6 +240,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-011',
+    assetCode: 'BOILR-001',
     accountId: 'acc-001',
     projectId: 'proj-002',
     name: 'Boiler Unit — Cleaver-Brooks CB200',
@@ -233,6 +254,7 @@ export const assets: Asset[] = [
     installDate: new Date('2010-03-01'),
     warrantyExpiry: new Date('2020-03-01'),
     description: 'Original steam boiler decommissioned during outpatient pavilion renovation; replaced with hydronic system.',
+    imageUrl: null,
     createdBy: 'user-013',
     createdAt: new Date('2010-02-15'),
     updatedAt: new Date('2024-09-01'),
@@ -242,6 +264,7 @@ export const assets: Asset[] = [
 
   {
     id: 'ast-012',
+    assetCode: 'GENRT-002',
     accountId: 'acc-001',
     projectId: 'proj-004',
     name: 'Mobile Diesel Generator — Generac SG130',
@@ -255,6 +278,7 @@ export const assets: Asset[] = [
     installDate: new Date('2014-07-01'),
     warrantyExpiry: new Date('2019-07-01'),
     description: 'Temporary mobile generator used during occupied renovation phases; disposed after project phase completion.',
+    imageUrl: null,
     createdBy: 'user-016',
     createdAt: new Date('2014-06-15'),
     updatedAt: new Date('2025-01-10'),

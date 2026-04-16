@@ -17,6 +17,7 @@ import {
   Building,
   CaretDown,
   CaretUp,
+  Copilot,
   Search,
 } from '@procore/core-icons';
 import styled from 'styled-components';
@@ -28,7 +29,6 @@ import avatarImg from '@/images/avatar-XL.png';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 
 const ProjectPickerPopover = dynamic(() => import('./ProjectPickerPopover'), { ssr: false });
-const AppPickerPopover = dynamic(() => import('./AppPickerPopover'), { ssr: false });
 const HelpPopover = dynamic(() => import('./HelpPopover'), { ssr: false });
 const UserMenuPopover = dynamic(() => import('./UserMenuPopover'), { ssr: false });
 const BrowseAsTearsheet = dynamic(() => import('./BrowseAsTearsheet'), { ssr: false });
@@ -200,10 +200,10 @@ const CompanyBadge = styled.div`
   white-space: nowrap;
 `;
 
-const AppPickerButton = styled.button`
+const AiButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--color-nav-surface);
   border: none;
   color: var(--color-nav-text);
@@ -271,14 +271,12 @@ const SearchShortcut = styled.div`
 export default function GlobalHeader() {
   const [navOpen, setNavOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
-  const [appPickerOpen, setAppPickerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [browseAsOpen, setBrowseAsOpen] = useState(false);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
 
   const pickerBtnRef = useRef<HTMLButtonElement>(null);
-  const appPickerBtnRef = useRef<HTMLButtonElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
   const userMenuBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -316,7 +314,7 @@ export default function GlobalHeader() {
         </MenuButton>
 
         <ProcoreLogo href="/portfolio">
-          <img src={procoreOwnersLogo.src} alt="Procore Owners" height={32} />
+          <img src={procoreOwnersLogo.src} alt="Procore Owners" height={26} />
         </ProcoreLogo>
 
         {/* Project / portfolio picker */}
@@ -364,28 +362,14 @@ export default function GlobalHeader() {
 
         {/* Right actions */}
         <RightActions>
-          {/* App picker */}
-          <PickerWrap>
-            <AppPickerButton
-              ref={appPickerBtnRef}
-              aria-label="Select an app"
-              aria-haspopup="dialog"
-              aria-expanded={appPickerOpen}
-              onClick={() => setAppPickerOpen((v) => !v)}
-            >
-              <PickerLabels>
-                <Typography color="white" intent="small" style={{ opacity: 0.6, lineHeight: 1 }}>Apps</Typography>
-                <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Select an App</Typography>
-              </PickerLabels>
-              {appPickerOpen ? <CaretUp size="sm" /> : <CaretDown size="sm" />}
-            </AppPickerButton>
-            {appPickerOpen && (
-              <AppPickerPopover
-                anchorRef={appPickerBtnRef}
-                onClose={() => setAppPickerOpen(false)}
-              />
-            )}
-          </PickerWrap>
+          {/* Procore AI */}
+          <AiButton
+            aria-label="Procore AI"
+            onClick={() => {/* TODO: open AI panel */}}
+          >
+            <Copilot size="sm" />
+            <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Procore AI</Typography>
+          </AiButton>
 
           {/* Help */}
           <PickerWrap>

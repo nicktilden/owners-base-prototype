@@ -24,7 +24,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -44,7 +44,7 @@ const ToolbarRight = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   border-radius: 0;
   overflow: hidden;
 `;
@@ -255,7 +255,7 @@ export default function CostManagementTableCard() {
         </ToolbarRow>
 
         {viewMode === "map" ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
+          <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>
             Map view coming soon.
           </div>
         ) : (

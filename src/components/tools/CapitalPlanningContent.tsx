@@ -18,6 +18,7 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
+import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { CreateSnapshotModal } from "@/components/tools/capitalPlanning/CreateSnapshotModal";
 import { CapitalPlanningSmartGrid } from "@/components/tools/capitalPlanning/CapitalPlanningSmartGrid";
@@ -34,6 +35,38 @@ import {
 import type { ForecastGranularity } from "@/components/tools/capitalPlanning/capitalPlanningForecast";
 import { DEFAULT_CAPITAL_PLANNING_COLUMN_GROUP_VISIBILITY } from "@/components/tools/capitalPlanning/capitalPlanningColumnGroups";
 import { formatDateMMDDYYYY } from "@/utils/date";
+
+const ToolbarRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  gap: 8px;
+  background: var(--color-surface-primary);
+`;
+
+const ToolbarLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
+const GridArea = styled.div`
+  display: flex;
+  height: 640px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0;
+  overflow: hidden;
+`;
 
 const GROUP_BY_COLUMN_OPTIONS = [
   { id: "project" as const, label: "Project" },
@@ -143,10 +176,10 @@ export default function CapitalPlanningContent() {
 
   const actions = (
     <>
-      <Button variant="secondary" icon={<Plus />} onClick={() => setSnapshotModalOpen(true)}>
+      <Button variant="primary" className="b_primary" icon={<Plus />} onClick={() => setSnapshotModalOpen(true)}>
         Create Snapshot
       </Button>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" className="b_secondary" variant="secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
@@ -168,7 +201,7 @@ export default function CapitalPlanningContent() {
     >
       <SplitViewCard>
         <SplitViewCard.Main>
-          <SplitViewCard.Section>
+          <SplitViewCard.Section heading="Capital Planning">
             <div
               className="capital-planning-tool-section"
               style={{
@@ -181,7 +214,7 @@ export default function CapitalPlanningContent() {
                       position: "fixed",
                       inset: 0,
                       zIndex: 1300,
-                      background: "#ffffff",
+                      background: "var(--color-surface-primary)",
                       padding: 16,
                       display: "flex",
                       flexDirection: "column",
@@ -194,169 +227,118 @@ export default function CapitalPlanningContent() {
               className="capital-planning-toolbar-stack"
               style={tableFullscreen ? { flexShrink: 0 } : undefined}
             >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                width: "100%",
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  width: "100%",
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flex: "0 1 auto",
-                    minWidth: 0,
-                    maxWidth: "100%",
-                  }}
+            {/* Row 1: Snapshot selector + Full Screen */}
+            <ToolbarRow>
+              <ToolbarLeft>
+                <Typography
+                  id={CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID}
+                  intent="small"
+                  weight="semibold"
+                  as="span"
+                  style={{ flexShrink: 0 }}
                 >
-                  <Typography
-                    id={CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID}
-                    intent="small"
-                    weight="semibold"
-                    as="span"
-                    style={{ flexShrink: 0 }}
+                  Snapshot
+                </Typography>
+                <div style={{ width: 280, minWidth: 200, maxWidth: "100%" }}>
+                  <Select
+                    aria-labelledby={CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID}
+                    className="capital-planning-group-by-select"
+                    block
+                    placeholder="Select snapshot"
+                    label={
+                      selectedSnapshotId
+                        ? SNAPSHOT_SELECT_OPTIONS.find((o) => o.id === selectedSnapshotId)?.label
+                        : undefined
+                    }
+                    onClear={selectedSnapshotId ? () => setSelectedSnapshotId(null) : undefined}
+                    onSelect={(selection) => {
+                      if (selection.action !== "selected") return;
+                      const opt = selection.item as (typeof SNAPSHOT_SELECT_OPTIONS)[number];
+                      setSelectedSnapshotId(opt.id);
+                    }}
                   >
-                    Snapshot
-                  </Typography>
-                  <div style={{ width: 280, minWidth: 200, maxWidth: "100%", flex: "1 1 auto" }}>
-                    <Select
-                      aria-labelledby={CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID}
-                      className="capital-planning-group-by-select"
-                      block
-                      placeholder="Select snapshot"
-                      label={
-                        selectedSnapshotId
-                          ? SNAPSHOT_SELECT_OPTIONS.find((o) => o.id === selectedSnapshotId)?.label
-                          : undefined
-                      }
-                      onClear={selectedSnapshotId ? () => setSelectedSnapshotId(null) : undefined}
-                      onSelect={(selection) => {
-                        if (selection.action !== "selected") return;
-                        const opt = selection.item as (typeof SNAPSHOT_SELECT_OPTIONS)[number];
-                        setSelectedSnapshotId(opt.id);
-                      }}
-                    >
-                      {SNAPSHOT_SELECT_OPTIONS.map((opt) => (
-                        <Select.Option key={opt.id} value={opt} selected={selectedSnapshotId === opt.id}>
-                          {opt.label}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </div>
+                    {SNAPSHOT_SELECT_OPTIONS.map((opt) => (
+                      <Select.Option key={opt.id} value={opt} selected={selectedSnapshotId === opt.id}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </div>
+              </ToolbarLeft>
+              <ToolbarRight>
                 <Button
                   variant="tertiary"
+                  className="b_tertiary"
                   icon={tableFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   onClick={() => setTableFullscreen((v) => !v)}
-                  style={{ flexShrink: 0 }}
                 >
                   {tableFullscreen ? "Exit Full Screen" : "Full Screen"}
                 </Button>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  minWidth: 0,
-                  width: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    minWidth: 0,
-                    flex: "1 1 auto",
-                  }}
-                >
-                  <div style={{ width: 280, maxWidth: "100%", minWidth: 0 }}>
-                    <Search
-                      placeholder="Search Projects"
-                      value={search}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                    />
-                  </div>
-                  <ToggleButton
-                    selected={filterOpen}
-                    icon={<Filter />}
-                    onClick={() => setFilterOpen((v) => !v)}
-                  >
-                    Filter
-                  </ToggleButton>
+              </ToolbarRight>
+            </ToolbarRow>
+
+            {/* Row 2: Search + Filter | Group By + Configure */}
+            <ToolbarRow>
+              <ToolbarLeft>
+                <div style={{ maxWidth: 280 }}>
+                  <Search
+                    placeholder="Search Projects"
+                    value={search}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                  />
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    flexShrink: 0,
-                    justifyContent: "flex-end",
-                    minWidth: 0,
-                  }}
+                <ToggleButton
+                  selected={filterOpen}
+                  icon={<Filter />}
+                  onClick={() => setFilterOpen((v) => !v)}
                 >
-                  <div style={{ width: 260, maxWidth: "100%", minWidth: 0 }}>
-                    <Select
-                      className="capital-planning-group-by-select"
-                      block
-                      placeholder="Select a Column to Group"
-                      label={
-                        groupByColumn
-                          ? GROUP_BY_COLUMN_OPTIONS.find((o) => o.id === groupByColumn)?.label
-                          : undefined
-                      }
-                      onClear={groupByColumn ? () => setGroupByColumn(null) : undefined}
-                      onSelect={(selection) => {
-                        if (selection.action !== "selected") return;
-                        const opt = selection.item as (typeof GROUP_BY_COLUMN_OPTIONS)[number];
-                        setGroupByColumn(opt.id);
-                      }}
-                    >
-                      {GROUP_BY_COLUMN_OPTIONS.map((opt) => (
-                        <Select.Option key={opt.id} value={opt} selected={groupByColumn === opt.id}>
-                          {opt.label}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </div>
-                  <Button
-                    variant="tertiary"
-                    icon={<Sliders />}
-                    onClick={() => setConfigureOpen((v) => !v)}
+                  Filter
+                </ToggleButton>
+              </ToolbarLeft>
+              <ToolbarRight>
+                <div style={{ width: 260 }}>
+                  <Select
+                    className="capital-planning-group-by-select"
+                    block
+                    placeholder="Group by"
+                    label={
+                      groupByColumn
+                        ? GROUP_BY_COLUMN_OPTIONS.find((o) => o.id === groupByColumn)?.label
+                        : undefined
+                    }
+                    onClear={groupByColumn ? () => setGroupByColumn(null) : undefined}
+                    onSelect={(selection) => {
+                      if (selection.action !== "selected") return;
+                      const opt = selection.item as (typeof GROUP_BY_COLUMN_OPTIONS)[number];
+                      setGroupByColumn(opt.id);
+                    }}
                   >
-                    Configure
-                  </Button>
+                    {GROUP_BY_COLUMN_OPTIONS.map((opt) => (
+                      <Select.Option key={opt.id} value={opt} selected={groupByColumn === opt.id}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </div>
-              </div>
+                <ToggleButton
+                  selected={configureOpen}
+                  icon={<Sliders />}
+                  onClick={() => setConfigureOpen((v) => !v)}
+                >
+                  Configure
+                </ToggleButton>
+              </ToolbarRight>
+            </ToolbarRow>
             </div>
+
             {configureOpen && (
               <div
                 style={{
                   marginBottom: 12,
                   padding: 12,
-                  border: "1px solid #d6dadc",
+                  border: "1px solid var(--color-border-separator)",
                   borderRadius: 8,
-                  background: "#fafbfb",
+                  background: "var(--color-surface-secondary)",
                   ...(tableFullscreen ? { flexShrink: 0 } : {}),
                 }}
               >
@@ -371,19 +353,8 @@ export default function CapitalPlanningContent() {
                 </Checkbox>
               </div>
             )}
-            </div>
-            <div
-              className="capital-planning-main-with-filter"
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "stretch",
-                gap: 16,
-                minWidth: 0,
-                width: "100%",
-                ...(tableFullscreen ? { flex: 1, minHeight: 0 } : {}),
-              }}
-            >
+
+            <GridArea style={tableFullscreen ? { flex: 1, minHeight: 0, height: "auto" } : undefined}>
             {filterOpen && (
               <aside
                 className="capital-planning-filter-panel"
@@ -392,11 +363,9 @@ export default function CapitalPlanningContent() {
                   flex: "0 0 280px",
                   boxSizing: "border-box",
                   padding: 16,
-                  border: "1px solid #d6dadc",
-                  borderRadius: 8,
-                  background: "#fafbfb",
-                  alignSelf: "flex-start",
-                  ...(tableFullscreen ? { flexShrink: 0, maxHeight: "100%", overflow: "auto" } : {}),
+                  borderRight: "1px solid var(--color-border-separator)",
+                  background: "var(--color-surface-secondary)",
+                  overflow: "auto",
                 }}
               >
                 <Typography intent="small" weight="bold" style={{ display: "block", marginBottom: 12 }}>
@@ -440,7 +409,6 @@ export default function CapitalPlanningContent() {
                 </Typography>
               </aside>
             )}
-            {/* Horizontal (and fullscreen vertical) scroll only inside this region — filter stays put. */}
             <div
               className={[
                 "capital-planning-table-scroll-region",
@@ -449,13 +417,9 @@ export default function CapitalPlanningContent() {
                 .filter(Boolean)
                 .join(" ")}
               style={{
-                minWidth: 0,
                 flex: "1 1 auto",
-                width: "100%",
-                maxWidth: "100%",
-                ...(tableFullscreen
-                  ? { minHeight: 0, overflow: "auto" }
-                  : {}),
+                minWidth: 0,
+                ...(tableFullscreen ? { minHeight: 0, overflow: "auto" } : {}),
               }}
             >
             <CapitalPlanningSmartGrid
@@ -473,7 +437,7 @@ export default function CapitalPlanningContent() {
               forecastGranularity={forecastGranularity}
             />
             </div>
-            </div>
+            </GridArea>
             </div>
           </SplitViewCard.Section>
         </SplitViewCard.Main>

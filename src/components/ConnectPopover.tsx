@@ -201,7 +201,7 @@ export default function ConnectModal({ connection, open, onClose }: ConnectModal
           </Typography>
         </Modal.FooterSummary>
         <Modal.FooterButtons>
-          <Button variant="tertiary" onClick={onClose}>
+          <Button variant="tertiary" className="b_secondary" onClick={onClose}>
             Close
           </Button>
         </Modal.FooterButtons>

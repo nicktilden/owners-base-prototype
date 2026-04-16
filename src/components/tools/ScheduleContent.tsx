@@ -48,7 +48,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -61,7 +61,7 @@ const ToolbarLeft = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   overflow: hidden;
 `;
 
@@ -74,7 +74,7 @@ const ProgressBarWrap = styled.div`
 const ProgressBarOuter = styled.div`
   flex: 1;
   height: 6px;
-  background: #e0e4e7;
+  background: var(--color-border-default);
   border-radius: 3px;
   overflow: hidden;
   min-width: 60px;
@@ -83,13 +83,13 @@ const ProgressBarOuter = styled.div`
 const ProgressBarInner = styled.div<{ $pct: number }>`
   height: 100%;
   width: ${({ $pct }) => $pct}%;
-  background: #1d5cc9;
+  background: var(--color-text-link);
   border-radius: 3px;
 `;
 
 const ProgressLabel = styled.span`
   font-size: 13px;
-  color: #6a767c;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 `;
 
@@ -118,9 +118,9 @@ function ActualDateRenderer(params: ICellRendererParams<Milestone>) {
   if (!params.data) return null;
   const d = params.data.actualMilestoneDate;
   if (d) {
-    return <span style={{ color: "#1a7d3a" }}>{formatDateMMDDYYYY(d)}</span>;
+    return <span style={{ color: "var(--color-icon-success)" }}>{formatDateMMDDYYYY(d)}</span>;
   }
-  return <span style={{ color: "#6a767c" }}>—</span>;
+  return <span style={{ color: "var(--color-text-secondary)" }}>—</span>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         filter: "agSetColumnFilter",
         valueGetter: (params) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
-        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
       });
     }
 
@@ -214,14 +214,14 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "WBS",
         width: 100,
         filter: "agTextColumnFilter",
-        cellStyle: { color: "#6a767c", fontSize: "13px" },
+        cellStyle: { color: "var(--color-text-secondary)", fontSize: "13px" },
       },
       {
         field: "name",
         headerName: "Name",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
       },
       {
         field: "status",
@@ -280,7 +280,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         filter: "agSetColumnFilter",
         valueGetter: (params) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
-        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
       });
     }
 
@@ -290,14 +290,14 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "WBS",
         width: 100,
         filter: "agTextColumnFilter",
-        cellStyle: { color: "#6a767c", fontSize: "13px" },
+        cellStyle: { color: "var(--color-text-secondary)", fontSize: "13px" },
       },
       {
         field: "name",
         headerName: "Name",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
       },
       {
         field: "milestoneDate",

@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Box, Button, Card, Checkbox, Form, H2, Page, Select, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, Card, Form, H2, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
 import styled, { createGlobalStyle } from 'styled-components';
 import { useData } from '@/context/DataContext';
 import { usePersona } from '@/context/PersonaContext';
 import { useTheme } from '@/context/ThemeContext';
+import type { ColDef } from 'ag-grid-community';
+import { SmartGridWrapper } from '@/components/SmartGrid';
 import type { PermissionKey, ToolPermissionLevel } from '@/types/permissions';
 import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
@@ -11,6 +13,31 @@ import type { UserRole } from '@/types/user';
 const ProfileTearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"] {
     flex: 0 0 50vw !important;
+  }
+`;
+
+const ThemeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+`;
+
+const ThemeCardBtn = styled.button<{ $selected: boolean }>`
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 2px solid ${({ $selected }) => ($selected ? 'var(--color-action-primary)' : 'var(--color-border-default)')};
+  background: var(--color-surface-card);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    border-color: ${({ $selected }) => ($selected ? 'var(--color-action-primary)' : 'var(--color-border-hover)')};
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
   }
 `;
 
@@ -35,15 +62,29 @@ interface ProfileFormValues {
 const USER_ROLES: UserRole[] = ['Executive Strategy', 'Operations & Administration', 'Project Delivery', 'Field Opperations'];
 const FORM_CARD_STYLE: React.CSSProperties = { padding: 16, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' };
 
-type ThemeOption = 'system' | 'default-light' | 'default-dark' | 'owner-light' | 'owner-dark';
+type ThemeOption = 'system' | `${'default' | 'owner' | 'owner-alt1' | 'owner-alt2' | 'owner-alt3'}-${'light' | 'dark'}`;
 
-const THEME_OPTIONS: { value: ThemeOption; label: string }[] = [
-  { value: 'system', label: 'System Preference' },
-  { value: 'default-light', label: 'Default Light' },
-  { value: 'default-dark', label: 'Default Dark' },
-  { value: 'owner-light', label: 'Owners Light' },
-  { value: 'owner-dark', label: 'Owners Dark' },
+interface ThemePreview { surface: string; nav: string; accent: string; muted: string }
+
+const THEME_OPTIONS: { value: ThemeOption; label: string; preview: ThemePreview }[] = [
+  { value: 'owner-light', label: 'Owners Light', preview: { surface: '#f2f4f6', nav: '#212833', accent: '#455261', muted: '#b8c1cc' } },
+  { value: 'owner-alt1-light', label: 'Alt 1 Light', preview: { surface: '#f0f3f7', nav: '#1e2836', accent: '#3e5268', muted: '#adbfcf' } },
+  { value: 'owner-alt2-light', label: 'Alt 2 Light', preview: { surface: '#f2f4f6', nav: '#212833', accent: '#000000', muted: '#b8c1cc' } },
+  { value: 'default-light', label: 'Default Light', preview: { surface: '#ffffff', nav: '#000000', accent: '#FF5200', muted: '#d6dadc' } },
+  { value: 'owner-alt1-dark', label: 'Alt 1 Dark', preview: { surface: '#10141c', nav: '#0a0e14', accent: '#637a94', muted: '#2e3d50' } },
+  { value: 'owner-alt2-dark', label: 'Alt 2 Dark', preview: { surface: '#0e1410', nav: '#080f0e', accent: '#5e9188', muted: '#28453f' } },
+  { value: 'owner-alt3-dark', label: 'Alt 3 Dark', preview: { surface: '#252c38', nav: '#1c2330', accent: '#6f7e90', muted: '#38414f' } },
+  { value: 'default-dark', label: 'Default Dark', preview: { surface: '#181818', nav: '#000000', accent: '#f69565', muted: '#3f4549' } },
 ];
+
+function themeOptionKey(themeName: string, scheme: string): ThemeOption {
+  return `${themeName}-${scheme}` as ThemeOption;
+}
+
+function parseThemeOption(val: ThemeOption): { theme: string; scheme: 'light' | 'dark' } {
+  const lastDash = val.lastIndexOf('-');
+  return { theme: val.slice(0, lastDash), scheme: val.slice(lastDash + 1) as 'light' | 'dark' };
+}
 
 function toIso(value: Date | null): string { return value ? value.toISOString() : ''; }
 function safeParseRecord<T extends Record<string, unknown>>(value: string, fallback: T): T {
@@ -61,6 +102,19 @@ function parseDateOrFallback(value: string, fallback: Date | null): Date | null 
 
 export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSettingsTearsheetProps) {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('Personal');
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    const timer = requestAnimationFrame(() => {
+      el.scrollTop = 0;
+      el.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(timer);
+  }, [selectedTab]);
+
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [rememberDevices, setRememberDevices] = useState(true);
   const [securityAlerts, setSecurityAlerts] = useState(true);
@@ -208,6 +262,69 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     return (
       <>
       <Card>
+        <Box style={FORM_CARD_STYLE}>
+          <H2 style={{ marginBottom: 4 }}>Appearance</H2>
+          <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
+            Choose a brand theme and color scheme for the interface.
+          </Typography>
+
+          <ThemeGrid role="radiogroup" aria-label="Interface Theme">
+            {THEME_OPTIONS.map((opt) => {
+              const isSelected = opt.value === themeOptionKey(theme, resolvedColorScheme);
+              const { preview } = opt;
+              return (
+                <ThemeCardBtn
+                  key={opt.value}
+                  $selected={isSelected}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={opt.label}
+                  onClick={() => {
+                    const parsed = parseThemeOption(opt.value);
+                    setTheme(parsed.theme as Parameters<typeof setTheme>[0]);
+                    setColorScheme(parsed.scheme);
+                  }}
+                >
+                  <div style={{ margin: 8, borderRadius: 6, overflow: 'hidden', background: preview.surface, display: 'flex', flexDirection: 'column', height: 80 }}>
+                    <div style={{ display: 'flex', gap: 3, padding: '6px 7px 4px' }}>
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FF5F56', display: 'block' }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFBD2E', display: 'block' }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#27C93F', display: 'block' }} />
+                    </div>
+                    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                      <div style={{ width: 20, background: preview.nav, flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '5px 3px', gap: 3 }}>
+                        <div style={{ height: 2.5, borderRadius: 1, background: preview.accent, opacity: 0.9 }} />
+                        <div style={{ height: 2, borderRadius: 1, background: preview.muted, opacity: 0.4 }} />
+                        <div style={{ height: 2, borderRadius: 1, background: preview.muted, opacity: 0.4 }} />
+                      </div>
+                      <div style={{ flex: 1, padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <div style={{ height: 5, width: '75%', borderRadius: 2.5, background: preview.accent }} />
+                        <div style={{ height: 3, width: '55%', borderRadius: 1.5, background: preview.muted, opacity: 0.5 }} />
+                        <div style={{ flex: 1 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: preview.accent, display: 'block' }} />
+                          <div style={{ height: 4, flex: 1, borderRadius: 2, background: preview.accent, opacity: 0.65 }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 10px 8px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-primary)' }}>{opt.label}</span>
+                    {isSelected && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="8" fill="var(--color-action-primary)" />
+                        <path d="M4.5 8L7 10.5L11.5 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </ThemeCardBtn>
+              );
+            })}
+          </ThemeGrid>
+        </Box>
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
         <Form
           initialValues={{ language: 'English (US)', numberFormat: 'Default', dateFormat: 'Relative', prefsTimeZone: '(GMT-5:00) Chicago' }}
           onSubmit={() => undefined}
@@ -429,81 +546,83 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     );
   }
 
+  const favProjectColDefs = useMemo<ColDef<{ id: string; label: string }>[]>(() => [
+    { field: 'label', headerName: 'Project', flex: 1 },
+  ], []);
+
+  const favToolColDefs = useMemo<ColDef<{ id: string; label: string }>[]>(() => [
+    { field: 'label', headerName: 'Tool', flex: 1 },
+  ], []);
+
+  const favProjectsSelected = useMemo(
+    () => (activeUser?.favorites.projectIds ?? []).reduce<Record<string, boolean>>((acc, id) => { acc[id] = true; return acc; }, {}),
+    [activeUser?.favorites.projectIds]
+  );
+
+  const favToolsSelected = useMemo(
+    () => (activeUser?.favorites.toolKeys ?? []).reduce<Record<string, boolean>>((acc, id) => { acc[id] = true; return acc; }, {}),
+    [activeUser?.favorites.toolKeys]
+  );
+
+  const handleProjectSelectionChanged = useCallback((event: { api: { getSelectedRows: () => { id: string }[] } }) => {
+    const selectedIds = event.api.getSelectedRows().map((r: { id: string }) => r.id);
+    updateFavoriteSelections(selectedIds, activeUser?.favorites.toolKeys ?? []);
+  }, [activeUser?.favorites.toolKeys, updateFavoriteSelections]);
+
+  const handleToolSelectionChanged = useCallback((event: { api: { getSelectedRows: () => { id: string }[] } }) => {
+    const selectedIds = event.api.getSelectedRows().map((r: { id: string }) => r.id);
+    updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], selectedIds);
+  }, [activeUser?.favorites.projectIds, updateFavoriteSelections]);
+
   function renderFavoritesTab() {
     return (
       <>
         <Card style={{ marginBottom: 16, padding: 16 }}>
           <H2 style={{ marginBottom: 16 }}>Favorite Projects</H2>
-          <Table.Container>
-            <Table>
-              <Table.Header>
-                <Table.HeaderRow>
-                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
-                  <Table.HeaderCell>Project</Table.HeaderCell>
-                </Table.HeaderRow>
-              </Table.Header>
-              <Table.Body>
-                {projectOptions.map((project) => {
-                  const checked = Boolean(activeUser?.favorites.projectIds.includes(project.id));
-                  return (
-                    <Table.BodyRow key={project.id}>
-                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
-                        <Checkbox
-                          checked={checked}
-                          onChange={(event) => {
-                            const currentlySelected = activeUser?.favorites.projectIds ?? [];
-                            const nextProjectIds = event.currentTarget.checked
-                              ? [...currentlySelected, project.id]
-                              : currentlySelected.filter((id) => id !== project.id);
-                            updateFavoriteSelections(nextProjectIds, activeUser?.favorites.toolKeys ?? []);
-                          }}
-                          aria-label={`Favorite ${project.label}`}
-                        />
-                      </Table.BodyCell>
-                      <Table.BodyCell><Table.TextCell>{project.label}</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  );
-                })}
-              </Table.Body>
-            </Table>
-          </Table.Container>
+          <div style={{ height: 400, border: '1px solid var(--color-border-default)', borderRadius: 0, overflow: 'hidden' }}>
+            <SmartGridWrapper<{ id: string; label: string }>
+              id="fav-projects-grid"
+              height="100%"
+              rowData={projectOptions}
+              columnDefs={favProjectColDefs}
+              getRowId={(params) => params.data.id}
+              rowSelection={{ mode: 'multiRow', checkboxLocation: 'selectionColumn', groupSelects: 'descendants' }}
+              selectionColumnDef={{ width: 48, maxWidth: 48, minWidth: 48, resizable: false, suppressMovable: true, sortable: false, suppressHeaderMenuButton: true }}
+              sideBar={false}
+              defaultColDef={{ resizable: false, sortable: true, filter: false, suppressHeaderMenuButton: true }}
+              isRowSelectable={() => true}
+              onSelectionChanged={handleProjectSelectionChanged}
+              onGridReady={(event) => {
+                event.api.forEachNode((node) => {
+                  if (favProjectsSelected[node.data?.id ?? '']) node.setSelected(true);
+                });
+              }}
+            />
+          </div>
         </Card>
 
         <Card style={{ marginBottom: 16, padding: 16 }}>
           <H2 style={{ marginBottom: 16 }}>Favorite Tools</H2>
-          <Table.Container>
-            <Table>
-              <Table.Header>
-                <Table.HeaderRow>
-                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
-                  <Table.HeaderCell>Tool</Table.HeaderCell>
-                </Table.HeaderRow>
-              </Table.Header>
-              <Table.Body>
-                {toolOptions.map((tool) => {
-                  const checked = Boolean(activeUser?.favorites.toolKeys.includes(tool.id as ToolKey));
-                  return (
-                    <Table.BodyRow key={tool.id}>
-                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
-                        <Checkbox
-                          checked={checked}
-                          onChange={(event) => {
-                            const currentlySelected = activeUser?.favorites.toolKeys ?? [];
-                            const nextToolIds = event.currentTarget.checked
-                              ? [...currentlySelected, tool.id as ToolKey]
-                              : currentlySelected.filter((id) => id !== tool.id);
-                            updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], nextToolIds);
-                          }}
-                          aria-label={`Favorite ${tool.label}`}
-                        />
-                      </Table.BodyCell>
-                      <Table.BodyCell><Table.TextCell>{tool.label}</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  );
-                })}
-              </Table.Body>
-            </Table>
-          </Table.Container>
+          <div style={{ height: 400, border: '1px solid var(--color-border-default)', borderRadius: 0, overflow: 'hidden' }}>
+            <SmartGridWrapper<{ id: string; label: string }>
+              id="fav-tools-grid"
+              height="100%"
+              rowData={toolOptions}
+              columnDefs={favToolColDefs}
+              getRowId={(params) => params.data.id}
+              rowSelection={{ mode: 'multiRow', checkboxLocation: 'selectionColumn', groupSelects: 'descendants' }}
+              selectionColumnDef={{ width: 48, maxWidth: 48, minWidth: 48, resizable: false, suppressMovable: true, sortable: false, suppressHeaderMenuButton: true }}
+              sideBar={false}
+              defaultColDef={{ resizable: false, sortable: true, filter: false, suppressHeaderMenuButton: true }}
+              isRowSelectable={() => true}
+              onSelectionChanged={handleToolSelectionChanged}
+              onGridReady={(event) => {
+                event.api.forEachNode((node) => {
+                  if (favToolsSelected[node.data?.id ?? '']) node.setSelected(true);
+                });
+              }}
+            />
+          </div>
         </Card>
       </>
     );
@@ -636,55 +755,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                 </Tabs>
               </Page.Tabs>
             </Page.Header>
-            <Page.Body style={{ padding: 24, overflowY: 'auto', background: 'var(--color-surface-secondary)' }}>
+            <Page.Body ref={bodyRef} tabIndex={-1} style={{ padding: 24, overflowY: 'auto', background: 'var(--color-surface-secondary)', outline: 'none' }}>
               {selectedTab === 'Personal' && (
                 <>
                   <Card>
-                    <Box style={FORM_CARD_STYLE}>
-                      <H2 style={{ marginBottom: 4 }}>Appearance</H2>
-                      <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
-                        Choose a brand theme and color scheme for the interface.
-                      </Typography>
-
-                      <Typography intent="h3" style={{ marginBottom: 8 }}>Interface Theme</Typography>
-                      <Box style={{ width: '50%' }}>
-                        <Select
-                        className="i_select"
-                          label={THEME_OPTIONS.find((o) => o.value === (
-                            colorScheme === 'system' ? 'system'
-                              : `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}` as ThemeOption
-                          ))?.label}
-                          onSelect={(selection) => {
-                            const val = selection.item as ThemeOption;
-                            if (val === 'system') {
-                              setColorScheme('system');
-                            } else {
-                              const [t, s] = val.split('-') as ['default' | 'owner', 'light' | 'dark'];
-                              setTheme(t);
-                              setColorScheme(s);
-                            }
-                          }}
-                          block
-                        >
-                          {THEME_OPTIONS.map((opt) => (
-                            <Select.Option
-                              key={opt.value}
-                              value={opt.value}
-                              selected={
-                                colorScheme === 'system'
-                                  ? opt.value === 'system'
-                                  : opt.value === `${theme === 'default' ? 'default' : 'owner'}-${colorScheme}`
-                              }
-                            >
-                              {opt.label}
-                            </Select.Option>
-                          ))}
-                        </Select>
-                      </Box>
-                    </Box>
-                  </Card>
-
-                  <Card style={{ marginTop: 16 }}>
                     <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
                       <Form.Form style={FORM_CARD_STYLE}>
                         <H2 style={{ marginBottom: 16 }}>Personal Info</H2>

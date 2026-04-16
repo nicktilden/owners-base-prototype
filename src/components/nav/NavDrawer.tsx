@@ -283,7 +283,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
             <Clear size="sm" />
           </CloseButton>
           <LogoWrap>
-            <img src={procoreOwnersLogo.src} alt="Procore Owners" height={32} />
+            <img src={procoreOwnersLogo.src} alt="Procore Owners" height={26} />
           </LogoWrap>
         </DrawerHeader>
 

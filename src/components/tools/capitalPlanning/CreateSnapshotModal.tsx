@@ -12,8 +12,8 @@ const readOnlyValueBoxStyle: React.CSSProperties = {
   minHeight: 40,
   padding: "10px 12px",
   borderRadius: 4,
-  border: "1px solid #d6dadc",
-  background: "#f5f6f7",
+  border: "1px solid var(--color-border-default)",
+  background: "var(--color-surface-tertiary)",
   display: "flex",
   alignItems: "center",
 };

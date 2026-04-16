@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
 
-type ThemeName = 'default' | 'owner';
+type ThemeName = 'default' | 'owner' | 'owner-alt1' | 'owner-alt2' | 'owner-alt3';
 type ColorScheme = 'light' | 'dark' | 'system';
 
 const DarkModeOverrides = createGlobalStyle`
@@ -81,15 +81,15 @@ function loadPreference(): { theme: ThemeName; colorScheme: ColorScheme } {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return {
-        theme: parsed.theme === 'default' ? 'default' : 'owner',
-        colorScheme: ['light', 'dark', 'system'].includes(parsed.colorScheme)
-          ? parsed.colorScheme
-          : 'system',
-      };
+      const validTheme = (['default', 'owner', 'owner-alt1', 'owner-alt2', 'owner-alt3'] as const).includes(parsed.theme) ? parsed.theme : 'owner';
+      let colorScheme: ColorScheme = ['light', 'dark', 'system'].includes(parsed.colorScheme)
+        ? parsed.colorScheme
+        : 'light';
+      if (validTheme === 'owner' && colorScheme === 'dark') colorScheme = 'light';
+      return { theme: validTheme, colorScheme };
     }
   } catch { /* noop */ }
-  return { theme: 'owner', colorScheme: 'dark' };
+  return { theme: 'owner', colorScheme: 'light' };
 }
 
 function savePreference(theme: ThemeName, colorScheme: ColorScheme) {

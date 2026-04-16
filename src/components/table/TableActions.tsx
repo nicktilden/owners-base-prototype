@@ -20,23 +20,23 @@ const BUTTON_STYLE: React.CSSProperties = {
 export const PINNED_HEADER_CELL_STYLE: React.CSSProperties = {
   position: "sticky",
   right: 0,
-  background: "#f5f6f7",
+  background: "var(--color-surface-secondary)",
   paddingLeft: 16,
   paddingRight: 16,
   zIndex: 2,
-  borderLeft: "1px solid #d6dadc",
-  boxShadow: "-2px 0 4px rgba(0,0,0,0.06)",
+  borderLeft: "1px solid var(--color-border-separator)",
+  boxShadow: "-2px 0 4px var(--color-shadow)",
 };
 
 export const PINNED_BODY_CELL_STYLE: React.CSSProperties = {
   position: "sticky",
   right: 0,
-  background: "#F4F5F6",
+  background: "var(--color-surface-hover)",
   paddingLeft: 16,
   paddingRight: 16,
   zIndex: 1,
-  borderLeft: "1px solid #e0e4e7",
-  boxShadow: "-2px 0 4px rgba(0,0,0,0.06)",
+  borderLeft: "1px solid var(--color-border-default)",
+  boxShadow: "-2px 0 4px var(--color-shadow)",
 };
 
 export function StandardRowActions() {
@@ -44,6 +44,7 @@ export function StandardRowActions() {
     <div style={ACTIONS_WRAP_STYLE}>
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Eye size="sm" />}
         aria-label="View"
@@ -51,6 +52,7 @@ export function StandardRowActions() {
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
         aria-label="Edit"
@@ -71,6 +73,7 @@ export function ProjectRowActions({
     <div style={ACTIONS_WRAP_STYLE}>
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={isFavorite ? <Star size="sm" /> : <StarOff size="sm" />}
         aria-label={isFavorite ? "Unfavorite" : "Favorite"}
@@ -79,6 +82,7 @@ export function ProjectRowActions({
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<NotepadList size="sm" />}
         aria-label="Notes"
@@ -86,6 +90,7 @@ export function ProjectRowActions({
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
         aria-label="Edit"
