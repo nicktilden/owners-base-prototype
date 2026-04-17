@@ -101,7 +101,7 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
   }, [project, actualStartDate, expectedEndDate]);
 
   return (
-    <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right" block>
+    <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right">
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header */}
         <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
@@ -307,7 +307,7 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
   return (
     <>
       <TearsheetWide />
-      <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right" block>
+      <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right">
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
           <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
@@ -659,7 +659,7 @@ export function ScheduleRiskGHubCard() {
               color: '#232729',
             }}
           >
-            AI Actions
+            Summarize
           </Button>
           <Button
             variant="secondary"
@@ -821,7 +821,7 @@ export function ScheduleVariance2HubCard() {
       })
       .sort((a, b) => b.worstVariance - a.worstVariance);
   }, [filteredProjectRows]);
-  const rows = useMemo(() => portfolioRows.slice(0, 7), [portfolioRows]);
+  const rows = useMemo(() => portfolioRows.slice(0, 6), [portfolioRows]);
 
   const avgVariance = useMemo(() => {
     if (!portfolioRows.length) return 0;
@@ -909,7 +909,7 @@ export function ScheduleVariance2HubCard() {
         />
       )}
     <HubCardFrame
-      title="Schedule Variance 2"
+      title="Schedule Risk"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -938,7 +938,7 @@ export function ScheduleVariance2HubCard() {
               color: '#232729',
             }}
           >
-            AI Actions
+            Summarize
           </Button>
           <Button
             variant="secondary"

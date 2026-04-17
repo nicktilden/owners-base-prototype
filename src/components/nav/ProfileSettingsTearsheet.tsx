@@ -9,6 +9,7 @@ import { SmartGridWrapper } from '@/components/SmartGrid';
 import type { PermissionKey, ToolPermissionLevel } from '@/types/permissions';
 import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
+import { THEME_APPEARANCE_PRESETS, type ThemePresetId } from '@/constants/themeDisplay';
 
 const ProfileTearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"] {
@@ -18,7 +19,7 @@ const ProfileTearsheetWidth = createGlobalStyle`
 
 const ThemeGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px;
   margin-top: 12px;
 `;
@@ -62,26 +63,11 @@ interface ProfileFormValues {
 const USER_ROLES: UserRole[] = ['Executive Strategy', 'Operations & Administration', 'Project Delivery', 'Field Opperations'];
 const FORM_CARD_STYLE: React.CSSProperties = { padding: 16, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' };
 
-type ThemeOption = 'system' | `${'default' | 'owner' | 'owner-alt1' | 'owner-alt2' | 'owner-alt3'}-${'light' | 'dark'}`;
-
-interface ThemePreview { surface: string; nav: string; accent: string; muted: string }
-
-const THEME_OPTIONS: { value: ThemeOption; label: string; preview: ThemePreview }[] = [
-  { value: 'owner-light', label: 'Owners Light', preview: { surface: '#f2f4f6', nav: '#212833', accent: '#455261', muted: '#b8c1cc' } },
-  { value: 'owner-alt1-light', label: 'Alt 1 Light', preview: { surface: '#f0f3f7', nav: '#1e2836', accent: '#3e5268', muted: '#adbfcf' } },
-  { value: 'owner-alt2-light', label: 'Alt 2 Light', preview: { surface: '#f2f4f6', nav: '#212833', accent: '#000000', muted: '#b8c1cc' } },
-  { value: 'default-light', label: 'Default Light', preview: { surface: '#ffffff', nav: '#000000', accent: '#FF5200', muted: '#d6dadc' } },
-  { value: 'owner-alt1-dark', label: 'Alt 1 Dark', preview: { surface: '#10141c', nav: '#0a0e14', accent: '#637a94', muted: '#2e3d50' } },
-  { value: 'owner-alt2-dark', label: 'Alt 2 Dark', preview: { surface: '#0e1410', nav: '#080f0e', accent: '#5e9188', muted: '#28453f' } },
-  { value: 'owner-alt3-dark', label: 'Alt 3 Dark', preview: { surface: '#252c38', nav: '#1c2330', accent: '#6f7e90', muted: '#38414f' } },
-  { value: 'default-dark', label: 'Default Dark', preview: { surface: '#181818', nav: '#000000', accent: '#f69565', muted: '#3f4549' } },
-];
-
-function themeOptionKey(themeName: string, scheme: string): ThemeOption {
-  return `${themeName}-${scheme}` as ThemeOption;
+function themeOptionKey(themeName: string, scheme: string): ThemePresetId {
+  return `${themeName}-${scheme}` as ThemePresetId;
 }
 
-function parseThemeOption(val: ThemeOption): { theme: string; scheme: 'light' | 'dark' } {
+function parseThemeOption(val: ThemePresetId): { theme: string; scheme: 'light' | 'dark' } {
   const lastDash = val.lastIndexOf('-');
   return { theme: val.slice(0, lastDash), scheme: val.slice(lastDash + 1) as 'light' | 'dark' };
 }
@@ -265,11 +251,11 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
         <Box style={FORM_CARD_STYLE}>
           <H2 style={{ marginBottom: 4 }}>Appearance</H2>
           <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
-            Choose a brand theme and color scheme for the interface.
+            Choose a Procore or Owners theme and a light or dark color scheme.
           </Typography>
 
-          <ThemeGrid role="radiogroup" aria-label="Interface Theme">
-            {THEME_OPTIONS.map((opt) => {
+          <ThemeGrid role="radiogroup" aria-label="Interface theme">
+            {THEME_APPEARANCE_PRESETS.map((opt) => {
               const isSelected = opt.value === themeOptionKey(theme, resolvedColorScheme);
               const { preview } = opt;
               return (
@@ -731,7 +717,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
   return (
     <>
       <ProfileTearsheetWidth />
-      <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right" block>
+      <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right">
         <Page style={{ height: '100%', background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}>
           <Page.Main style={{ height: '100%', overflow: 'hidden', background: 'var(--color-surface-primary)' }}>
             <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
 
+/** Stored `theme` value; maps to `data-theme` on <html> (omit attribute when `default` = Procore). */
 type ThemeName = 'default' | 'owner' | 'owner-alt1' | 'owner-alt2' | 'owner-alt3';
 type ColorScheme = 'light' | 'dark' | 'system';
 

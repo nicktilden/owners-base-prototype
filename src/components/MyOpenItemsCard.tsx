@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button, Pill, Search, Select, Tearsheet, Typography, colors } from "@procore/core-react";
 import {
   Copilot,
@@ -11,6 +11,9 @@ import {
 } from "@procore/core-icons";
 import styled from "styled-components";
 import { sampleOpenItemRows, type OpenItemRow } from "@/data/openitems";
+import { rfis } from "@/data/seed/rfis";
+import { projects } from "@/data/seed/projects";
+import { usePersona } from "@/context/PersonaContext";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { formatDateMMDDYYYY } from "@/utils/date";
@@ -31,7 +34,7 @@ const ItemTable = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 110px 1fr auto auto 36px;
+  grid-template-columns: 100px 1fr 100px 90px 36px;
   padding: 0 8px;
   height: 28px;
   align-items: center;
@@ -46,17 +49,16 @@ const HeaderCell = styled.span`
   padding: 6px 0;
 
   &:nth-child(3) {
-    text-align: right;
-    padding-right: 16px;
+    text-align: left;
   }
   &:nth-child(4) {
-    text-align: right;
+    text-align: left;
   }
 `;
 
 const ItemRow = styled.div<{ $even?: boolean }>`
   display: grid;
-  grid-template-columns: 110px 1fr auto auto 36px;
+  grid-template-columns: 100px 1fr 110px 100px 36px;
   padding: 0 8px;
   min-height: 44px;
   align-items: center;
@@ -70,7 +72,7 @@ const TypeCell = styled.div`
   align-items: center;
   gap: 4px;
   overflow: hidden;
-  padding: 7px 0;
+  padding: 8px 0;
 `;
 
 const TypeLabel = styled.span`
@@ -85,7 +87,7 @@ const TypeLabel = styled.span`
 
 const TitleCell = styled.div`
   min-width: 0;
-  padding: 7px 8px 7px 0;
+  padding: 8px 8px 8px 0;
 `;
 
 const ProjectLabel = styled.div`
@@ -120,13 +122,13 @@ const DueDateCell = styled.div<{ $overdue?: boolean }>`
   color: ${({ $overdue }) => ($overdue ? "#c42223" : "var(--color-text-primary)")};
   line-height: 16px;
   white-space: nowrap;
-  text-align: right;
-  padding: 7px 16px 7px 0;
+  text-align: left;
+  padding: 8px 0;
 `;
 
 const StatusCell = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 `;
 
 const TearsheetHeader = styled.div`
@@ -143,8 +145,8 @@ const TearsheetBody = styled.div`
 const DetailGrid = styled.div`
   display: grid;
   grid-template-columns: 160px 1fr;
-  row-gap: 10px;
-  column-gap: 12px;
+  row-gap: 8px;
+  column-gap: 8px;
 `;
 
 const DetailLabel = styled.div`
@@ -158,15 +160,59 @@ const DetailValue = styled.div`
   color: var(--color-text-primary);
 `;
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Data helpers ─────────────────────────────────────────────────────────────
 
-const CURRENT_USER = "Sidney Shah";
+const projectLookup: Record<string, { name: string; number: string }> = {};
+for (const p of projects) {
+  projectLookup[p.id] = { name: p.name, number: p.number };
+}
 
-/** Top 5 open (non-closed, non-void) items assigned to the current user, sorted soonest due date first. */
-const MY_OPEN_ITEMS: OpenItemRow[] = sampleOpenItemRows
-  .filter((r) => r.assignee === CURRENT_USER && r.status !== "Closed" && r.status !== "Void")
-  .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-  .slice(0, 5);
+function useMyOpenItems(): OpenItemRow[] {
+  const { activeUser } = usePersona();
+  return useMemo(() => {
+    const userName = activeUser
+      ? `${activeUser.firstName} ${activeUser.lastName}`
+      : "Bridget O'Sullivan";
+
+    // RFIs assigned to the active user, converted to OpenItemRow shape
+    const rfiItems: OpenItemRow[] = rfis
+      .filter((r) => r.assignees.includes(userName) && r.status !== 'Closed' && r.status !== 'Closed - Revised' && r.status !== 'Closed - Draft')
+      .map((r, idx) => {
+        const proj = projectLookup[r.projectId];
+        const daysOverdue = r.dueDate
+          ? Math.max(0, Math.round((new Date('2026-03-27').getTime() - new Date(r.dueDate).getTime()) / 86400000))
+          : 0;
+        return {
+          id: 10000 + idx,
+          number: `RFI-${String(r.number).padStart(4, '0')}`,
+          type: 'RFI' as const,
+          title: r.subject,
+          status: r.status === 'Open' ? 'Open' as const : 'Pending' as const,
+          priority: 'High' as const,
+          trade: 'General' as const,
+          createdDate: r.createdAt,
+          dueDate: r.dueDate ?? r.createdAt,
+          closedDate: '',
+          daysOverdue,
+          assignee: userName,
+          submittedBy: r.createdBy,
+          projectId: 0,
+          projectNumber: proj?.number ?? '',
+          projectName: proj?.name ?? '',
+          specSection: '',
+          description: r.question,
+        };
+      });
+
+    // Original open items for backwards compatibility
+    const legacyItems = sampleOpenItemRows
+      .filter((r) => r.assignee === userName && r.status !== "Closed" && r.status !== "Void");
+
+    return [...rfiItems, ...legacyItems]
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+      .slice(0, 5);
+  }, [activeUser]);
+}
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   "RFI": <FileQuestionMark size="sm" />,
@@ -199,6 +245,7 @@ export default function MyOpenItemsCard() {
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const { openPanel: openAiPanel } = useAiPanel();
+  const MY_OPEN_ITEMS = useMyOpenItems();
 
   const projectOptions = ["All Projects", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.projectName))).sort()];
   const typeOptions = ["All Types", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.type))).sort()];
@@ -247,7 +294,7 @@ export default function MyOpenItemsCard() {
             color: colors.gray15,
           }}
         >
-          AI Actions
+          Summarize
         </Button>
         <Button
           variant="secondary"
@@ -341,7 +388,7 @@ export default function MyOpenItemsCard() {
                     onClick={() => setSelectedItem(item)}
                     aria-label={`Open details for ${item.number}`}
                   >
-                    {item.number}: {item.title.length > 30 ? `${item.title.slice(0, 30)}…` : item.title}
+                    {item.number}: {item.title.length > 24 ? `${item.title.slice(0, 24)}…` : item.title}
                   </ItemLinkButton>
                 </TitleCell>
 

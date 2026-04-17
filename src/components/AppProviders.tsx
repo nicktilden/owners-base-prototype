@@ -52,6 +52,8 @@ import { tasks } from '@/data/seed/tasks';
 import { documents } from '@/data/seed/documents';
 import { assets } from '@/data/seed/assets';
 import { actionPlans } from '@/data/seed/action_plans';
+import { rfis } from '@/data/seed/rfis';
+import { specifications } from '@/data/seed/specifications';
 
 function SeedLoader({ children }: { children: React.ReactNode }) {
   const { setData } = useData();
@@ -70,6 +72,8 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
       documents,
       assets,
       actionPlans,
+      rfis,
+      specifications,
     });
     setUsers(users);
     setActiveUser(activeUser);

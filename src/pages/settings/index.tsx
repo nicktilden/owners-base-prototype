@@ -25,7 +25,7 @@ export default function SettingsPage() {
             Settings
           </Typography>
           <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 24, display: 'block' }}>
-            Appearance and theme preferences can be configured from your profile settings.
+            Procore Owners theme and appearance preferences are configured from your profile settings.
           </Typography>
         </PageWrap>
       </AppLayout>

@@ -27,6 +27,15 @@ const FieldCellWide = styled(FieldCell)`
   grid-column: 1 / -1;
 `;
 
+const AssetImage = styled.img`
+  max-width: 200px;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-separator);
+  margin-bottom: 20px;
+`;
+
 type PillColor = "green" | "yellow" | "red" | "gray";
 
 const STATUS_COLORS: Record<AssetStatus, PillColor> = {
@@ -75,7 +84,7 @@ export default function AssetDetailTearsheet({ asset, projectName, open, onClose
   return (
     <>
       <AssetTearsheetWidth />
-      <Tearsheet open={open} onClose={onClose} aria-label="Asset details" placement="right" block>
+      <Tearsheet open={open} onClose={onClose} aria-label="Asset details" placement="right">
         <Page style={{ height: "100%", background: "var(--color-surface-primary)", color: "var(--color-text-primary)" }}>
           <Page.Main style={{ height: "100%", overflow: "hidden", background: "var(--color-surface-primary)" }}>
             <Page.Header style={{ background: "var(--color-surface-primary)", borderColor: "var(--color-border-separator)" }}>
@@ -108,6 +117,14 @@ export default function AssetDetailTearsheet({ asset, projectName, open, onClose
               {activeTab === "Information" && (
                 <Card style={{ padding: 24, background: "var(--color-surface-primary)" }}>
                   <H2 style={{ marginBottom: 20 }}>General Information</H2>
+
+                  {asset.imageUrl && (
+                    <AssetImage
+                      src={asset.imageUrl}
+                      alt={asset.name}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
 
                   <FieldGrid>
                     <FieldCell>

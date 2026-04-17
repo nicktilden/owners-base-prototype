@@ -25,6 +25,7 @@ import NavDrawer from './NavDrawer';
 import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
+import { useAiPanel } from '@/context/AiPanelContext';
 import avatarImg from '@/images/avatar-XL.png';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 
@@ -283,6 +284,7 @@ export default function GlobalHeader() {
   const { activeUser } = usePersona();
   const { level, activeProjectId } = useLevel();
   const { data } = useData();
+  const { openPanel } = useAiPanel();
 
   const account = data.account;
   const companyName = account?.companyName ?? 'Procore';
@@ -365,7 +367,7 @@ export default function GlobalHeader() {
           {/* Procore AI */}
           <AiButton
             aria-label="Procore AI"
-            onClick={() => {/* TODO: open AI panel */}}
+            onClick={() => openPanel()}
           >
             <Copilot size="sm" />
             <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Procore AI</Typography>

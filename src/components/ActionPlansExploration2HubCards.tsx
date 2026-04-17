@@ -147,7 +147,7 @@ function RichActionPlanTearsheet({ open, onClose, project, templateName, cell }:
   return (
     <>
       <TearsheetWide />
-      <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right" block>
+      <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right">
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>

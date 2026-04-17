@@ -170,7 +170,7 @@ export default function ActionPanel({
   };
 
   return (
-    <Tearsheet open={open} onClose={onClose} aria-label="AI Actions" placement="right" block>
+    <Tearsheet open={open} onClose={onClose} aria-label="AI Actions" placement="right">
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* ── Header ── */}
         <PanelHeader>

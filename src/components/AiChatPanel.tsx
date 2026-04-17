@@ -732,10 +732,10 @@ function ItemDetailPane({ item, detail }: { item: OpenItemRow; detail: RfiDetail
 // ─── Simulated Responses ────────────────────────────────────────────────────
 
 const WELCOME_SUGGESTIONS = [
-  'Summarize my portfolio risks',
-  'Which projects are behind schedule?',
-  'Draft a delay notice for the GC',
-  'What needs my attention today?',
+  'Give me a health summary of my portfolio',
+  'Rank my projects from highest to lowest risk',
+  'Which projects are showing cost overruns?',
+  'Which delayed projects also have high risk?',
 ];
 
 function formatDateShort(iso: string): string {
@@ -953,16 +953,32 @@ function getSimulatedResponse(ctx: AiPanelContextData | null, message: string): 
 
   const lower = message.toLowerCase();
 
-  if (lower.includes('risk') || lower.includes('behind schedule') || lower.includes('analyze')) {
-    return `Based on your current portfolio, I've identified 3 projects with critical schedule variance:\n\n• **Metro Center Phase II** — 18 days behind on structural milestones\n• **Harbor View Tower** — 12 days behind, pending GC recovery plan\n• **Riverside Commons** — 9 days behind, weather-related delays\n\nWould you like me to draft escalation notices or request recovery plans for any of these?`;
+  if (lower.includes('health summary') || lower.includes('portfolio health') || lower.includes('how is my portfolio')) {
+    return `**Portfolio Health Summary — Trinity Health System**\n\n📊 **20 Active Projects** · $1.24B Total Value\n\n🟢 **On Track (14 projects)** — Schedule within tolerance, budget within 5%\n🟡 **Watch (3 projects)** — Minor delays (3–7 days) or budget variance 5–10%\n🔴 **At Risk (3 projects)** — Critical delays (>7 days) or budget overrun >10%\n\n**Key Metrics:**\n• Average schedule variance: +4.2 days\n• Budget utilization: 62% of committed funds\n• Open RFIs requiring response: 18\n• Change orders pending approval: 7 ($2.1M aggregate)\n\n**Highlights:**\n• 🟢 Loyola Medical Campus — 2 days ahead of schedule, under budget\n• 🟡 Mercy West Pavilion — 5-day delay on MEP rough-in, recovery plan in progress\n• 🔴 St. Vincent Behavioral Health — 14 days behind, 3 critical RFIs unresolved\n\nWould you like me to drill into any specific project or generate a stakeholder report?`;
+  }
+
+  if (lower.includes('rank') && lower.includes('risk')) {
+    return `**Project Risk Ranking — Highest to Lowest**\n\n🔴 **1. St. Vincent Behavioral Health Facility** — Risk Score: 92/100\n• 14 days behind schedule · 3 critical unresolved RFIs · GC recovery plan overdue\n• Budget overrun: +8.3% ($1.2M over)\n\n🔴 **2. Sacred Heart Emergency Expansion** — Risk Score: 85/100\n• 11 days behind on structural milestones · Subcontractor labor shortage\n• 2 change orders pending ($890K total)\n\n🔴 **3. Trinity Central Power Plant Upgrade** — Risk Score: 78/100\n• Equipment delivery delayed 9 days · MEP coordination issues\n• Cost impact pending assessment\n\n🟡 **4. Mercy West Pavilion** — Risk Score: 54/100\n• 5-day delay on MEP rough-in · Recovery plan submitted\n\n🟡 **5. Good Shepherd Rehab Center** — Risk Score: 48/100\n• Minor budget variance (+6.2%) · On schedule\n\n🟡 **6. St. Mary's Outpatient Clinic** — Risk Score: 42/100\n• 3-day weather delay · Expected to recover\n\n🟢 **7–20. Remaining 14 projects** — Risk Score: <35/100\n• All tracking on or ahead of schedule with budget within tolerance\n\nWould you like me to generate a detailed risk report for any of these projects, or draft escalation notices for the top 3?`;
+  }
+
+  if (lower.includes('cost overrun') || lower.includes('over budget') || lower.includes('budget overrun')) {
+    return `**Projects Showing Cost Overruns**\n\nI've identified **4 projects** with budget variance exceeding the 5% threshold:\n\n🔴 **St. Vincent Behavioral Health** — +8.3% ($1.2M over)\n• Root cause: Unforeseen soil conditions led to foundation redesign\n• 2 approved change orders ($680K), 1 pending ($520K)\n• Contingency remaining: 1.8% of original budget\n\n🔴 **Sacred Heart Emergency Expansion** — +7.1% ($890K over)\n• Root cause: Steel price escalation + design revisions\n• GC submitted 2 change orders, both under review\n• Contingency remaining: 2.4%\n\n🟡 **Good Shepherd Rehab Center** — +6.2% ($310K over)\n• Root cause: Owner-directed scope additions (additional patient rooms)\n• Approved change order covers $240K; remaining $70K unresolved\n• Contingency remaining: 4.1%\n\n🟡 **Trinity North Parking Structure** — +5.4% ($162K over)\n• Root cause: Waterproofing specification upgrade after inspection\n• Single change order pending approval\n• Contingency remaining: 5.6%\n\n**Portfolio Impact:**\n• Total overrun exposure: $2.56M across 4 projects\n• Weighted portfolio budget variance: +2.8%\n• 3 projects have contingency below recommended 3%\n\nWould you like me to generate a cost impact report or review the pending change orders?`;
+  }
+
+  if (lower.includes('delayed') && lower.includes('risk')) {
+    return `**Delayed Projects with High Risk**\n\nI cross-referenced schedule delays with risk factors to identify the most critical projects:\n\n🔴 **St. Vincent Behavioral Health** — Critical\n• Schedule: **14 days behind** on structural completion\n• Risk factors: 3 critical RFIs unresolved, GC recovery plan overdue, budget +8.3%\n• Impact: Delays occupancy, potential liquidated damages ($12K/day)\n• ⚡ Recommended: Escalate to VP level, demand recovery plan within 48 hours\n\n🔴 **Sacred Heart Emergency Expansion** — Critical\n• Schedule: **11 days behind** on structural milestones\n• Risk factors: Subcontractor labor shortage, 2 pending change orders ($890K)\n• Impact: May push commissioning past regulatory deadline\n• ⚡ Recommended: Schedule emergency meeting with GC, evaluate acceleration options\n\n🔴 **Trinity Central Power Plant Upgrade** — High\n• Schedule: **9 days behind** on equipment installation\n• Risk factors: Long-lead equipment delayed, MEP coordination gaps\n• Impact: Delays tie-in to main campus utilities\n• ⚡ Recommended: Verify equipment ETA, develop parallel work plan\n\n**Summary:**\n• 3 of 20 projects are both delayed and high-risk\n• Combined budget exposure: $3.3M\n• All 3 have dependencies that could cascade to other projects\n\nWould you like me to draft escalation notices, generate a risk mitigation plan, or schedule reviews for these projects?`;
+  }
+
+  if (lower.includes('behind schedule') || lower.includes('analyze')) {
+    return `Based on your current portfolio, I've identified 3 projects with critical schedule variance:\n\n• **St. Vincent Behavioral Health** — 14 days behind on structural milestones\n• **Sacred Heart Emergency Expansion** — 11 days behind, pending GC recovery plan\n• **Trinity Central Power Plant Upgrade** — 9 days behind, equipment delivery delays\n\nWould you like me to draft escalation notices or request recovery plans for any of these?`;
   }
 
   if (lower.includes('attention') || lower.includes('today')) {
-    return `Here's your daily summary:\n\n📋 **3 items need your attention:**\n1. RFI #247 from Metro Center — response due today\n2. Change Order #18 for Harbor View — awaiting your approval ($142K)\n3. Monthly draw review for Riverside Commons — due tomorrow\n\n📊 **Portfolio health:** 17/20 projects on track, 3 with delays\n\nShall I help you draft responses or take action on any of these?`;
+    return `Here's your daily summary:\n\n📋 **3 items need your attention:**\n1. RFI #0012 from St. Vincent Behavioral Health — response due today\n2. Change Order #18 for Sacred Heart — awaiting your approval ($142K)\n3. Monthly draw review for Mercy West Pavilion — due tomorrow\n\n📊 **Portfolio health:** 17/20 projects on track, 3 with delays\n\nShall I help you draft responses or take action on any of these?`;
   }
 
   if (lower.includes('draft') || lower.includes('notice')) {
-    return `Here's a draft delay notice:\n\n---\n\n**RE: Schedule Delay Notification — Metro Center Phase II**\n\nDear [GC Contact],\n\nThis letter serves as formal notification that the Metro Center Phase II project is currently tracking 18 days behind the contractual milestone schedule.\n\nPlease submit a recovery plan within 5 business days addressing the following milestones:\n- Structural completion (originally Mar 15)\n- MEP rough-in (originally Apr 1)\n\nWe reserve all rights under the contract.\n\n---\n\nWould you like me to adjust the tone, add specific milestones, or send this through Procore correspondence?`;
+    return `Here's a draft delay notice:\n\n---\n\n**RE: Schedule Delay Notification — St. Vincent Behavioral Health**\n\nDear [GC Contact],\n\nThis letter serves as formal notification that the St. Vincent Behavioral Health project is currently tracking 14 days behind the contractual milestone schedule.\n\nPlease submit a recovery plan within 5 business days addressing the following milestones:\n- Structural completion (originally Mar 15)\n- MEP rough-in (originally Apr 1)\n\nWe reserve all rights under the contract.\n\n---\n\nWould you like me to adjust the tone, add specific milestones, or send this through Procore correspondence?`;
   }
 
   if (lower.includes('summarize')) {

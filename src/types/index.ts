@@ -16,3 +16,5 @@ export * from './documents';
 export * from './assets';
 export * from './action_plans';
 export * from './actions';
+export * from './rfis';
+export * from './specifications';

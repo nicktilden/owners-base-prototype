@@ -1,11 +1,19 @@
 /* ================================================================
  * PROCORE OWNERS PROTOTYPE — DESIGN TOKEN SYSTEM
  *
- * Architecture: Primitives → Semantic Aliases → Theme Overrides
- * Components consume var(--color-*) tokens, never raw hex values.
+ * Architecture: primitives → semantic aliases → theme overrides.
+ * Components use var(--color-*) tokens, not raw hex values.
  *
- * Themes: "default" (Procore standard) | "owner" (Metal-based)
- * Color schemes: "light" | "dark" (set via data-color-scheme attr)
+ * data-theme (omit = Procore standard)    Token ramps used
+ * ─────────────────────────────────────   ───────────────────
+ * (none)                                   Orange + gray (Procore)
+ * owner                                    Metal (Owners default)
+ * owner-alt1                               Slate
+ * owner-alt2                               Metal + black actions (light);
+ *                                          Evergreen (dark)
+ * owner-alt3                               Metal (dark, mid surfaces)
+ *
+ * data-color-scheme: light | dark on <html> (see ThemeContext).
  * ================================================================ */
 
 /* ── 1. Primitive Color Ramps ──────────────────────────────────── */
@@ -46,7 +54,7 @@
   --p-orange-96: #fef5f0;
   --p-orange-98: #fff9f7;
 
-  /* Metal (Owner Brand — anchor #566578, Hue ~213°, Sat ~16%) */
+  /* Metal (Owners default brand — anchor #566578, Hue ~213°, Sat ~16%) */
   --p-metal-10: #0e1117;
   --p-metal-15: #171c24;
   --p-metal-20: #212833;
@@ -65,7 +73,7 @@
   --p-metal-96: #e8ebef;
   --p-metal-98: #f2f4f6;
 
-  /* Slate (Owner Alt 1 — anchor #4a6078, Hue ~210°, Sat ~22%) */
+  /* Slate (Owners — Slate, data-theme owner-alt1) */
   --p-slate-10: #0c1018;
   --p-slate-15: #141b25;
   --p-slate-20: #1e2836;
@@ -81,7 +89,7 @@
   --p-slate-96: #e4ebf1;
   --p-slate-98: #f0f3f7;
 
-  /* Evergreen (Owner Alt 2 — anchor #3d6b63, Hue ~170°, Sat ~25%) */
+  /* Evergreen (Owners — Evergreen dark palette, data-theme owner-alt2 + dark) */
   --p-evergreen-10: #091412;
   --p-evergreen-15: #111f1c;
   --p-evergreen-20: #1a2e2a;
@@ -97,7 +105,7 @@
   --p-evergreen-96: #e2efec;
   --p-evergreen-98: #eff6f4;
 
-  /* Ember (Owner Alt 3 — anchor #7a5e4a, Hue ~25°, Sat ~18%) */
+  /* Ember — warm neutral ramp (reserved; no data-theme maps here yet) */
   --p-ember-10: #171009;
   --p-ember-15: #231a10;
   --p-ember-20: #332618;
@@ -131,7 +139,7 @@
   --p-yellow-50: #d69e2e;
 }
 
-/* ── 2. Semantic Alias Tokens — Default Theme, Light ───────────── */
+/* ── 2. Semantic aliases — Procore (default), light ───────────── */
 
 :root {
   /* Text */
@@ -222,14 +230,14 @@
   --color-pill-text-cyan: #1B7E6E;
 }
 
-/* ── WCAG 2.2 AA Contrast Validation ────────────────────────────
+/* ── WCAG 2.2 AA contrast notes ─────────────────────────────────
  *
- * Default Light:
+ * Procore light:
  *   text-primary   (#232729) on surface-primary (#fff)    → 14.7:1 ✓ AAA
  *   text-secondary  (#6a767c) on surface-primary (#fff)    →  4.5:1 ✓ AA
  *   action-primary (#f47e42) on surface-primary (#fff)    →  2.9:1 ✗ (large text only)
  *
- * Owner Light:
+ * Owners — Metal (light):
  *   action-primary (#455261) on surface-primary (#fff)    →  7.0:1 ✓ AAA
  *   action-primary (#455261) on surface-secondary (#f5f5f5) → 6.6:1 ✓ AA
  *   brand (#566578) on surface-primary (#fff)              →  4.5:1 ✓ AA (large text)
@@ -237,13 +245,13 @@
  *   text-primary   (#232729) on brand-surface (#e8ebef)    → 10.4:1 ✓ AAA
  *
  * Focus rings:
- *   Default: blue-40 (#1d5cc9) → 5.3:1 on white ✓
- *   Owner:   metal-40 (#455261) → 7.0:1 on white ✓
+ *   Procore: blue-40 (#1d5cc9) → 5.3:1 on white ✓
+ *   Owners:  metal-40 (#455261) → 7.0:1 on white ✓
  *
  * Status colors UNCHANGED across themes (red/green/yellow/blue).
  * ──────────────────────────────────────────────────────────────── */
 
-/* ── 3. Owner Theme — Light ────────────────────────────────────── */
+/* ── 3. Owners — Metal — light (data-theme="owner") ────────────── */
 
 [data-theme="owner"] {
   /* Actions → Metal-derived (metal-40 at ~7:1 contrast on white) */
@@ -254,6 +262,7 @@
 
   /* Borders */
   --color-border-default: var(--p-gray-85);
+  --color-nav-border-subtle: var(--p-metal-85);
 
   /* Brand → Metal */
   --color-brand: var(--p-metal-30);
@@ -266,6 +275,7 @@
   --color-nav-surface-hover: var(--p-metal-40);
   --color-nav-border: rgba(138, 151, 167, 0.2);
 
+
   /* Focus ring → Metal-complementary */
   --color-focus-ring: var(--p-metal-40);
   --color-border-focus: var(--p-metal-40);
@@ -275,7 +285,7 @@
   --color-icon-tinted: var(--p-metal-50);
 }
 
-/* ── 3b. Owners Alt 1 — Slate Light ──────────────────────────── */
+/* ── 3b. Owners — Slate — light (data-theme="owner-alt1") ───── */
 
 [data-theme="owner-alt1"] {
   --color-action-primary: var(--p-slate-40);
@@ -299,7 +309,7 @@
   --color-icon-tinted: var(--p-slate-50);
 }
 
-/* ── 3c. Owners Alt 2 — Metal + Black Buttons ────────────────── */
+/* ── 3c. Owners — Metal — light, black primary actions ───────── */
 
 [data-theme="owner-alt2"] {
   --color-action-primary: #000000;
@@ -324,7 +334,7 @@
   --color-text-linked: #000;
 }
 
-/* ── 4. Default Theme — Dark ───────────────────────────────────── */
+/* ── 4. Procore — dark (no data-theme, dark scheme) ───────────── */
 
 [data-color-scheme="dark"]:not([data-theme="owner"]):not([data-theme="owner-alt1"]):not([data-theme="owner-alt2"]):not([data-theme="owner-alt3"]) {
   --color-text-primary: #fff;
@@ -397,7 +407,7 @@
   --color-pill-text-cyan: #DAF2EF;
 }
 
-/* ── 5b. Owners Alt 1 — Slate Dark ─────────────────────────────── */
+/* ── 5b. Owners — Slate — dark ────────────────────────────────── */
 
 [data-theme="owner-alt1"][data-color-scheme="dark"] {
   --color-text-primary: #fff;
@@ -471,7 +481,7 @@
   --color-pill-text-cyan: #DAF2EF;
 }
 
-/* ── 5c. Owners Alt 2 — Evergreen Dark ────────────────────────── */
+/* ── 5c. Owners — Evergreen — dark ────────────────────────────── */
 
 [data-theme="owner-alt2"][data-color-scheme="dark"] {
   --color-text-primary: #fff;
@@ -545,7 +555,7 @@
   --color-pill-text-cyan: #DAF2EF;
 }
 
-/* ── 5d. Owners Alt 3 — Metal Medium Dark ────────────────────── */
+/* ── 5d. Owners — Metal — dark (mid surfaces) ─────────────────── */
 
 [data-theme="owner-alt3"][data-color-scheme="dark"] {
   --color-text-primary: #fff;
@@ -631,6 +641,16 @@
 }
 
 /* ── 7. Global Base Styles (tokenized) ─────────────────────────── */
+
+[data-theme="owner"] [class*="GlobalHeader__Bar"] [class*="GlobalHeader__SearchBarWrap"] {
+  background: var(--color-nav-bg) !important;
+  border: 1.5px solid var(--color-nav-border-subtle) !important;
+}
+
+[data-theme="owner"] [class*="GlobalHeader__Bar"] [class*="GlobalHeader__SearchBarWrap"] [class*="GlobalHeader__KbdBadge"] {
+  background: var(--color-nav-border-subtle) !important;
+  color: var(--color-text-primary) !important;
+}
 
 /* ─── Procore SmartGrid refinements (theme params set in SmartGridWrapper.tsx) ─ */
 
@@ -758,6 +778,12 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  left: 0;
+  right: 0;
+  width: 100%;
 }
 
 header {
@@ -1195,22 +1221,28 @@ div.nextjs-toast {
 }
 
 
-[data-color-scheme="dark"] .b_radiogroup .cPdHyw  {
+[data-color-scheme="dark"] .b_radiogroup .cPdHyw,
+[data-theme="owner"] .b_radiogroup .cPdHyw,
+[data-theme="owner-alt1"] .b_radiogroup .cPdHyw,
+[data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
   background-color: var(--color-surface-secondary) !important;
   color: var(--color-text-secondary) !important;
 }
 
-[data-color-scheme="dark"] .b_radiogroup .eLJGZn  {
+[data-color-scheme="dark"] .b_radiogroup .eLJGZn,
+[data-theme="owner"] .b_radiogroup .eLJGZn,
+[data-theme="owner-alt1"] .b_radiogroup .eLJGZn,
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
   background-color: var(--color-text-primary) !important;
   color: var(--color-surface-primary) !important;
 }
 
-[data-theme="owner-alt2"] .b_radiogroup .cPdHyw  {
+[data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
   background-color: var(--color-surface-primary) !important;
   color: var(--color-text-secondary) !important;
 }
 
-[data-theme="owner-alt2"] .b_radiogroup .eLJGZn  {
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
   background-color: var(--color-text-primary) !important;
   color: var(--color-surface-primary) !important;
 }
@@ -2491,3 +2523,4 @@ div.nextjs-toast {
   background: transparent;
   border: none;
 }
+

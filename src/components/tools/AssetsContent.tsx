@@ -4,7 +4,6 @@ import {
   Button,
   Dropdown,
   Search,
-  SegmentedController,
   Select,
   SplitViewCard,
   Tabs,
@@ -13,10 +12,8 @@ import {
 import {
   Assets as AssetsIcon,
   Filter,
-  Location,
   Plus,
   Sliders,
-  ViewRows,
 } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
@@ -353,22 +350,6 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                       ))}
                     </Select>
                   </div>
-                  <SegmentedController>
-                    <SegmentedController.Segment
-                      selected={viewMode === "rows"}
-                      onClick={() => setViewMode("rows")}
-                      tooltip="List view"
-                    >
-                      <ViewRows />
-                    </SegmentedController.Segment>
-                    <SegmentedController.Segment
-                      selected={viewMode === "grid"}
-                      onClick={() => setViewMode("grid")}
-                      tooltip="Map view"
-                    >
-                      <Location />
-                    </SegmentedController.Segment>
-                  </SegmentedController>
                   <ToggleButton
                     selected={configOpen}
                     className="b_toggle"

@@ -10,9 +10,20 @@ export default function ProjectNameCellRenderer(params: ICellRendererParams<Proj
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, height: "100%", overflow: "hidden" }}>
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <a
+        href="#"
+        onClick={(e) => e.preventDefault()}
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          color: "var(--color-text-link)",
+          textDecoration: "underline",
+          fontWeight: 500,
+        }}
+      >
         {params.value}
-      </span>
+      </a>
       {connection && <ConnectIconWithPopover connection={connection} />}
     </div>
   );

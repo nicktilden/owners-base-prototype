@@ -376,8 +376,8 @@ const LEGEND_COLORS = [
 export default function ScheduleHeatmapCard() {
   const { filteredProjectRows } = useHubFilters();
   return (
-    <DetailPage.Card navigationLabel="Schedule & Milestones" className="card_container">
-      <DetailPage.Section heading="Schedule & Milestones">
+    <DetailPage.Card navigationLabel="Schedule Heatmap" className="card_container">
+      <DetailPage.Section heading="Schedule Heatmap">
         <Legend>
           <LegendGradient>
             <LegendLabel>Behind</LegendLabel>

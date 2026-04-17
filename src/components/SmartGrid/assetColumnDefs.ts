@@ -72,7 +72,7 @@ export function getAssetColumnDefs(
               e.preventDefault();
               onAssetClick?.(params.data!);
             },
-            style: { color: "var(--color-text-link)", textDecoration: "none", fontWeight: 500 },
+            style: { color: "var(--color-text-link)", textDecoration: "underline", fontWeight: 500 },
           },
           params.value
         );

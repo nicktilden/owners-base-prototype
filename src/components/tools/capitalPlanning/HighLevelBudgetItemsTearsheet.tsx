@@ -333,7 +333,7 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
   );
 
   return (
-    <Tearsheet open={open} onClose={onClose} placement="right" block aria-label="High level budget items">
+    <Tearsheet open={open} onClose={onClose} placement="right" aria-label="High level budget items">
       {row ? (
         <div className="high-level-budget-items-tearsheet-layout">
         <Page

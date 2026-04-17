@@ -58,6 +58,7 @@ interface HubCardFrameProps {
   actions?: React.ReactNode;
   controls?: React.ReactNode;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
 export default function HubCardFrame({
@@ -68,9 +69,10 @@ export default function HubCardFrame({
   actions,
   controls,
   children,
+  style,
 }: HubCardFrameProps) {
   return (
-    <Card className="card_container">
+    <Card className="card_container" style={style}>
       <Header>
         <HeaderLeft>
           {titlePrefix}

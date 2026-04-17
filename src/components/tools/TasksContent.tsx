@@ -3,7 +3,6 @@ import {
   Button,
   Dropdown,
   Search,
-  SegmentedController,
   SplitViewCard,
   Tabs,
   ToggleButton,
@@ -13,7 +12,6 @@ import {
   Filter,
   Plus,
   Sliders,
-  ViewRows,
 } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
@@ -270,15 +268,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                   </ToggleButton>
                 </ToolbarLeft>
                 <ToolbarRight>
-                  <SegmentedController>
-                    <SegmentedController.Segment
-                      selected={true}
-                      onClick={() => {}}
-                      tooltip="List view"
-                    >
-                      <ViewRows />
-                    </SegmentedController.Segment>
-                  </SegmentedController>
                   <ToggleButton
                     selected={configOpen}
                     icon={<Sliders />}

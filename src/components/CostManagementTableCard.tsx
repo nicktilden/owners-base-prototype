@@ -228,7 +228,7 @@ export default function CostManagementTableCard() {
                 ))}
               </Select>
             </div>
-            <SegmentedController>
+            <SegmentedController className="b_radiogroup">
               <SegmentedController.Segment
                 selected={viewMode === "rows"}
                 onClick={() => setViewMode("rows")}
