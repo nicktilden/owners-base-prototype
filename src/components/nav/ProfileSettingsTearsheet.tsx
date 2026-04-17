@@ -1,16 +1,45 @@
-import React, { useMemo, useState } from 'react';
-import { Box, Button, Card, Checkbox, Form, H2, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
-import { createGlobalStyle } from 'styled-components';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, Card, Form, H2, Page, Switch, Table, Tabs, Tearsheet, Typography } from '@procore/core-react';
+import styled, { createGlobalStyle } from 'styled-components';
 import { useData } from '@/context/DataContext';
 import { usePersona } from '@/context/PersonaContext';
+import { useTheme } from '@/context/ThemeContext';
+import type { ColDef } from 'ag-grid-community';
+import { SmartGridWrapper } from '@/components/SmartGrid';
 import type { PermissionKey, ToolPermissionLevel } from '@/types/permissions';
 import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
+import { THEME_APPEARANCE_PRESETS, type ThemePresetId } from '@/constants/themeDisplay';
 
 const ProfileTearsheetWidth = createGlobalStyle`
   /* Scope to this tearsheet only — unscoped rules steal width from every Tearsheet (e.g. HLBI). */
   [class*="StyledTearsheetBody"]:has(> .profile-settings-tearsheet-root) {
     flex: 0 0 50vw !important;
+  }
+`;
+
+const ThemeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+`;
+
+const ThemeCardBtn = styled.button<{ $selected: boolean }>`
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 2px solid ${({ $selected }) => ($selected ? 'var(--color-action-primary)' : 'var(--color-border-default)')};
+  background: var(--color-surface-card);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    border-color: ${({ $selected }) => ($selected ? 'var(--color-action-primary)' : 'var(--color-border-hover)')};
+  }
+  &:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
   }
 `;
 
@@ -33,7 +62,16 @@ interface ProfileFormValues {
 }
 
 const USER_ROLES: UserRole[] = ['Executive Strategy', 'Operations & Administration', 'Project Delivery', 'Field Opperations'];
-const FORM_CARD_STYLE = { padding: 16 };
+const FORM_CARD_STYLE: React.CSSProperties = { padding: 16, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' };
+
+function themeOptionKey(themeName: string, scheme: string): ThemePresetId {
+  return `${themeName}-${scheme}` as ThemePresetId;
+}
+
+function parseThemeOption(val: ThemePresetId): { theme: string; scheme: 'light' | 'dark' } {
+  const lastDash = val.lastIndexOf('-');
+  return { theme: val.slice(0, lastDash), scheme: val.slice(lastDash + 1) as 'light' | 'dark' };
+}
 
 function toIso(value: Date | null): string { return value ? value.toISOString() : ''; }
 function safeParseRecord<T extends Record<string, unknown>>(value: string, fallback: T): T {
@@ -51,6 +89,19 @@ function parseDateOrFallback(value: string, fallback: Date | null): Date | null 
 
 export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSettingsTearsheetProps) {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('Personal');
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    const timer = requestAnimationFrame(() => {
+      el.scrollTop = 0;
+      el.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(timer);
+  }, [selectedTab]);
+
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [rememberDevices, setRememberDevices] = useState(true);
   const [securityAlerts, setSecurityAlerts] = useState(true);
@@ -62,6 +113,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
   const [profileDiscoverability, setProfileDiscoverability] = useState(true);
   const { activeUser, setActiveUser, users, setUsers } = usePersona();
   const { data, setData } = useData();
+  const { theme, colorScheme, resolvedColorScheme, setTheme, setColorScheme } = useTheme();
+  const isDark = resolvedColorScheme === 'dark';
 
   const projectOptions = useMemo(
     () => data.projects.map((project) => ({ id: project.id, label: `${project.number} - ${project.name}` })),
@@ -196,6 +249,69 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     return (
       <>
       <Card>
+        <Box style={FORM_CARD_STYLE}>
+          <H2 style={{ marginBottom: 4 }}>Appearance</H2>
+          <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
+            Choose a Procore or Owners theme and a light or dark color scheme.
+          </Typography>
+
+          <ThemeGrid role="radiogroup" aria-label="Interface theme">
+            {THEME_APPEARANCE_PRESETS.map((opt) => {
+              const isSelected = opt.value === themeOptionKey(theme, resolvedColorScheme);
+              const { preview } = opt;
+              return (
+                <ThemeCardBtn
+                  key={opt.value}
+                  $selected={isSelected}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-label={opt.label}
+                  onClick={() => {
+                    const parsed = parseThemeOption(opt.value);
+                    setTheme(parsed.theme as Parameters<typeof setTheme>[0]);
+                    setColorScheme(parsed.scheme);
+                  }}
+                >
+                  <div style={{ margin: 8, borderRadius: 6, overflow: 'hidden', background: preview.surface, display: 'flex', flexDirection: 'column', height: 80 }}>
+                    <div style={{ display: 'flex', gap: 3, padding: '6px 7px 4px' }}>
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FF5F56', display: 'block' }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFBD2E', display: 'block' }} />
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#27C93F', display: 'block' }} />
+                    </div>
+                    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+                      <div style={{ width: 20, background: preview.nav, flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '5px 3px', gap: 3 }}>
+                        <div style={{ height: 2.5, borderRadius: 1, background: preview.accent, opacity: 0.9 }} />
+                        <div style={{ height: 2, borderRadius: 1, background: preview.muted, opacity: 0.4 }} />
+                        <div style={{ height: 2, borderRadius: 1, background: preview.muted, opacity: 0.4 }} />
+                      </div>
+                      <div style={{ flex: 1, padding: '5px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <div style={{ height: 5, width: '75%', borderRadius: 2.5, background: preview.accent }} />
+                        <div style={{ height: 3, width: '55%', borderRadius: 1.5, background: preview.muted, opacity: 0.5 }} />
+                        <div style={{ flex: 1 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: preview.accent, display: 'block' }} />
+                          <div style={{ height: 4, flex: 1, borderRadius: 2, background: preview.accent, opacity: 0.65 }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 10px 8px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-primary)' }}>{opt.label}</span>
+                    {isSelected && (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="8" fill="var(--color-action-primary)" />
+                        <path d="M4.5 8L7 10.5L11.5 5.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </ThemeCardBtn>
+              );
+            })}
+          </ThemeGrid>
+        </Box>
+      </Card>
+
+      <Card style={{ marginTop: 16 }}>
         <Form
           initialValues={{ language: 'English (US)', numberFormat: 'Default', dateFormat: 'Relative', prefsTimeZone: '(GMT-5:00) Chicago' }}
           onSubmit={() => undefined}
@@ -408,8 +524,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Typography intent="body">Accounting sync integration disabled</Typography>
             </Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Connected Apps</Button>
+<Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+                          <Button variant="primary" className="b_primary" type="submit">Save Connected Apps</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -417,81 +533,83 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     );
   }
 
+  const favProjectColDefs = useMemo<ColDef<{ id: string; label: string }>[]>(() => [
+    { field: 'label', headerName: 'Project', flex: 1 },
+  ], []);
+
+  const favToolColDefs = useMemo<ColDef<{ id: string; label: string }>[]>(() => [
+    { field: 'label', headerName: 'Tool', flex: 1 },
+  ], []);
+
+  const favProjectsSelected = useMemo(
+    () => (activeUser?.favorites.projectIds ?? []).reduce<Record<string, boolean>>((acc, id) => { acc[id] = true; return acc; }, {}),
+    [activeUser?.favorites.projectIds]
+  );
+
+  const favToolsSelected = useMemo(
+    () => (activeUser?.favorites.toolKeys ?? []).reduce<Record<string, boolean>>((acc, id) => { acc[id] = true; return acc; }, {}),
+    [activeUser?.favorites.toolKeys]
+  );
+
+  const handleProjectSelectionChanged = useCallback((event: { api: { getSelectedRows: () => { id: string }[] } }) => {
+    const selectedIds = event.api.getSelectedRows().map((r: { id: string }) => r.id);
+    updateFavoriteSelections(selectedIds, activeUser?.favorites.toolKeys ?? []);
+  }, [activeUser?.favorites.toolKeys, updateFavoriteSelections]);
+
+  const handleToolSelectionChanged = useCallback((event: { api: { getSelectedRows: () => { id: string }[] } }) => {
+    const selectedIds = event.api.getSelectedRows().map((r: { id: string }) => r.id);
+    updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], selectedIds);
+  }, [activeUser?.favorites.projectIds, updateFavoriteSelections]);
+
   function renderFavoritesTab() {
     return (
       <>
         <Card style={{ marginBottom: 16, padding: 16 }}>
           <H2 style={{ marginBottom: 16 }}>Favorite Projects</H2>
-          <Table.Container>
-            <Table>
-              <Table.Header>
-                <Table.HeaderRow>
-                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
-                  <Table.HeaderCell>Project</Table.HeaderCell>
-                </Table.HeaderRow>
-              </Table.Header>
-              <Table.Body>
-                {projectOptions.map((project) => {
-                  const checked = Boolean(activeUser?.favorites.projectIds.includes(project.id));
-                  return (
-                    <Table.BodyRow key={project.id}>
-                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
-                        <Checkbox
-                          checked={checked}
-                          onChange={(event) => {
-                            const currentlySelected = activeUser?.favorites.projectIds ?? [];
-                            const nextProjectIds = event.currentTarget.checked
-                              ? [...currentlySelected, project.id]
-                              : currentlySelected.filter((id) => id !== project.id);
-                            updateFavoriteSelections(nextProjectIds, activeUser?.favorites.toolKeys ?? []);
-                          }}
-                          aria-label={`Favorite ${project.label}`}
-                        />
-                      </Table.BodyCell>
-                      <Table.BodyCell><Table.TextCell>{project.label}</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  );
-                })}
-              </Table.Body>
-            </Table>
-          </Table.Container>
+          <div style={{ height: 400, border: '1px solid var(--color-border-default)', borderRadius: 0, overflow: 'hidden' }}>
+            <SmartGridWrapper<{ id: string; label: string }>
+              id="fav-projects-grid"
+              height="100%"
+              rowData={projectOptions}
+              columnDefs={favProjectColDefs}
+              getRowId={(params) => params.data.id}
+              rowSelection={{ mode: 'multiRow', checkboxLocation: 'selectionColumn', groupSelects: 'descendants' }}
+              selectionColumnDef={{ width: 48, maxWidth: 48, minWidth: 48, resizable: false, suppressMovable: true, sortable: false, suppressHeaderMenuButton: true }}
+              sideBar={false}
+              defaultColDef={{ resizable: false, sortable: true, filter: false, suppressHeaderMenuButton: true }}
+              isRowSelectable={() => true}
+              onSelectionChanged={handleProjectSelectionChanged}
+              onGridReady={(event) => {
+                event.api.forEachNode((node) => {
+                  if (favProjectsSelected[node.data?.id ?? '']) node.setSelected(true);
+                });
+              }}
+            />
+          </div>
         </Card>
 
         <Card style={{ marginBottom: 16, padding: 16 }}>
           <H2 style={{ marginBottom: 16 }}>Favorite Tools</H2>
-          <Table.Container>
-            <Table>
-              <Table.Header>
-                <Table.HeaderRow>
-                  <Table.HeaderCell style={{ width: 55, textAlign: 'center' }}>{' '}</Table.HeaderCell>
-                  <Table.HeaderCell>Tool</Table.HeaderCell>
-                </Table.HeaderRow>
-              </Table.Header>
-              <Table.Body>
-                {toolOptions.map((tool) => {
-                  const checked = Boolean(activeUser?.favorites.toolKeys.includes(tool.id as ToolKey));
-                  return (
-                    <Table.BodyRow key={tool.id}>
-                      <Table.BodyCell style={{ width: 55, textAlign: 'center' }}>
-                        <Checkbox
-                          checked={checked}
-                          onChange={(event) => {
-                            const currentlySelected = activeUser?.favorites.toolKeys ?? [];
-                            const nextToolIds = event.currentTarget.checked
-                              ? [...currentlySelected, tool.id as ToolKey]
-                              : currentlySelected.filter((id) => id !== tool.id);
-                            updateFavoriteSelections(activeUser?.favorites.projectIds ?? [], nextToolIds);
-                          }}
-                          aria-label={`Favorite ${tool.label}`}
-                        />
-                      </Table.BodyCell>
-                      <Table.BodyCell><Table.TextCell>{tool.label}</Table.TextCell></Table.BodyCell>
-                    </Table.BodyRow>
-                  );
-                })}
-              </Table.Body>
-            </Table>
-          </Table.Container>
+          <div style={{ height: 400, border: '1px solid var(--color-border-default)', borderRadius: 0, overflow: 'hidden' }}>
+            <SmartGridWrapper<{ id: string; label: string }>
+              id="fav-tools-grid"
+              height="100%"
+              rowData={toolOptions}
+              columnDefs={favToolColDefs}
+              getRowId={(params) => params.data.id}
+              rowSelection={{ mode: 'multiRow', checkboxLocation: 'selectionColumn', groupSelects: 'descendants' }}
+              selectionColumnDef={{ width: 48, maxWidth: 48, minWidth: 48, resizable: false, suppressMovable: true, sortable: false, suppressHeaderMenuButton: true }}
+              sideBar={false}
+              defaultColDef={{ resizable: false, sortable: true, filter: false, suppressHeaderMenuButton: true }}
+              isRowSelectable={() => true}
+              onSelectionChanged={handleToolSelectionChanged}
+              onGridReady={(event) => {
+                event.api.forEachNode((node) => {
+                  if (favToolsSelected[node.data?.id ?? '']) node.setSelected(true);
+                });
+              }}
+            />
+          </div>
         </Card>
       </>
     );
@@ -518,8 +636,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable budget alerts" defaultChecked /><Typography intent="body">Budget alerts</Typography></Box>
             <Box style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Switch aria-label="Enable schedule alerts" defaultChecked /><Typography intent="body">Schedule alerts</Typography></Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Notifications</Button>
+              <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" type="submit">Save Notifications</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -571,13 +689,13 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
                     <Table.BodyCell><Table.TextCell>MacBook Pro (Current)</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Austin, TX</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Now</Table.TextCell></Table.BodyCell>
-                    <Table.BodyCell><Button variant="tertiary" size="sm" disabled>Current Session</Button></Table.BodyCell>
+                    <Table.BodyCell><Button className="b_tertiary" variant="tertiary" size="sm" disabled>Current Session</Button></Table.BodyCell>
                   </Table.BodyRow>
                   <Table.BodyRow>
                     <Table.BodyCell><Table.TextCell>iPhone 15</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>Dallas, TX</Table.TextCell></Table.BodyCell>
                     <Table.BodyCell><Table.TextCell>2 hours ago</Table.TextCell></Table.BodyCell>
-                    <Table.BodyCell><Button variant="secondary" size="sm">Revoke</Button></Table.BodyCell>
+                    <Table.BodyCell><Button variant="secondary" className="b_secondary" data-variant="secondary" size="sm">Revoke</Button></Table.BodyCell>
                   </Table.BodyRow>
                 </Table.Body>
               </Table>
@@ -588,8 +706,8 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
               <Typography intent="body">Email me when suspicious activity is detected</Typography>
             </Box>
             <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-              <Button variant="secondary" onClick={onClose}>Cancel</Button>
-              <Button variant="primary" type="submit">Save Security Settings</Button>
+              <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" type="submit">Save Security Settings</Button>
             </Form.SettingsPageFooter>
           </Form.Form>
         </Form>
@@ -605,71 +723,82 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
           className="profile-settings-tearsheet-root"
           style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}
         >
-        <Page style={{ height: '100%' }}>
-          <Page.Main style={{ height: '100%', overflow: 'hidden' }}>
-            <Page.Header>
+        <Page style={{ height: '100%', background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}>
+          <Page.Main style={{ height: '100%', overflow: 'hidden', background: 'var(--color-surface-primary)' }}>
+            <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
               <Page.Title><Typography intent="h2">My Profile Settings</Typography></Page.Title>
               <Page.Tabs>
                 <Tabs>
-                  {PROFILE_TABS.map((tab) => (
-                    <Tabs.Tab key={tab} role="button" selected={selectedTab === tab} onPress={() => setSelectedTab(tab)}>
-                      {tab}
-                    </Tabs.Tab>
-                  ))}
+                  {PROFILE_TABS.map((tab) => {
+                    const isSelected = selectedTab === tab;
+                    return (
+                      <Tabs.Tab
+                        key={tab}
+                        role="button"
+                        selected={isSelected}
+                        onPress={() => setSelectedTab(tab)}
+                        style={isDark ? { color: isSelected ? 'var(--color-text-link)' : 'var(--color-text-primary)' } : undefined}
+                      >
+                        {tab}
+                      </Tabs.Tab>
+                    );
+                  })}
                 </Tabs>
               </Page.Tabs>
             </Page.Header>
-            <Page.Body style={{ padding: 24, overflowY: 'auto' }}>
+            <Page.Body ref={bodyRef} tabIndex={-1} style={{ padding: 24, overflowY: 'auto', background: 'var(--color-surface-secondary)', outline: 'none' }}>
               {selectedTab === 'Personal' && (
-                <Card>
-                  <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
-                    <Form.Form style={FORM_CARD_STYLE}>
-                      <H2 style={{ marginBottom: 16 }}>Personal Info</H2>
-                      <Form.Row>
-                        <Form.Text name="firstName" label="First Name" colStart={1} colWidth={6} required />
-                        <Form.Text name="lastName" label="Last Name" colStart={7} colWidth={6} required />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="email" label="Email Address" colStart={1} colWidth={6} required />
-                        <Form.Text name="jobTitle" label="Job Title" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Select
-                          name="role"
-                          label="Role"
-                          colStart={1}
-                          colWidth={6}
-                          disabled
-                          options={USER_ROLES.map((role) => ({ id: role, label: role }))}
-                        />
-                        <Form.Text name="companyName" label="Company Name" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="avatar" label="Avatar URL" colStart={1} colWidth={6} />
-                        <Form.Text name="accountId" label="Account ID" colStart={7} colWidth={6} disabled />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="timeZone" label="Time Zone" colStart={1} colWidth={6} />
-                        <Form.Text name="officeName" label="Office Name" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeAddress" label="Office Address" colStart={1} colWidth={6} />
-                        <Form.Text name="officeCity" label="Office City" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeState" label="Office State" colStart={1} colWidth={6} />
-                        <Form.Text name="officeZip" label="Office ZIP" colStart={7} colWidth={6} />
-                      </Form.Row>
-                      <Form.Row>
-                        <Form.Text name="officeCountry" label="Office Country" colStart={1} colWidth={6} />
-                      </Form.Row>
-                      <Form.SettingsPageFooter style={{ marginTop: 24 }}>
-                        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                        <Button variant="primary" type="submit">Save Profile</Button>
-                      </Form.SettingsPageFooter>
-                    </Form.Form>
-                  </Form>
-                </Card>
+                <>
+                  <Card>
+                    <Form initialValues={initialValues} onSubmit={handleProfileSave} enableReinitialize>
+                      <Form.Form style={FORM_CARD_STYLE}>
+                        <H2 style={{ marginBottom: 16 }}>Personal Info</H2>
+                        <Form.Row>
+                          <Form.Text name="firstName" label="First Name" colStart={1} colWidth={6} required />
+                          <Form.Text name="lastName" label="Last Name" colStart={7} colWidth={6} required />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="email" label="Email Address" colStart={1} colWidth={6} required />
+                          <Form.Text name="jobTitle" label="Job Title" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Select
+                            name="role"
+                            label="Role"
+                            colStart={1}
+                            colWidth={6}
+                            disabled
+                            options={USER_ROLES.map((role) => ({ id: role, label: role }))}
+                          />
+                          <Form.Text name="companyName" label="Company Name" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="avatar" label="Avatar URL" colStart={1} colWidth={6} />
+                          <Form.Text name="accountId" label="Account ID" colStart={7} colWidth={6} disabled />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="timeZone" label="Time Zone" colStart={1} colWidth={6} />
+                          <Form.Text name="officeName" label="Office Name" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeAddress" label="Office Address" colStart={1} colWidth={6} />
+                          <Form.Text name="officeCity" label="Office City" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeState" label="Office State" colStart={1} colWidth={6} />
+                          <Form.Text name="officeZip" label="Office ZIP" colStart={7} colWidth={6} />
+                        </Form.Row>
+                        <Form.Row>
+                          <Form.Text name="officeCountry" label="Office Country" colStart={1} colWidth={6} />
+                        </Form.Row>
+                        <Form.SettingsPageFooter style={{ marginTop: 24 }}>
+                          <Button variant="secondary" className="b_secondary" data-variant="secondary" onClick={onClose}>Cancel</Button>
+                          <Button variant="primary" className="b_primary" type="submit">Save Profile</Button>
+                        </Form.SettingsPageFooter>
+                      </Form.Form>
+                    </Form>
+                  </Card>
+                </>
               )}
               {selectedTab === 'Preferences' && renderPreferencesTab()}
               {selectedTab === 'Favorites' && renderFavoritesTab()}

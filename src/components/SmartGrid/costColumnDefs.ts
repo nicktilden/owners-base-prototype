@@ -110,8 +110,8 @@ export const costColumnDefs: ColDef<ProjectRow>[] = [
       fmtVariance(params.value),
     cellStyle: (params) => {
       if (params.value == null) return null;
-      if (params.value > 0) return { color: "#1a7d3a" };
-      if (params.value < 0) return { color: "#b91c1c" };
+      if (params.value > 0) return { color: "var(--color-icon-success)" };
+      if (params.value < 0) return { color: "var(--color-text-error)" };
       return null;
     },
   },

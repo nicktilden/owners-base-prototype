@@ -5,10 +5,15 @@
  */
 
 import React, { useEffect } from 'react';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { createGlobalStyle } from 'styled-components';
 import { PersonaProvider, usePersona } from '@/context/PersonaContext';
 import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
+import { AiPanelProvider } from '@/context/AiPanelContext';
+import dynamic from 'next/dynamic';
+
+const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
 
 const TearsheetAnimationOverride = createGlobalStyle`
   /* Tearsheet panel: use CSS transitions instead of keyframe animations */
@@ -47,6 +52,8 @@ import { tasks } from '@/data/seed/tasks';
 import { documents } from '@/data/seed/documents';
 import { assets } from '@/data/seed/assets';
 import { actionPlans } from '@/data/seed/action_plans';
+import { rfis } from '@/data/seed/rfis';
+import { specifications } from '@/data/seed/specifications';
 
 function SeedLoader({ children }: { children: React.ReactNode }) {
   const { setData } = useData();
@@ -65,6 +72,8 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
       documents,
       assets,
       actionPlans,
+      rfis,
+      specifications,
     });
     setUsers(users);
     setActiveUser(activeUser);
@@ -75,15 +84,20 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <DataProvider>
-      <PersonaProvider>
-        <LevelProvider>
-          <TearsheetAnimationOverride />
-          <SeedLoader>
-            {children}
-          </SeedLoader>
-        </LevelProvider>
-      </PersonaProvider>
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <PersonaProvider>
+          <LevelProvider>
+            <AiPanelProvider>
+              <TearsheetAnimationOverride />
+              <SeedLoader>
+                {children}
+                <AiChatPanel />
+              </SeedLoader>
+            </AiPanelProvider>
+          </LevelProvider>
+        </PersonaProvider>
+      </DataProvider>
+    </ThemeProvider>
   );
 }

@@ -54,7 +54,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -67,7 +67,7 @@ const ToolbarLeft = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   overflow: hidden;
 `;
 
@@ -133,7 +133,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
         filter: "agSetColumnFilter",
         valueGetter: (params) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
-        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
       });
     }
 
@@ -143,7 +143,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
         headerName: "Title",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
       },
       {
         field: "type",

@@ -1,3 +1,657 @@
+/* ================================================================
+ * PROCORE OWNERS PROTOTYPE — DESIGN TOKEN SYSTEM
+ *
+ * Architecture: primitives → semantic aliases → theme overrides.
+ * Components use var(--color-*) tokens, not raw hex values.
+ *
+ * data-theme (omit = Procore standard)    Token ramps used
+ * ─────────────────────────────────────   ───────────────────
+ * (none)                                   Orange + gray (Procore)
+ * owner                                    Metal (Owners default)
+ * owner-alt1                               Slate
+ * owner-alt2                               Metal + black actions (light);
+ *                                          Evergreen (dark)
+ * owner-alt3                               Metal (dark, mid surfaces)
+ *
+ * data-color-scheme: light | dark on <html> (see ThemeContext).
+ * ================================================================ */
+
+/* ── 1. Primitive Color Ramps ──────────────────────────────────── */
+
+:root {
+  --p-white: #ffffff;
+  --p-black: #000000;
+
+  /* Gray (Hue 200°, Sat 8%) — 14-step tonal range */
+  --p-gray-10: #131517;
+  --p-gray-15: #232729;
+  --p-gray-20: #2e3336;
+  --p-gray-30: #3f4549;
+  --p-gray-40: #50575d;
+  --p-gray-45: #6a767c;
+  --p-gray-50: #76838a;
+  --p-gray-60: #8c969c;
+  --p-gray-70: #a3abb1;
+  --p-gray-85: #c4cbcf;
+  --p-gray-90: #d6dadc;
+  --p-gray-94: #e8eaeb;
+  --p-gray-96: #f0f1f2;
+  --p-gray-98: #f7f8f8;
+
+  /* Orange (Procore Brand — Hue 19°, Sat 100%) */
+  --p-orange-10: #2d1408;
+  --p-orange-15: #3d1c0e;
+  --p-orange-20: #4e2414;
+  --p-orange-30: #6f3520;
+  --p-orange-40: #91472d;
+  --p-orange-45: #c45a2e;
+  --p-orange-50: #FF5200; 
+  --p-orange-60: #f69565;
+  --p-orange-70: #f8ac88;
+  --p-orange-85: #fcd5c2;
+  --p-orange-90: #fde3d6;
+  --p-orange-94: #fef0e9;
+  --p-orange-96: #fef5f0;
+  --p-orange-98: #fff9f7;
+
+  /* Metal (Owners default brand — anchor #566578, Hue ~213°, Sat ~16%) */
+  --p-metal-10: #0e1117;
+  --p-metal-15: #171c24;
+  --p-metal-20: #212833;
+  --p-metal-25: #2a333f;
+  --p-metal-30: #333d4b;
+  --p-metal-35: #3c4856;
+  --p-metal-40: #455261;
+  --p-metal-45: #4d5a6c;
+  --p-metal-50: #566578;
+  --p-metal-55: #627184;
+  --p-metal-60: #6f7e90;
+  --p-metal-70: #8a97a7;
+  --p-metal-85: #b8c1cc;
+  --p-metal-90: #cdd3db;
+  --p-metal-94: #dde1e7;
+  --p-metal-96: #e8ebef;
+  --p-metal-98: #f2f4f6;
+
+  /* Slate (Owners — Slate, data-theme owner-alt1) */
+  --p-slate-10: #0c1018;
+  --p-slate-15: #141b25;
+  --p-slate-20: #1e2836;
+  --p-slate-30: #2e3d50;
+  --p-slate-40: #3e5268;
+  --p-slate-45: #455e78;
+  --p-slate-50: #4a6078;
+  --p-slate-60: #637a94;
+  --p-slate-70: #8096ad;
+  --p-slate-85: #adbfcf;
+  --p-slate-90: #c4d1dd;
+  --p-slate-94: #d8e1ea;
+  --p-slate-96: #e4ebf1;
+  --p-slate-98: #f0f3f7;
+
+  /* Evergreen (Owners — Evergreen dark palette, data-theme owner-alt2 + dark) */
+  --p-evergreen-10: #091412;
+  --p-evergreen-15: #111f1c;
+  --p-evergreen-20: #1a2e2a;
+  --p-evergreen-30: #28453f;
+  --p-evergreen-40: #365b53;
+  --p-evergreen-45: #3d6b63;
+  --p-evergreen-50: #487a71;
+  --p-evergreen-60: #5e9188;
+  --p-evergreen-70: #7daaa2;
+  --p-evergreen-85: #a8c9c3;
+  --p-evergreen-90: #c0d9d4;
+  --p-evergreen-94: #d5e7e3;
+  --p-evergreen-96: #e2efec;
+  --p-evergreen-98: #eff6f4;
+
+  /* Ember — warm neutral ramp (reserved; no data-theme maps here yet) */
+  --p-ember-10: #171009;
+  --p-ember-15: #231a10;
+  --p-ember-20: #332618;
+  --p-ember-30: #4d3a27;
+  --p-ember-40: #664e36;
+  --p-ember-45: #735840;
+  --p-ember-50: #7a5e4a;
+  --p-ember-60: #947861;
+  --p-ember-70: #ab957f;
+  --p-ember-85: #ccbcad;
+  --p-ember-90: #dbd0c5;
+  --p-ember-94: #e8e0d8;
+  --p-ember-96: #efe9e3;
+  --p-ember-98: #f6f3f0;
+
+  /* Red (Critical — Hue 360°, Sat 70%) */
+  --p-red-50: #c53030;
+  --p-red-70: #e06666;
+
+  /* Green (Success — Hue 125°, Sat 50%) */
+  --p-green-30: #276749;
+  --p-green-50: #38a169;
+
+  /* Blue (Highlight — Hue 218°, Sat 75%) */
+  --p-blue-40: #1d5cc9;
+  --p-blue-45: #2563eb;
+  --p-blue-50: #3b82f6;
+  --p-blue-85: #bfdbfe;
+
+  /* Yellow (Warning — Hue 45°, Sat 85%) */
+  --p-yellow-50: #d69e2e;
+}
+
+/* ── 2. Semantic aliases — Procore (default), light ───────────── */
+
+:root {
+  /* Text */
+  --color-text-primary: var(--p-gray-15);
+  --color-text-secondary: var(--p-gray-45);
+  --color-text-disabled: var(--p-gray-70);
+  --color-text-error: var(--p-red-50);
+  --color-text-tinted: var(--p-blue-45);
+  --color-text-link: #1d5cc9;
+  --color-text-reversed: var(--p-white);
+  --color-text-on-action: var(--p-white);
+
+  /* Surfaces */
+  --color-surface-primary: var(--p-white);
+  --color-surface-card: var(--p-white);
+  --color-surface-secondary: #f5f5f5;
+  --color-surface-tertiary: var(--p-gray-96);
+  --color-surface-hover: #f4f5f6;
+  --color-surface-active: var(--p-gray-94);
+  --color-surface-reversed: var(--p-gray-15);
+
+  /* Actions */
+  --color-action-primary: var(--p-orange-50);
+  --color-action-primary-hover: var(--p-orange-45);
+  --color-action-primary-disabled: var(--p-orange-85);
+  --color-action-text: var(--p-white);
+
+  /* Brand */
+  --color-brand: var(--p-orange-50);
+  --color-brand-surface: var(--p-orange-96);
+
+  /* Borders */
+  --color-border-default: var(--p-gray-85);
+  --color-border-strong: var(--p-gray-70);
+  --color-border-separator: var(--p-gray-90);
+  --color-border-hover: var(--p-gray-45);
+  --color-border-focus: var(--p-blue-40);
+  --color-border-alert: var(--p-red-50);
+  --color-card-border: transparent;
+
+  /* Icons */
+  --color-icon-primary: var(--p-gray-15);
+  --color-icon-secondary: var(--p-gray-45);
+  --color-icon-tinted: var(--p-blue-50);
+  --color-icon-success: var(--p-green-30);
+  --color-icon-alert: var(--p-red-50);
+
+  /* Navigation chrome */
+  --color-nav-bg: var(--p-black);
+  --color-nav-text: var(--p-white);
+  --color-nav-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-nav-hover: rgba(117, 131, 138, 0.3);
+  --color-nav-surface: rgb(70, 79, 83);
+  --color-nav-surface-hover: rgb(85, 95, 100);
+  --color-nav-overlay: rgba(255, 255, 255, 0.15);
+  --color-nav-border: rgba(255, 255, 255, 0.1);
+  --color-nav-border-focus: rgba(255, 255, 255, 0.6);
+  --color-nav-border-subtle: rgba(255, 255, 255, 0.25);
+
+  /* Shadows */
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-shadow-strong: rgba(0, 0, 0, 0.2);
+
+  /* Focus ring */
+  --color-focus-ring: var(--p-blue-40);
+
+  /* Pills */
+  --color-pill-bg-green: #E8F7E9;
+  --color-pill-bg-red: #FAE5E5;
+  --color-pill-bg-gray: #EEF0F1;
+  --color-pill-bg-blue: #E4ECFB;
+  --color-pill-bg-yellow: #FBF0D0;
+  --color-pill-bg-magenta: #F9E6F6;
+  --color-pill-bg-cyan: #EFFBF9;
+  --color-pill-border-green: #8CD993;
+  --color-pill-border-red: #F3BEBE;
+  --color-pill-border-gray: #D6DADC;
+  --color-pill-border-blue: #BCD1F5;
+  --color-pill-border-yellow: #F0C442;
+  --color-pill-border-magenta: #F0C2E8;
+  --color-pill-border-cyan: #C0F2E9;
+  --color-pill-text-green: #26732D;
+  --color-pill-text-red: #C42223;
+  --color-pill-text-gray: #464F53;
+  --color-pill-text-blue: #1D5CC9;
+  --color-pill-text-yellow: #993000;
+  --color-pill-text-magenta: #A3298F;
+  --color-pill-text-cyan: #1B7E6E;
+}
+
+/* ── WCAG 2.2 AA contrast notes ─────────────────────────────────
+ *
+ * Procore light:
+ *   text-primary   (#232729) on surface-primary (#fff)    → 14.7:1 ✓ AAA
+ *   text-secondary  (#6a767c) on surface-primary (#fff)    →  4.5:1 ✓ AA
+ *   action-primary (#f47e42) on surface-primary (#fff)    →  2.9:1 ✗ (large text only)
+ *
+ * Owners — Metal (light):
+ *   action-primary (#455261) on surface-primary (#fff)    →  7.0:1 ✓ AAA
+ *   action-primary (#455261) on surface-secondary (#f5f5f5) → 6.6:1 ✓ AA
+ *   brand (#566578) on surface-primary (#fff)              →  4.5:1 ✓ AA (large text)
+ *   nav-text (#fff) on nav-bg (#212833)                    → 13.8:1 ✓ AAA
+ *   text-primary   (#232729) on brand-surface (#e8ebef)    → 10.4:1 ✓ AAA
+ *
+ * Focus rings:
+ *   Procore: blue-40 (#1d5cc9) → 5.3:1 on white ✓
+ *   Owners:  metal-40 (#455261) → 7.0:1 on white ✓
+ *
+ * Status colors UNCHANGED across themes (red/green/yellow/blue).
+ * ──────────────────────────────────────────────────────────────── */
+
+/* ── 3. Owners — Metal — light (data-theme="owner") ────────────── */
+
+[data-theme="owner"] {
+  /* Actions → Metal-derived (metal-40 at ~7:1 contrast on white) */
+  --color-action-primary: var(--p-metal-30);
+  --color-action-primary-hover: var(--p-metal-40);
+  --color-action-primary-disabled: var(--p-metal-85);
+  --color-text-link: var(--p-metal-20);
+
+  /* Borders */
+  --color-border-default: var(--p-gray-85);
+  --color-nav-border-subtle: var(--p-metal-85);
+
+  /* Brand → Metal */
+  --color-brand: var(--p-metal-30);
+  --color-brand-surface: var(--p-metal-96);
+
+  /* Navigation → Metal-tinted dark */
+  --color-nav-bg: var(--p-metal-20);
+  --color-nav-hover: rgba(86, 101, 120, 0.3);
+  --color-nav-surface: var(--p-metal-30);
+  --color-nav-surface-hover: var(--p-metal-40);
+  --color-nav-border: rgba(138, 151, 167, 0.2);
+
+
+  /* Focus ring → Metal-complementary */
+  --color-focus-ring: var(--p-metal-40);
+  --color-border-focus: var(--p-metal-40);
+
+  /* Tinted text/icons → Metal-derived */
+  --color-text-tinted: var(--p-metal-45);
+  --color-icon-tinted: var(--p-metal-50);
+}
+
+/* ── 3b. Owners — Slate — light (data-theme="owner-alt1") ───── */
+
+[data-theme="owner-alt1"] {
+  --color-action-primary: var(--p-slate-40);
+  --color-action-primary-hover: var(--p-slate-30);
+  --color-action-primary-disabled: var(--p-slate-85);
+  --color-text-link: var(--p-slate-20);
+
+  --color-brand: var(--p-slate-50);
+  --color-brand-surface: var(--p-slate-96);
+
+  --color-nav-bg: var(--p-slate-20);
+  --color-nav-hover: rgba(74, 96, 120, 0.3);
+  --color-nav-surface: var(--p-slate-30);
+  --color-nav-surface-hover: var(--p-slate-40);
+  --color-nav-border: rgba(128, 150, 173, 0.2);
+
+  --color-focus-ring: var(--p-slate-40);
+  --color-border-focus: var(--p-slate-40);
+
+  --color-text-tinted: var(--p-slate-45);
+  --color-icon-tinted: var(--p-slate-50);
+}
+
+/* ── 3c. Owners — Metal — light, black primary actions ───────── */
+
+[data-theme="owner-alt2"] {
+  --color-action-primary: #000000;
+  --color-action-primary-hover: var(--p-gray-20);
+  --color-action-primary-disabled: var(--p-metal-85);
+  --color-text-link: var(--p-metal-20);
+
+  --color-brand: var(--p-metal-50);
+  --color-brand-surface: var(--p-metal-96);
+
+  --color-nav-bg: var(--p-metal-20);
+  --color-nav-hover: rgba(86, 101, 120, 0.3);
+  --color-nav-surface: var(--p-metal-30);
+  --color-nav-surface-hover: var(--p-metal-40);
+  --color-nav-border: rgba(138, 151, 167, 0.2);
+
+  --color-focus-ring: #000000;
+  --color-border-focus: #000000;
+
+  --color-text-tinted: var(--p-metal-45);
+  --color-icon-tinted: var(--p-metal-50);
+  --color-text-linked: #000;
+}
+
+/* ── 4. Procore — dark (no data-theme, dark scheme) ───────────── */
+
+[data-color-scheme="dark"]:not([data-theme="owner"]):not([data-theme="owner-alt1"]):not([data-theme="owner-alt2"]):not([data-theme="owner-alt3"]) {
+  --color-text-primary: #fff;
+  --color-text-secondary: var(--p-gray-70);
+  --color-text-disabled: var(--p-gray-40);
+  --color-text-error: var(--p-red-70);
+  --color-text-tinted: #CDE2FF;
+  --color-text-link: #CDE2FF;
+  --color-text-reversed: var(--p-gray-15);
+
+  --color-surface-primary: #181818;
+  --color-surface-card: #222222;
+  --color-surface-secondary: #333;
+  --color-surface-tertiary: #252525;
+  --color-surface-hover: #2a2a2a;
+  --color-surface-active: #333333;
+  --color-surface-reversed: var(--p-gray-96);
+  --color-procore-orange-muted: #F96668;
+
+  --color-action-primary: var(--p-orange-60);
+  --color-action-primary-hover: var(--p-orange-50);
+  --color-action-primary-disabled: var(--p-orange-30);
+  --color-action-text: var(--p-white);
+
+  --color-brand: var(--p-orange-60);
+  --color-brand-surface: rgba(244, 126, 66, 0.1);
+
+  --color-border-default: #4D4D4D;
+  --color-border-strong: var(--p-gray-50);
+  --color-border-separator: #3F3F3F; 
+  --color-border-hover: var(--p-gray-60);
+  --color-border-focus: var(--p-blue-50);
+  --color-border-alert: var(--p-red-70);
+  --color-card-border: var(--color-border-separator);
+
+  --color-icon-primary: var(--p-gray-96);
+  --color-icon-secondary: var(--p-gray-70);
+  --color-icon-tinted: var(--p-blue-85);
+  --color-icon-success: var(--p-green-50);
+  --color-icon-alert: var(--p-red-70);
+
+  --color-nav-bg: var(--p-black);
+  --color-nav-surface: #2a2a2a;
+  --color-nav-surface-hover: #3a3a3a;
+
+  --color-shadow: transparent;
+  --color-shadow-strong: rgba(0, 0, 0, 0.6);
+  --color-focus-ring: var(--p-blue-50);
+
+  --color-pill-bg-green: #264C23;
+  --color-pill-bg-red: #76191A;
+  --color-pill-bg-gray: #2F2F2F;
+  --color-pill-bg-blue: #2A4167;
+  --color-pill-bg-yellow: #785420;
+  --color-pill-bg-magenta: #642F54;
+  --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #2F2F2F;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
+  --color-pill-text-green: #E1F6DF;
+  --color-pill-text-red: #FDE3E3;
+  --color-pill-text-gray: #F8F8F8;
+  --color-pill-text-blue: #CDE2FF;
+  --color-pill-text-yellow: #FFEDD1;
+  --color-pill-text-magenta: #FCE8F6;
+  --color-pill-text-cyan: #DAF2EF;
+}
+
+/* ── 5b. Owners — Slate — dark ────────────────────────────────── */
+
+[data-theme="owner-alt1"][data-color-scheme="dark"] {
+  --color-text-primary: #fff;
+  --color-text-secondary: #9aa0a8;
+  --color-text-disabled: var(--p-gray-40);
+  --color-text-error: var(--p-red-70);
+  --color-text-tinted: var(--p-slate-85);
+  --color-text-link: #8ab8f8;
+  --color-text-reversed: var(--p-gray-15);
+
+  --color-surface-primary: #10141c;
+  --color-surface-card: #161b24;
+  --color-surface-secondary: #1d2430;
+  --color-surface-tertiary: #212a36;
+  --color-surface-hover: #263040;
+  --color-surface-active: #2e3a4a;
+  --color-surface-reversed: var(--p-gray-96);
+
+  --color-action-primary: var(--p-slate-60);
+  --color-action-primary-hover: var(--p-slate-50);
+  --color-action-primary-disabled: var(--p-slate-30);
+  --color-action-text: var(--p-white);
+
+  --color-brand: var(--p-slate-60);
+  --color-brand-surface: rgba(74, 96, 120, 0.15);
+
+  --color-border-default: var(--p-slate-40);
+  --color-border-strong: var(--p-slate-50);
+  --color-border-separator: var(--p-slate-30);
+  --color-border-hover: var(--p-slate-60);
+  --color-border-focus: var(--p-slate-60);
+  --color-border-alert: var(--p-red-70);
+  --color-card-border: var(--color-border-separator);
+
+  --color-icon-primary: var(--p-gray-96);
+  --color-icon-secondary: var(--p-gray-70);
+  --color-icon-tinted: var(--p-slate-85);
+  --color-icon-success: var(--p-green-50);
+  --color-icon-alert: var(--p-red-70);
+
+  --color-nav-bg: #0a0e14;
+  --color-nav-hover: rgba(74, 96, 120, 0.3);
+  --color-nav-surface: var(--p-slate-20);
+  --color-nav-surface-hover: var(--p-slate-30);
+  --color-nav-border: rgba(128, 150, 173, 0.15);
+
+  --color-shadow: transparent;
+  --color-shadow-strong: rgba(0, 0, 0, 0.7);
+  --color-focus-ring: var(--p-slate-60);
+
+  --color-pill-bg-green: #264C23;
+  --color-pill-bg-red: #76191A;
+  --color-pill-bg-gray: #2F2F2F;
+  --color-pill-bg-blue: #2A4167;
+  --color-pill-bg-yellow: #785420;
+  --color-pill-bg-magenta: #642F54;
+  --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #2F2F2F;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
+  --color-pill-text-green: #E1F6DF;
+  --color-pill-text-red: #FDE3E3;
+  --color-pill-text-gray: #F8F8F8;
+  --color-pill-text-blue: #CDE2FF;
+  --color-pill-text-yellow: #FFEDD1;
+  --color-pill-text-magenta: #FCE8F6;
+  --color-pill-text-cyan: #DAF2EF;
+}
+
+/* ── 5c. Owners — Evergreen — dark ────────────────────────────── */
+
+[data-theme="owner-alt2"][data-color-scheme="dark"] {
+  --color-text-primary: #fff;
+  --color-text-secondary: #96a2a0;
+  --color-text-disabled: var(--p-gray-40);
+  --color-text-error: var(--p-red-70);
+  --color-text-tinted: var(--p-evergreen-85);
+  --color-text-link: #7ecabd;
+  --color-text-reversed: var(--p-gray-15);
+
+  --color-surface-primary: #0e1614;
+  --color-surface-card: #141e1c;
+  --color-surface-secondary: #1a2826;
+  --color-surface-tertiary: #1f2e2b;
+  --color-surface-hover: #243633;
+  --color-surface-active: #2c403c;
+  --color-surface-reversed: var(--p-gray-96);
+
+  --color-action-primary: var(--p-evergreen-60);
+  --color-action-primary-hover: var(--p-evergreen-50);
+  --color-action-primary-disabled: var(--p-evergreen-30);
+  --color-action-text: var(--p-white);
+
+  --color-brand: var(--p-evergreen-60);
+  --color-brand-surface: rgba(61, 107, 99, 0.15);
+
+  --color-border-default: var(--p-evergreen-40);
+  --color-border-strong: var(--p-evergreen-50);
+  --color-border-separator: var(--p-evergreen-30);
+  --color-border-hover: var(--p-evergreen-60);
+  --color-border-focus: var(--p-evergreen-60);
+  --color-border-alert: var(--p-red-70);
+  --color-card-border: var(--color-border-separator);
+
+  --color-icon-primary: var(--p-gray-96);
+  --color-icon-secondary: var(--p-gray-70);
+  --color-icon-tinted: var(--p-evergreen-85);
+  --color-icon-success: var(--p-green-50);
+  --color-icon-alert: var(--p-red-70);
+
+  --color-nav-bg: #080f0e;
+  --color-nav-hover: rgba(61, 107, 99, 0.3);
+  --color-nav-surface: var(--p-evergreen-20);
+  --color-nav-surface-hover: var(--p-evergreen-30);
+  --color-nav-border: rgba(125, 170, 162, 0.15);
+
+  --color-shadow: transparent;
+  --color-shadow-strong: rgba(0, 0, 0, 0.7);
+  --color-focus-ring: var(--p-evergreen-60);
+
+  --color-pill-bg-green: #264C23;
+  --color-pill-bg-red: #76191A;
+  --color-pill-bg-gray: #2F2F2F;
+  --color-pill-bg-blue: #2A4167;
+  --color-pill-bg-yellow: #785420;
+  --color-pill-bg-magenta: #642F54;
+  --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #2F2F2F;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
+  --color-pill-text-green: #E1F6DF;
+  --color-pill-text-red: #FDE3E3;
+  --color-pill-text-gray: #F8F8F8;
+  --color-pill-text-blue: #CDE2FF;
+  --color-pill-text-yellow: #FFEDD1;
+  --color-pill-text-magenta: #FCE8F6;
+  --color-pill-text-cyan: #DAF2EF;
+}
+
+/* ── 5d. Owners — Metal — dark (mid surfaces) ─────────────────── */
+
+[data-theme="owner-alt3"][data-color-scheme="dark"] {
+  --color-text-primary: #fff;
+  --color-text-secondary: #a0a8b4;
+  --color-text-disabled: var(--p-gray-40);
+  --color-text-error: var(--p-red-70);
+  --color-text-tinted: var(--p-metal-85);
+  --color-text-link: #8ab4f8;
+  --color-text-reversed: var(--p-gray-15);
+
+  --color-surface-primary: #252c38;
+  --color-surface-card: #2b3340;
+  --color-surface-secondary: #323a48;
+  --color-surface-tertiary: #38414f;
+  --color-surface-hover: #3e4858;
+  --color-surface-active: #465162;
+  --color-surface-reversed: var(--p-gray-96);
+
+  --color-action-primary: var(--p-metal-60);
+  --color-action-primary-hover: var(--p-metal-50);
+  --color-action-primary-disabled: var(--p-metal-30);
+  --color-action-text: var(--p-white);
+
+  --color-brand: var(--p-metal-60);
+  --color-brand-surface: rgba(86, 101, 120, 0.2);
+
+  --color-border-default: var(--p-metal-45);
+  --color-border-strong: var(--p-metal-55);
+  --color-border-separator: var(--p-metal-35);
+  --color-border-hover: var(--p-metal-60);
+  --color-border-focus: var(--p-metal-60);
+  --color-border-alert: var(--p-red-70);
+  --color-card-border: var(--color-border-separator);
+
+  --color-icon-primary: var(--p-gray-96);
+  --color-icon-secondary: var(--p-gray-70);
+  --color-icon-tinted: var(--p-metal-85);
+  --color-icon-success: var(--p-green-50);
+  --color-icon-alert: var(--p-red-70);
+
+  --color-nav-bg: #1c2330;
+  --color-nav-hover: rgba(86, 101, 120, 0.35);
+  --color-nav-surface: var(--p-metal-25);
+  --color-nav-surface-hover: var(--p-metal-35);
+  --color-nav-border: rgba(128, 150, 173, 0.2);
+
+  --color-shadow: transparent;
+  --color-shadow-strong: rgba(0, 0, 0, 0.6);
+  --color-focus-ring: var(--p-metal-60);
+
+  --color-pill-bg-green: #264C23;
+  --color-pill-bg-red: #76191A;
+  --color-pill-bg-gray: #3a3a3a;
+  --color-pill-bg-blue: #2A4167;
+  --color-pill-bg-yellow: #785420;
+  --color-pill-bg-magenta: #642F54;
+  --color-pill-bg-cyan: #244642;
+  --color-pill-border-green: #264C23;
+  --color-pill-border-red: #76191A;
+  --color-pill-border-gray: #3a3a3a;
+  --color-pill-border-blue: #2A4167;
+  --color-pill-border-yellow: #785420;
+  --color-pill-border-magenta: #642F54;
+  --color-pill-border-cyan: #244642;
+  --color-pill-text-green: #E1F6DF;
+  --color-pill-text-red: #FDE3E3;
+  --color-pill-text-gray: #F8F8F8;
+  --color-pill-text-blue: #CDE2FF;
+  --color-pill-text-yellow: #FFEDD1;
+  --color-pill-text-magenta: #FCE8F6;
+  --color-pill-text-cyan: #DAF2EF;
+}
+
+/* ── 6. Theme Transition Support ───────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-theme-transition] *,
+  [data-theme-transition] *::before,
+  [data-theme-transition] *::after {
+    transition: background-color 150ms ease, color 150ms ease,
+                border-color 150ms ease, box-shadow 150ms ease;
+  }
+}
+
+/* ── 7. Global Base Styles (tokenized) ─────────────────────────── */
+
+[data-theme="owner"] [class*="GlobalHeader__Bar"] [class*="GlobalHeader__SearchBarWrap"] {
+  background: var(--color-nav-bg) !important;
+  border: 1.5px solid var(--color-nav-border-subtle) !important;
+}
+
+[data-theme="owner"] [class*="GlobalHeader__Bar"] [class*="GlobalHeader__SearchBarWrap"] [class*="GlobalHeader__KbdBadge"] {
+  background: var(--color-nav-border-subtle) !important;
+  color: var(--color-text-primary) !important;
+}
+
 /* ─── Procore SmartGrid refinements (theme params set in SmartGridWrapper.tsx) ─ */
 
 /* Header text letter-spacing */
@@ -19,10 +673,27 @@
   justify-content: center;
 }
 
-/* Group row indent: 14px spacer per nesting level */
+/* AG Grid → theme token mapping: override AG Grid CSS vars with our design tokens */
 .ag-root-wrapper,
 [class*="ag-theme-"] {
   --ag-row-group-indent-size: 14px !important;
+  --ag-background-color: var(--color-surface-primary);
+  --ag-foreground-color: var(--color-text-primary);
+  --ag-header-background-color: var(--color-surface-secondary);
+  --ag-header-foreground-color: var(--color-text-primary);
+  --ag-odd-row-background-color: var(--color-surface-primary);
+  --ag-row-hover-color: var(--color-surface-hover);
+  --ag-border-color: var(--color-border-default);
+  --ag-row-border-color: var(--color-border-default);
+  --ag-header-row-border-color: var(--color-border-default);
+  --ag-header-column-separator-color: var(--color-border-default);
+  --ag-header-column-resize-handle-color: var(--color-border-default);
+  --ag-selected-row-background-color: var(--color-surface-active);
+  --ag-range-selection-border-color: var(--color-border-focus);
+  --ag-column-hover-color: var(--color-surface-hover);
+  --ag-input-focus-border-color: var(--color-border-focus);
+  --ag-checkbox-checked-color: var(--color-text-link);
+  --ag-side-panel-border: 1px solid var(--color-border-default);
 }
 
 /* Group expand/collapse: replace default chevrons with Procore CaretRight / CaretDown */
@@ -60,7 +731,7 @@
 
 .ag-group-child-count {
   font-weight: 400;
-  color: #464F53;
+  color: var(--color-text-primary);
   margin-left: 2px;
 }
 
@@ -80,7 +751,16 @@
   min-height: 40px;
 }
 
-/* Design-system baseline: sans-serif so @procore/core-react (font-family: inherit) matches. */
+/* AG Grid dark mode: lighter chevron SVGs for expand/collapse icons */
+[data-color-scheme="dark"] .ag-icon-contracted {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23a3abb1'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M10 17L10 7L15 12L10 17Z'/%3E%3C/svg%3E");
+}
+
+[data-color-scheme="dark"] .ag-icon-expanded {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23a3abb1'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M7 9.5H17L12 14.5L7 9.5Z'/%3E%3C/svg%3E");
+}
+
+
 html,
 body {
   font-family:
@@ -94,9 +774,20 @@ body {
     sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f5f5f5;
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+header {
+  box-shadow: 0 0 0 transparent !important;
 }
 
 * {
@@ -128,6 +819,7 @@ body {
   max-width: 100%;
   min-height: 0;
   overflow: hidden;
+  background-color: var(--color-surface-secondary) !important;
 }
 
 [data-core-react="tool-landing-page"] [data-core-page-layout-root] > :first-child {
@@ -139,7 +831,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 4;
-  background-color: #ffffff;
+  background-color: var(--color-surface-primary);
 }
 
 [data-core-react="tool-landing-page"] [data-core-page-layout-root] > :not(:first-child) {
@@ -163,7 +855,480 @@ table:not(.ag-header-row) th * {
   font-weight: 600 !important;
   font-size: 12px !important;
   line-height: 16px !important;
-  color: #232729;
+  color: var(--color-text-primary);
+}
+
+button.b_primary {
+  color: var(--color-text-on-action) !important;
+  background-color: var(--color-action-primary) !important;
+}
+
+/* ── 8. Core-React Dark Mode Overrides ────────────────────────────
+ * @procore/core-react components use styled-components with hardcoded
+ * white/light backgrounds. These overrides use reliable HTML element
+ * and ARIA role selectors. Component-instance inline styles handle
+ * the rest (see ToolPageLayout.tsx, ProfileSettingsTearsheet.tsx, etc).
+ * ─────────────────────────────────────────────────────────────────── */
+
+[data-color-scheme="dark"] {
+  color-scheme: dark;
+  color: var(--color-text-primary);
+}
+
+[data-color-scheme="dark"] [class*="StyledTearsheetBody"] [class*="StyledPageHeader"] {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border-bottom: 1px solid var(--color-border-separator) !important;
+}
+
+[data-color-scheme="dark"] [class*="StyledTearsheetBody"] [class*="StyledPageHeader"][class*="StyledPageHeaderItem"] {
+  background-color: transparent !important;
+  color: var(--color-text-primary) !important;
+  border-bottom: 0px solid var(--color-border-separator) !important;
+}
+
+[data-color-scheme="dark"] [class*="StyledTearsheetBody"] [class*="StyledPageHeader"][class*="StyledPageHeaderItem"] [class*="StyledTab"] {
+  background-color: transparent !important;
+}
+
+[data-color-scheme="dark"] [class*="StyledTearsheetBody"] [class*="StyledTypography"] {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] [class*="StyledScrimContainer"] [class*="StyledButtonCard"] button {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border: 0px solid var(--color-border-default) !important;
+} 
+
+/* HTML table elements */
+[data-color-scheme="dark"] table,
+[data-color-scheme="dark"] [class*="ProjectsTableCard__GridArea"] {
+  background-color: var(--color-surface-primary) !important;
+  border: 0px solid var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] div.ag-root-wrapper {
+  border: 0px solid var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] thead,
+[data-color-scheme="dark"] thead tr,
+[data-color-scheme="dark"] thead th {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] tbody tr {
+  background-color: var(--color-surface-primary) !important;
+  border-color: var(--color-border-separator) !important;
+}
+
+[data-color-scheme="dark"] tbody td {
+  border-color: var(--color-border-separator) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] tbody tr:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+/* Force all text inside table cells (including core-react styled wrappers) */
+/* [data-color-scheme="dark"] button span[class],
+[data-color-scheme="dark"] button div[class] {
+  color: inherit !important;
+} */
+
+/* Force all text inside table cells (including core-react styled wrappers) */
+[data-color-scheme="dark"] td div[class],
+[data-color-scheme="dark"] td p[class],
+[data-color-scheme="dark"] th div[class] {
+  color: inherit !important;
+}
+
+/* ARIA role-based targets */
+[data-color-scheme="dark"] [role="table"],
+[data-color-scheme="dark"] [role="grid"] {
+  background-color: var(--color-surface-primary) !important;
+}
+
+[data-color-scheme="dark"] [role="row"] {
+  border-color: var(--color-border-separator) !important;
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+}
+
+/* [data-color-scheme="dark"] [role="row"]:nth-child(even) {
+  background-color: var(--color-surface-secondary) !important;
+} */
+
+[data-color-scheme="dark"] [role="gridcell"],
+[data-color-scheme="dark"] [role="cell"] {
+  border-color: var(--color-border-separator) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* [data-color-scheme="dark"] [role="gridcell"] span[class],
+[data-color-scheme="dark"] [role="gridcell"] div[class],
+[data-color-scheme="dark"] [role="gridcell"] p[class],
+[data-color-scheme="dark"] [role="cell"] span[class],
+[data-color-scheme="dark"] [role="cell"] div[class],
+[data-color-scheme="dark"] [role="cell"] p[class] {
+  color: inherit !important;
+} */
+
+[data-color-scheme="dark"] [role="dialog"] {
+  background-color: var(--color-surface-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] [role="listbox"],
+[data-color-scheme="dark"] [role="menu"] {
+  background-color: var(--color-surface-primary) !important;
+  border-color: var(--color-border-separator) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] [role="menuitem"]:hover,
+[data-color-scheme="dark"] [role="option"]:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+/* Form inputs and controls */
+[data-color-scheme="dark"] input,
+[data-color-scheme="dark"] textarea,
+[data-color-scheme="dark"] select,
+[data-color-scheme="dark"] [role="combobox"] {
+  background-color: var(--color-surface-primary) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] input:focus,
+[data-color-scheme="dark"] textarea:focus,
+[data-color-scheme="dark"] select:focus,
+[data-color-scheme="dark"] [role="combobox"]:focus {
+  box-shadow: 0 0 0 1px var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] input[type="checkbox"] {
+  background-color: transparent !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] input[type="checkbox"]:selected {
+  background-color: var(--color-surface-primary) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] .ag-checkbox-input-wrapper.ag-checked {
+  background-color: #fff !important;
+  border-color: #fff !important;
+}
+
+[data-color-scheme="dark"] label {
+  color: var(--color-text-primary);
+}
+
+[data-color-scheme="dark"] .i_select {
+  background-color: var(--color-surface-primary) !important;
+  color: white !important;
+  border-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] .i_select option {
+  color: white !important;
+}
+
+/* Typography and headings */
+[data-color-scheme="dark"] h1,
+[data-color-scheme="dark"] h2,
+[data-color-scheme="dark"] h3,
+[data-color-scheme="dark"] h4,
+[data-color-scheme="dark"] h5,
+[data-color-scheme="dark"] h6,
+[data-color-scheme="dark"] p {
+  color: var(--color-text-primary);
+}
+
+/* Breadcrumbs — core-react renders nav > ol > li with hardcoded link colors */
+[data-color-scheme="dark"] nav[aria-label] ol,
+[data-color-scheme="dark"] nav[aria-label] li,
+[data-color-scheme="dark"] nav[aria-label] a,
+[data-color-scheme="dark"] nav[aria-label] span {
+  color: var(--color-text-secondary) !important;
+}
+
+[data-color-scheme="dark"] nav[aria-label] li[aria-current],
+[data-color-scheme="dark"] nav[aria-label] li:last-child {
+  color: var(--color-text-primary) !important;
+}
+
+/* Tooltips */
+[data-color-scheme="dark"] [class*="TooltipContent"],
+[data-color-scheme="dark"] [class*="tooltip"] {
+  background-color: var(--color-text-primary) !important;
+  color: var(--color-surface-primary) !important;
+  border: 1px solid var(--color-border-separator) !important;
+}
+
+/* Tabs — core-react Tabs use buttons/links with hardcoded colors */
+[data-color-scheme="dark"] [class*="Tabs__TabsList"],
+[data-color-scheme="dark"] div[class*="StyledTabList"],
+[data-color-scheme="dark"] div[class*="StyledTabList"] button,
+[data-color-scheme="dark"] div[class*="StyledTabList"] button div {
+  background-color: transparent !important;
+  border-color: var(--color-border-separator) !important;
+}
+
+[data-color-scheme="dark"] [role="tab"],
+[data-color-scheme="dark"] [class*="Tabs__TabsList"] {
+  color: var(--color-text-secondary) !important;
+  background-color: transparent !important;
+}
+
+[data-color-scheme="dark"] [role="tab"][aria-selected="true"],
+[data-color-scheme="dark"] [role="tab"]:hover {
+  color: var(--color-text-primary) !important;
+  background: var(--color-surface-hover) !important;
+  border-bottom-color: var(--color-border-default) !important;
+}
+
+[data-color-scheme="dark"] [role="group"] button[aria-current="true"],
+[data-color-scheme="dark"] [role="group"] button[aria-current="true"]:hover,
+[data-color-scheme="dark"] [class*="Tabs__TabsList"] [data-active] {
+  border-bottom: 3px solid #fff !important;
+  background: transparent !important;
+}
+
+/* Scrim */
+[data-color-scheme="dark"] div[class*="StyledPortal"],
+[data-color-scheme="dark"] div[class*="StyledScrimContainer"],
+[data-color-scheme="dark"] div[class*="StyledScrimContainer"] div[class*="StyledButtonContainer"],
+[data-color-scheme="dark"] div[class*="StyledScrimContainer"] div[class*="StyledButtonContainer"] div[class*="StyledCardContainer"],
+[data-color-scheme="dark"] [role="dialog"] {
+  background: transparent !important;
+}
+
+[data-color-scheme="dark"] div[class*="StyledModal"],
+[data-color-scheme="dark"] div[class*="StyledModalScrim"] {
+  background: hsla(200,8%,10%,0.3) !important;
+}
+
+[data-color-scheme="dark"] div[class*="StyledModal"] div[class*="StyledModalContent"] {
+  background: var(--color-surface-primary) !important;
+}
+
+/* Devtools */
+div.nextjs-toast {
+  display:none;
+}
+
+/* Menu Options */
+[data-color-scheme="dark"] [aria-label="Menu options"] [role="menuitem"] {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] [aria-label="Menu options"],
+[data-color-scheme="dark"] [role="dialog"] {
+  border: 1px solid var(--color-card-border) !important;
+  border-radius: 4px !important;
+}
+
+[data-color-scheme="dark"] [aria-label="Menu options"] [data-highlighted='true'] {
+  background: var(--color-surface-hover) !important;
+}
+
+[data-color-scheme="dark"] [role="dialog"] button[type="button"] span {
+  color: inherit !important;
+}
+
+[data-color-scheme="dark"] [class*="ProjectPickerPopover__Footer"] {
+  border-top: 1px solid var(--color-card-border) !important;
+}
+
+/* Scrollbar styling (Webkit) */
+[data-color-scheme="dark"] ::-webkit-scrollbar {
+  background: var(--color-surface-secondary);
+}
+
+[data-color-scheme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+
+[data-color-scheme="dark"] .section--level-2 {  
+  background-color: transparent !important; 
+}
+
+/* Buttons */
+[data-color-scheme="dark"] button.b_primary {
+  background-color: var(--color-action-primary) !important;
+}
+
+[data-color-scheme="owner"] button.b_primary {
+  background-color: var(--color-action-primary) !important;
+  color: #ffffff !important;
+}
+
+[data-color-scheme="dark"] button.b_primary span,
+[data-color-scheme="dark"] button.b_primary span span {
+  color: #000 !important;
+}
+
+[data-color-scheme="dark"] button.b_secondary {
+  background-color: var(--color-surface-secondary) !important;
+}
+
+[data-color-scheme="dark"] button.b_secondary span,
+[data-color-scheme="dark"] button.b_secondary span span {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] button.b_tertiary,
+[data-color-scheme="dark"] button.b_toggle,
+[data-color-scheme="dark"] .Tabs__TabsList button[class][aria-haspopup="menu"] {
+  background-color: transparent !important;
+}
+
+[data-color-scheme="dark"] button.b_tertiary:hover ,
+[data-color-scheme="dark"] button.b_toggle:hover {
+  background-color: var(--color-surface-active) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] div[class*="StyledModalCancel"] button {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] div[class*="StyledModalCancel"] button:hover {
+  background-color: var(--color-surface-active) !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] button.b_tertiary span,
+[data-color-scheme="dark"] button.b_tertiary span span,
+[data-color-scheme="dark"] button.b_toggle span,
+[data-color-scheme="dark"] button.b_toggle span span {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] .b_toggle[aria-pressed="true"] {
+  border-color: var(--color-text-primary) !important;
+}
+
+
+[data-color-scheme="dark"] .b_radiogroup .cPdHyw,
+[data-theme="owner"] .b_radiogroup .cPdHyw,
+[data-theme="owner-alt1"] .b_radiogroup .cPdHyw,
+[data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+[data-color-scheme="dark"] .b_radiogroup .eLJGZn,
+[data-theme="owner"] .b_radiogroup .eLJGZn,
+[data-theme="owner-alt1"] .b_radiogroup .eLJGZn,
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
+  background-color: var(--color-text-primary) !important;
+  color: var(--color-surface-primary) !important;
+}
+
+[data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
+  background-color: var(--color-surface-primary) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
+  background-color: var(--color-text-primary) !important;
+  color: var(--color-surface-primary) !important;
+}
+
+/* Card and Menu containers */
+[data-color-scheme="dark"] .card_container,
+[data-color-scheme="dark"] .menu_container {
+  background-color: var(--color-surface-card) !important;
+  /* border: 1px solid var(--color-border-separator) !important; */
+  border: 0px solid transparent !important;
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] .card_container div,
+[data-color-scheme="dark"] .card_container main[class],
+[data-color-scheme="dark"] .card_container input[class],
+[data-color-scheme="dark"] .card_container textarea[class],
+[data-color-scheme="dark"] .card_container select[class],
+[data-color-scheme="dark"] .card_container option[class],
+[data-color-scheme="dark"] .card_container optgroup[class],
+[data-color-scheme="dark"] .card_container label[class],
+[data-color-scheme="dark"] .card_container legend[class],
+[data-color-scheme="dark"] .card_container fieldset[class],
+[data-color-scheme="dark"] .card_container aside[class],
+[data-color-scheme="dark"] .card_container article[class] {
+  background-color: inherit !important;
+}
+
+/* Pills */
+[data-color-scheme="dark"] [data-pill-color="green"] { 
+  background-color: var(--color-pill-bg-green) !important;
+  color: var(--color-pill-text-green) !important;
+  border-color: var(--color-pill-bg-green) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="red"] { 
+  background-color: var(--color-pill-bg-red) !important;
+  color: var(--color-pill-text-red) !important;
+  border-color: var(--color-pill-bg-red) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="blue"] { 
+  background-color: var(--color-pill-bg-blue) !important;
+  color: var(--color-pill-text-blue) !important;
+  border-color: var(--color-pill-bg-blue) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="gray"] { 
+  background-color: var(--color-pill-bg-gray) !important;
+  color: var(--color-pill-text-gray) !important;
+  border-color: var(--color-pill-bg-gray) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="yellow"] { 
+  background-color: var(--color-pill-bg-yellow) !important;
+  color: var(--color-pill-text-yellow) !important;
+  border-color: var(--color-pill-bg-yellow) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="magenta"] { 
+  background-color: var(--color-pill-bg-magenta) !important;
+  color: var(--color-pill-text-magenta) !important;
+  border-color: var(--color-pill-bg-magenta) !important;
+}
+[data-color-scheme="dark"] [data-pill-color="cyan"] { 
+  background-color: var(--color-pill-bg-cyan) !important;
+  color: var(--color-pill-text-cyan) !important;
+  border-color: var(--color-pill-bg-cyan) !important;
+}
+
+/* Alert Banner */
+[data-color-scheme="dark"] .card_container div.alert-banner {
+  background-color: var(--color-surface-secondary) !important;
+}
+
+[data-color-scheme="dark"] .card_container div.alert-banner span.text-primary {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="dark"] .card_container div.alert-banner span.alert-date-text {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="owner"] .card_container div.alert-banner,
+[data-color-scheme="owner"] .card_container div.alert-banner span,
+[data-color-scheme="owner"] .card_container div.alert-banner p {
+  color: var(--color-text-primary) !important;
+}
+
+[data-color-scheme="owner"] .card_container div.alert-banner span.alert-date-text {
+  background-color: var(--color-action-primary) !important;
 }
 
 /* Horizontal scrolling for core-react Table */
@@ -171,14 +1336,27 @@ table:not(.ag-header-row) th * {
   overflow-x: auto;
 }
 
+/* AG Grid */
+.ag-cell-inline-editing {
+  padding: 6px 12px !important;
+  background-color: var(--color-surface-primary) !important;
+  border: 1px solid var(--color-border-default) !important;
+}
+
+
 /* Capital Planning: horizontal scroll only on the table region (not filter panel) */
 
 /* Merged / single FY forecast header — FY label left, CaretsIn toggle right (Capital Planning Figma) */
+.capital-planning-table-scroll th.capital-planning-col-project,
+.capital-planning-table-scroll th.capital-planning-forecast-fy-subheader {
+  border-color: var(--color-border-default) !important;
+}
+
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group {
   text-align: left !important;
-  background-color: #f5f7f8 !important;
+  background-color: var(--color-surface-secondary) !important;
   vertical-align: middle !important;
-  border-bottom: 1px solid #d6dadc !important;
+  border-bottom: 1px solid var(--color-border-separator) !important;
 }
 
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group .capital-planning-forecast-cost-group-inner {
@@ -200,7 +1378,7 @@ table:not(.ag-header-row) th * {
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group .capital-planning-forecast-fy-label {
   font-weight: 600;
   font-size: 13px;
-  color: #232729;
+  color: var(--color-text-primary);
   white-space: nowrap;
   text-align: left;
   flex: 1 1 auto;
@@ -211,9 +1389,9 @@ table:not(.ag-header-row) th * {
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-fy-subheader {
   text-align: left !important;
   /* Match `.capital-planning-forecast-cost-group` / `.capital-planning-forecast-period-header` */
-  background-color: #f5f7f8 !important;
+  background-color: var(--color-surface-secondary) !important;
   vertical-align: middle !important;
-  border-bottom: 1px solid #d6dadc !important;
+  border-bottom: 1px solid var(--color-border-separator) !important;
   padding: 0 8px !important;
   height: 32px !important;
   min-height: 32px !important;
@@ -231,7 +1409,7 @@ table:not(.ag-header-row) th * {
   box-sizing: border-box;
   font-weight: 600;
   font-size: 12px;
-  color: #232729;
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 
@@ -260,8 +1438,8 @@ table:not(.ag-header-row) th * {
   font-size: 11px !important;
   font-weight: 600 !important;
   line-height: 16px !important;
-  color: #6a767c !important;
-  background-color: #f5f7f8 !important;
+  color: var(--color-text-secondary) !important;
+  background-color: var(--color-surface-secondary) !important;
   height: 32px !important;
   min-height: 32px !important;
   max-height: 32px !important;
@@ -306,10 +1484,10 @@ table:not(.ag-header-row) th * {
   font-size: 10px !important;
   font-weight: 600 !important;
   line-height: 16px !important;
-  color: #6a767c !important;
-  background-color: #f5f7f8 !important;
+  color: var(--color-text-secondary) !important;
+  background-color: var(--color-surface-secondary) !important;
   padding: 0 8px !important;
-  border-top: 1px solid #d6dadc !important;
+  border-top: 1px solid var(--color-border-separator) !important;
   white-space: nowrap;
   height: 32px !important;
   min-height: 32px !important;
@@ -355,10 +1533,10 @@ table:not(.ag-header-row) th * {
   vertical-align: middle !important;
   font-size: 0 !important;
   line-height: 0 !important;
-  color: #6a767c !important;
-  background-color: #f5f7f8 !important;
+  color: var(--color-text-secondary) !important;
+  background-color: var(--color-surface-secondary) !important;
   padding: 0 8px !important;
-  border-top: 1px solid #d6dadc !important;
+  border-top: 1px solid var(--color-border-separator) !important;
   white-space: nowrap;
   height: 32px !important;
   min-height: 32px !important;
@@ -441,22 +1619,22 @@ table:not(.ag-header-row) th * {
 }
 
 .capital-planning-group-by-select [role="combobox"] {
-  border: 1px solid #6a7b83 !important;
+  border: 1px solid var(--color-border-strong) !important;
   border-radius: 4px !important;
   min-height: 36px !important;
   height: auto !important;
-  background-color: #ffffff !important;
+  background-color: var(--color-surface-primary) !important;
   box-shadow: none !important;
 }
 
 .capital-planning-group-by-select [role="combobox"]:hover {
-  border-color: #5c6d75 !important;
-  background-color: #ffffff !important;
+  border-color: var(--color-border-hover) !important;
+  background-color: var(--color-surface-primary) !important;
 }
 
 .capital-planning-group-by-select [role="combobox"][aria-expanded="true"] {
-  border-color: #6a7b83 !important;
-  background-color: #ffffff !important;
+  border-color: var(--color-border-strong) !important;
+  background-color: var(--color-surface-primary) !important;
 }
 
 .capital-planning-main-with-filter {
@@ -488,6 +1666,7 @@ table:not(.ag-header-row) th * {
   min-height: 0;
   width: 100%;
   max-width: 100%;
+  border: 2px solid var(--color-border-default) !important;
   /* Bounded vertical scrollport so `tfoot` `position: sticky; bottom: 0` pins to this region */
   max-height: min(72vh, calc(100dvh - 14rem));
   overflow-x: auto;
@@ -527,8 +1706,21 @@ table:not(.ag-header-row) th * {
   overflow-x: hidden;
 }
 
+/* SplitViewCard backgrounds must follow theme tokens */
+[data-core-react="tool-landing-page"] [class*="StyledSplitViewCardContainer"],
+[data-core-react="tool-landing-page"] [class*="StyledSplitViewCardMain"],
+[data-core-react="tool-landing-page"] [class*="StyledSectionContainer"],
+[data-core-react="tool-landing-page"] [class*="StyledSectionInner"],
+[data-core-react="tool-landing-page"] [class*="StyledSectionHeading"] {
+  background-color: var(--color-surface-primary) !important;
+}
+
 [data-core-react="tool-landing-page"] [class*="StyledGridCol"] {
   min-width: 0;
+}
+
+[data-core-react="tool-landing-page"] {
+  background: var(--color-surface-secondary);
 }
 
 /*
@@ -539,8 +1731,7 @@ table:not(.ag-header-row) th * {
   position: sticky;
   top: 0;
   z-index: 50;
-  /* Opaque surface so gray page body does not show through while scrolling (DS header already adds elevation) */
-  background-color: #ffffff;
+  background-color: var(--color-surface-primary);
 }
 
 /* One scroll track: region scrolls; inner DS table wrapper does not clip/scroll again */
@@ -597,7 +1788,7 @@ table:not(.ag-header-row) th * {
 }
 
 .capital-planning-table-scroll tbody tr:hover td {
-  background-color: #f5f7f8;
+  background-color: var(--color-surface-secondary);
 }
 
 /*
@@ -701,13 +1892,13 @@ table:not(.ag-header-row) th * {
   min-width: var(--cp-sticky-col1-width);
   max-width: var(--cp-sticky-col1-width);
   box-sizing: border-box;
-  background-color: #ffffff;
+  background-color: var(--color-surface-primary);
   vertical-align: middle;
 }
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project {
   z-index: 6;
-  background-color: #f5f7f8;
+  background-color: var(--color-surface-secondary);
 }
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-inner {
@@ -741,7 +1932,7 @@ table:not(.ag-header-row) th * {
   min-width: var(--cp-sticky-col2-width);
   max-width: var(--cp-sticky-col2-width);
   box-sizing: border-box;
-  background-color: #ffffff;
+  background-color: var(--color-surface-primary);
   vertical-align: middle;
   overflow: visible;
   box-shadow: var(--cp-planned-amount-column-shadow);
@@ -749,7 +1940,7 @@ table:not(.ag-header-row) th * {
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-split {
   z-index: 14;
-  background-color: #f5f7f8;
+  background-color: var(--color-surface-secondary);
 }
 
 /* Extra 1px edge above row backgrounds — ensures the rule reads in header/body/hover */
@@ -761,7 +1952,7 @@ table:not(.ag-header-row) th * {
   right: 0;
   bottom: 0;
   width: 1px;
-  background-color: #d6dadc;
+  background-color: var(--color-border-separator);
   z-index: 3;
   pointer-events: none;
 }
@@ -773,12 +1964,12 @@ table:not(.ag-header-row) th * {
 
 .capital-planning-table-scroll tbody tr:hover td.capital-planning-col-project:not([colspan]),
 .capital-planning-table-scroll tbody tr:hover td.capital-planning-col-sticky-split {
-  background-color: #f5f7f8;
+  background-color: var(--color-surface-secondary);
 }
 
 /* Vertical rule between last visible baseline column and forecast (header row 1) */
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-last-baseline {
-  border-right: 1px solid #d6dadc !important;
+  border-right: 1px solid inherit !important;
 }
 
 /* Sticky totals row — stays at bottom of the scroll region; matches column alignment on horizontal scroll */
@@ -788,13 +1979,13 @@ table:not(.ag-header-row) th * {
   /* Above body rows and sticky body columns so the totals band stays visible while scrolling */
   z-index: 30;
   /* Single top rule (Procore table / gray96 band); avoid heavy “card” shadow */
-  box-shadow: 0 -1px 0 #d6dadc;
+  box-shadow: 0 -1px 0 var(--color-border-separator);
 }
 
 .capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td {
   /* Match thead `tableHeaderBgColor` (gray96) — same band as Procore data table headers */
-  background-color: #f5f7f8 !important;
-  border-top: 1px solid #d6dadc;
+  background-color: var(--color-surface-secondary) !important;
+  border-top: 1px solid inherit;
   vertical-align: middle;
   height: 32px;
   max-height: 32px;
@@ -829,7 +2020,7 @@ table:not(.ag-header-row) th * {
   min-width: var(--cp-sticky-col1-width);
   max-width: var(--cp-sticky-col1-width);
   box-sizing: border-box;
-  background-color: #f5f7f8 !important;
+  background-color: var(--color-surface-secondary) !important;
 }
 
 .capital-planning-table-scroll tfoot tr > td.capital-planning-col-scroll {
@@ -845,7 +2036,7 @@ table:not(.ag-header-row) th * {
   min-width: var(--cp-sticky-col2-width);
   max-width: var(--cp-sticky-col2-width);
   box-sizing: border-box;
-  background-color: #f5f7f8 !important;
+  background-color: var(--color-surface-secondary) !important;
   overflow: visible;
   box-shadow: var(--cp-planned-amount-column-shadow);
 }
@@ -857,13 +2048,20 @@ table:not(.ag-header-row) th * {
   right: 0;
   bottom: 0;
   width: 1px;
-  background-color: #d6dadc;
+  background-color: var(--color-border-separator);
   z-index: 3;
   pointer-events: none;
 }
 
 .capital-planning-table-scroll tfoot tr td.capital-planning-col-last-baseline {
-  border-right: 1px solid #d6dadc !important;
+  border-right: 1px solid var(--color-border-separator) !important;
+}
+
+/* Capital Planning: sticky header rows on vertical scroll */
+.capital-planning-table-scroll thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 /* Procore Data Table density: 32px row height (body + header), Capital Planning grid */
@@ -908,7 +2106,7 @@ table:not(.ag-header-row) th * {
   line-height: 16px !important;
   font-weight: 400 !important;
   font-style: italic !important;
-  color: #6a767c !important;
+  color: var(--color-text-secondary) !important;
 }
 
 /* Planned amount DropdownFlyout: option that matches the row’s stored source */
@@ -1213,8 +2411,8 @@ table:not(.ag-header-row) th * {
 .capital-planning-table-scroll tbody tr td [role="combobox"]:hover,
 .capital-planning-table-scroll tbody tr td [role="combobox"]:focus,
 .capital-planning-table-scroll tbody tr td [role="combobox"][aria-expanded="true"] {
-  border-color: #bcc8cc !important;
-  background-color: #ffffff !important;
+  border-color: var(--color-border-default) !important;
+  background-color: var(--color-surface-primary) !important;
 }
 
 .capital-planning-table-scroll tbody tr td [role="combobox"].select--table:hover > *:last-child *,

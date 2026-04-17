@@ -7,10 +7,10 @@ const PanelWrapper = styled.div<{ $open: boolean }>`
   min-width: ${({ $open }) => ($open ? "400px" : "0px")};
   overflow: hidden;
   transition: width 0.25s ease, min-width 0.25s ease;
-  border-right: ${({ $open }) => ($open ? "1px solid #D6DADC" : "none")};
+  border-right: ${({ $open }) => ($open ? "1px solid var(--color-border-separator)" : "none")};
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--color-surface-primary);
   height: 100%;
 `;
 
@@ -26,13 +26,13 @@ const PanelHeader = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 8px 8px 16px;
-  border-bottom: 1px solid #D6DADC;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
 const PanelSearchRow = styled.div`
   padding: 16px;
-  border-bottom: 1px solid #D6DADC;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -50,7 +50,7 @@ const PanelFooter = styled.div`
   align-items: center;
   justify-content: flex-end;
   padding: 8px 16px;
-  border-top: 1px solid #D6DADC;
+  border-top: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -66,7 +66,7 @@ const FilterLabel = styled.label`
   font-size: 14px;
   line-height: 20px;
   letter-spacing: 0.15px;
-  color: #232729;
+  color: var(--color-text-primary);
 `;
 
 interface FilterOption {
@@ -199,11 +199,11 @@ export default function AssetFiltersPanel({
         <PanelHeader>
           <Typography
             intent="h3"
-            style={{ flex: 1, fontSize: 16, fontWeight: 600, lineHeight: "24px", letterSpacing: "0.15px", color: "#232729" }}
+            style={{ flex: 1, fontSize: 16, fontWeight: 600, lineHeight: "24px", letterSpacing: "0.15px", color: "var(--color-text-primary)" }}
           >
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </Typography>
-          <Button variant="tertiary" onClick={handleClearAll}>
+          <Button variant="tertiary" className="b_tertiary" onClick={handleClearAll}>
             Clear All Filters
           </Button>
         </PanelHeader>

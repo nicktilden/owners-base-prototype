@@ -15,8 +15,7 @@ import {
 } from "@procore/core-react";
 import {
   Clear,
-  Cog,
-  EllipsisVertical,
+  CurrencyUSA as CapitalPlanningIcon,
   Filter,
   Fullscreen,
   FullscreenExit,
@@ -74,8 +73,8 @@ const CapitalPlanningSidePanel = styled.aside`
   width: 340px;
   flex: 0 0 340px;
   flex-shrink: 0;
-  border: 1px solid #e0e4e7;
-  background: #fff;
+  border: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -87,14 +86,14 @@ const FilterPanelHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e4e7;
+  border-bottom: 1px solid var(--color-border-separator);
 `;
 
 const FilterPanelTitle = styled.span`
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const FilterPanelHeaderActions = styled.div`
@@ -122,7 +121,7 @@ const FilterFieldSection = styled.div`
 const FilterFieldLabel = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const ConfigSectionHeading = styled.div`
@@ -135,7 +134,7 @@ const ConfigSectionHeading = styled.div`
 const ConfigSectionTitle = styled.span`
   font-size: 14px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
 `;
 
 const ShowAllLink = styled.button`
@@ -144,7 +143,7 @@ const ShowAllLink = styled.button`
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  color: #1a2226;
+  color: var(--color-text-primary);
   padding: 0;
   &:hover {
     text-decoration: underline;
@@ -157,7 +156,7 @@ const ColumnToggleRow = styled.div`
   gap: 12px;
   padding: 8px 10px;
   border-radius: 4px;
-  background: #f0f2f3;
+  background: var(--color-surface-secondary);
   margin-bottom: 6px;
   &:last-of-type {
     margin-bottom: 0;
@@ -166,7 +165,7 @@ const ColumnToggleRow = styled.div`
 
 const ColumnToggleLabel = styled.span`
   font-size: 14px;
-  color: #1a2226;
+  color: var(--color-text-primary);
   flex: 1;
   min-width: 0;
 `;
@@ -354,14 +353,18 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
   }, [projectRows, search, filterStatus, filterPriority, filterRegions]);
 
 
+  const breadcrumbs = [
+    { label: "Portfolio", href: "/portfolio" },
+  ];
+
   const actions = (
     <>
       {headerTab === "capital_plan" ? (
-        <Button variant="secondary" icon={<Plus />} onClick={() => setSnapshotModalOpen(true)}>
+        <Button variant="secondary" className="b_secondary" icon={<Plus />} onClick={() => setSnapshotModalOpen(true)}>
           Create Snapshot
         </Button>
       ) : null}
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" className="b_secondary" variant="secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
@@ -418,20 +421,8 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
           {pageVariant === "next" ? "Open Beta" : "Beta"}
         </Pill>
       }
-      icon={
-        <Button
-          type="button"
-          variant="secondary"
-          size="md"
-          icon={<Cog />}
-          aria-label="Table settings"
-          onClick={() => {
-            setHeaderTab("capital_plan");
-            setConfigureOpen((open) => !open);
-            setFilterOpen(false);
-          }}
-        />
-      }
+      icon={<CapitalPlanningIcon size="md" />}
+      breadcrumbs={breadcrumbs}
       actions={actions}
       tabs={headerTabs}
     >
@@ -459,7 +450,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                       position: "fixed",
                       inset: 0,
                       zIndex: 1300,
-                      background: "#ffffff",
+                      background: "var(--color-surface-primary)",
                       padding: 16,
                       display: "flex",
                       flexDirection: "column",
@@ -547,6 +538,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                 </div>
                 <Button
                   variant="tertiary"
+                  className="b_tertiary"
                   icon={tableFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   onClick={() => setTableFullscreen((v) => !v)}
                   style={{ flexShrink: 0 }}
@@ -664,12 +656,13 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                   <FilterPanelTitle>Filters</FilterPanelTitle>
                   <FilterPanelHeaderActions>
                     {filterPanelHasActiveSelections ? (
-                      <Button variant="tertiary" size="md" onClick={clearFilterPanel}>
+                      <Button variant="tertiary" className="b_tertiary" size="md" onClick={clearFilterPanel}>
                         Clear All
                       </Button>
                     ) : null}
                     <Button
                       variant="tertiary"
+                      className="b_tertiary"
                       icon={<Clear />}
                       onClick={() => setFilterOpen(false)}
                       aria-label="Close filters"
@@ -783,11 +776,12 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                 <FilterPanelHeader>
                   <FilterPanelTitle>Table Settings</FilterPanelTitle>
                   <FilterPanelHeaderActions>
-                    <Button variant="tertiary" size="md" onClick={resetTableSettings}>
+                    <Button variant="tertiary" className="b_tertiary" size="md" onClick={resetTableSettings}>
                       Reset
                     </Button>
                     <Button
                       variant="tertiary"
+                      className="b_tertiary"
                       icon={<Clear />}
                       onClick={() => setConfigureOpen(false)}
                       aria-label="Close table settings"
@@ -799,7 +793,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                     <Typography
                       intent="small"
                       weight="semibold"
-                      style={{ display: "block", marginBottom: 8, color: "#1a2226" }}
+                      style={{ display: "block", marginBottom: 8, color: "var(--color-text-primary)" }}
                     >
                       Row height
                     </Typography>
@@ -827,7 +821,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                   <hr
                     style={{
                       border: 0,
-                      borderTop: "1px solid #e0e4e7",
+                      borderTop: "1px solid var(--color-border-separator)",
                       margin: "4px 0 12px",
                     }}
                   />

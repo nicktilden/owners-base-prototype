@@ -58,7 +58,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -71,7 +71,7 @@ const ToolbarLeft = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   overflow: hidden;
 `;
 
@@ -120,7 +120,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
         filter: "agSetColumnFilter",
         valueGetter: (params: ValueGetterParams<BudgetLineItem>) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
-        cellStyle: { color: "#1d5cc9", cursor: "pointer" },
+        cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
       });
     }
 
@@ -144,7 +144,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
         headerName: "Cost Code",
         width: 120,
         filter: "agTextColumnFilter",
-        cellStyle: { color: "#6a767c", fontSize: "13px" },
+        cellStyle: { color: "var(--color-text-secondary)", fontSize: "13px" },
       },
       {
         field: "originalBudgetAmount",
@@ -210,8 +210,8 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
           formatCurrency(params.value),
         cellStyle: (params) => {
           const base = { fontWeight: 600 as const };
-          if (params.value > 0) return { ...base, color: "#1a7d3a" };
-          if (params.value < 0) return { ...base, color: "#b91c1c" };
+          if (params.value > 0) return { ...base, color: "var(--color-icon-success)" };
+          if (params.value < 0) return { ...base, color: "var(--color-text-error)" };
           return base;
         },
       },

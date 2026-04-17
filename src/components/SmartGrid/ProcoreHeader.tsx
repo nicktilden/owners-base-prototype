@@ -68,14 +68,14 @@ export default function ProcoreHeader(props: IHeaderParams) {
           fontSize: 12,
           lineHeight: "16px",
           letterSpacing: "0.25px",
-          color: "#464F53",
+          color: "var(--color-text-primary)",
         }}
       >
         {displayName}
       </span>
 
       {enableSorting && sortState && (
-        <span style={{ display: "flex", alignItems: "center", color: "#2066DF", flexShrink: 0 }}>
+        <span style={{ display: "flex", alignItems: "center", color: "var(--color-text-link)", flexShrink: 0 }}>
           {sortState === "asc" ? (
             <ArrowUp size="sm" />
           ) : (
@@ -85,7 +85,7 @@ export default function ProcoreHeader(props: IHeaderParams) {
       )}
 
       {enableFilterButton && filterActive && (
-        <span style={{ display: "flex", alignItems: "center", color: "#2066DF", flexShrink: 0 }}>
+        <span style={{ display: "flex", alignItems: "center", color: "var(--color-text-link)", flexShrink: 0 }}>
           <Filter size="sm" />
         </span>
       )}
@@ -105,14 +105,14 @@ export default function ProcoreHeader(props: IHeaderParams) {
           style={{
             display: "flex",
             alignItems: "center",
-            color: "#9DA6AB",
+            color: "var(--color-text-disabled)",
             flexShrink: 0,
             cursor: "pointer",
             borderRadius: 4,
             padding: 2,
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#464F53"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#9DA6AB"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text-primary)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--color-text-disabled)"; }}
         >
           <EllipsisVertical size="sm" />
         </span>

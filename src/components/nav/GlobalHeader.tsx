@@ -17,6 +17,7 @@ import {
   Building,
   CaretDown,
   CaretUp,
+  Copilot,
   Search,
 } from '@procore/core-icons';
 import styled from 'styled-components';
@@ -24,11 +25,11 @@ import NavDrawer from './NavDrawer';
 import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
+import { useAiPanel } from '@/context/AiPanelContext';
 import avatarImg from '@/images/avatar-XL.png';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 
 const ProjectPickerPopover = dynamic(() => import('./ProjectPickerPopover'), { ssr: false });
-const AppPickerPopover = dynamic(() => import('./AppPickerPopover'), { ssr: false });
 const HelpPopover = dynamic(() => import('./HelpPopover'), { ssr: false });
 const UserMenuPopover = dynamic(() => import('./UserMenuPopover'), { ssr: false });
 const BrowseAsTearsheet = dynamic(() => import('./BrowseAsTearsheet'), { ssr: false });
@@ -50,13 +51,13 @@ const Bar = styled.header`
   left: 0;
   right: 0;
   height: ${GLOBAL_HEADER_HEIGHT}px;
-  background: #000000;
+  background: var(--color-nav-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
   z-index: 1000;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 0 var(--color-nav-border);
 `;
 
 const MenuButton = styled.button`
@@ -65,52 +66,53 @@ const MenuButton = styled.button`
   gap: 6px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-nav-text);
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 4px;
   flex-shrink: 0;
   transition: background 0.15s;
-  &:hover { background: rgba(117, 131, 138, 0.3); }
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 const ProcoreLogo = styled(Link)`
   display: flex;
   align-items: center;
   margin: 0 12px 0 4px;
+  padding: 8px;
   flex-shrink: 0;
   text-decoration: none;
   border-radius: 4px;
   transition: background 0.15s;
-  &:hover { background: rgba(117, 131, 138, 0.3); }
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 const PickerButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgb(70, 79, 83);
+  background: var(--color-nav-surface);
   border: none;
-  color: #fff;
+  color: var(--color-nav-text);
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 6px;
   flex-shrink: 0;
   transition: background 0.15s;
   min-width: 0;
-  &:hover { background: rgb(85, 95, 100); }
+  &:hover { background: var(--color-nav-surface-hover); }
 `;
 
 const PickerIcon = styled.div`
   width: 28px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-nav-overlay);
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-nav-text);
 `;
 
 const PickerLabels = styled.div`
@@ -161,9 +163,9 @@ const IconBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--color-nav-text);
   transition: background 0.15s;
-  &:hover { background: rgba(117, 131, 138, 0.3); }
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 const ProfileButton = styled.button`
@@ -177,7 +179,7 @@ const ProfileButton = styled.button`
   border-radius: 6px;
   transition: background 0.15s;
   margin-left: 4px;
-  &:hover { background: rgba(117, 131, 138, 0.3); }
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 const AvatarImg = styled.img`
@@ -185,13 +187,13 @@ const AvatarImg = styled.img`
   height: 30px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border: 1.5px solid var(--color-nav-overlay);
 `;
 
 const CompanyBadge = styled.div`
   height: 30px;
   padding: 0 10px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-nav-overlay);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -199,19 +201,19 @@ const CompanyBadge = styled.div`
   white-space: nowrap;
 `;
 
-const AppPickerButton = styled.button`
+const AiButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgb(70, 79, 83);
+  gap: 6px;
+  background: var(--color-nav-surface);
   border: none;
-  color: #fff;
+  color: var(--color-nav-text);
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 6px;
   flex-shrink: 0;
   transition: background 0.15s;
-  &:hover { background: rgb(85, 95, 100); }
+  &:hover { background: var(--color-nav-surface-hover); }
 `;
 
 const SearchBarWrap = styled.div`
@@ -220,16 +222,16 @@ const SearchBarWrap = styled.div`
   gap: 8px;
   width: 100%;
   height: 36px;
-  background: #ffffff;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: var(--color-surface-primary);
+  border: 1.5px solid var(--color-nav-border-subtle);
   border-radius: 6px;
   padding: 0 12px;
   cursor: text;
   pointer-events: auto;
   transition: border-color 0.15s, background 0.15s;
   &:focus-within {
-    border-color: rgba(255, 255, 255, 0.6);
-    background: #ffffff;
+    border-color: var(--color-nav-border-focus);
+    background: var(--color-surface-primary);
   }
 `;
 
@@ -238,9 +240,9 @@ const SearchInput = styled.input`
   background: transparent;
   border: none;
   outline: none;
-  color: #6A767C;
+  color: var(--color-text-secondary);
   font-size: 14px;
-  &::placeholder { color: #6A767C; }
+  &::placeholder { color: var(--color-text-secondary); }
 `;
 
 const KbdBadge = styled.kbd`
@@ -249,12 +251,12 @@ const KbdBadge = styled.kbd`
   justify-content: center;
   height: 20px;
   padding: 0 6px;
-  background: #EEF0F1;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--color-surface-tertiary);
+  border: 1px solid var(--color-border-separator);
   border-radius: 4px;
   font-size: 11px;
   font-family: inherit;
-  color: #232729;
+  color: var(--color-text-primary);
   white-space: nowrap;
 `;
 
@@ -270,20 +272,19 @@ const SearchShortcut = styled.div`
 export default function GlobalHeader() {
   const [navOpen, setNavOpen] = useState(false);
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
-  const [appPickerOpen, setAppPickerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [browseAsOpen, setBrowseAsOpen] = useState(false);
   const [profileSettingsOpen, setProfileSettingsOpen] = useState(false);
 
   const pickerBtnRef = useRef<HTMLButtonElement>(null);
-  const appPickerBtnRef = useRef<HTMLButtonElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
   const userMenuBtnRef = useRef<HTMLButtonElement>(null);
 
   const { activeUser } = usePersona();
   const { level, activeProjectId } = useLevel();
   const { data } = useData();
+  const { openPanel } = useAiPanel();
 
   const account = data.account;
   const companyName = account?.companyName ?? 'Procore';
@@ -315,7 +316,7 @@ export default function GlobalHeader() {
         </MenuButton>
 
         <ProcoreLogo href="/portfolio">
-          <img src={procoreOwnersLogo.src} alt="Procore Owners" height={32} />
+          <img src={procoreOwnersLogo.src} alt="Procore Owners" height={26} />
         </ProcoreLogo>
 
         {/* Project / portfolio picker */}
@@ -352,8 +353,8 @@ export default function GlobalHeader() {
         {/* Search bar */}
         <SearchBarContainer>
           <SearchBarWrap>
-            <Search size="sm" style={{ color: '#6A767C', flexShrink: 0 }} />
-            <SearchInput placeholder="Search" />
+            <Search size="sm" style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
+            <SearchInput className="i_search" placeholder="Search" />
             <SearchShortcut>
               <KbdBadge>Cmd</KbdBadge>
               <KbdBadge>K</KbdBadge>
@@ -363,28 +364,14 @@ export default function GlobalHeader() {
 
         {/* Right actions */}
         <RightActions>
-          {/* App picker */}
-          <PickerWrap>
-            <AppPickerButton
-              ref={appPickerBtnRef}
-              aria-label="Select an app"
-              aria-haspopup="dialog"
-              aria-expanded={appPickerOpen}
-              onClick={() => setAppPickerOpen((v) => !v)}
-            >
-              <PickerLabels>
-                <Typography color="white" intent="small" style={{ opacity: 0.6, lineHeight: 1 }}>Apps</Typography>
-                <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Select an App</Typography>
-              </PickerLabels>
-              {appPickerOpen ? <CaretUp size="sm" /> : <CaretDown size="sm" />}
-            </AppPickerButton>
-            {appPickerOpen && (
-              <AppPickerPopover
-                anchorRef={appPickerBtnRef}
-                onClose={() => setAppPickerOpen(false)}
-              />
-            )}
-          </PickerWrap>
+          {/* Procore AI */}
+          <AiButton
+            aria-label="Procore AI"
+            onClick={() => openPanel()}
+          >
+            <Copilot size="sm" />
+            <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Procore AI</Typography>
+          </AiButton>
 
           {/* Help */}
           <PickerWrap>
@@ -429,7 +416,7 @@ export default function GlobalHeader() {
               <CompanyBadge>
                 <Typography
                   intent="small"
-                  style={{ color: '#fff', fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap' }}
+                  style={{ color: 'var(--color-nav-text)', fontWeight: 600, lineHeight: 1, whiteSpace: 'nowrap' }}
                 >
                   {companyName}
                 </Typography>

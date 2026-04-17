@@ -147,83 +147,84 @@ function RichActionPlanTearsheet({ open, onClose, project, templateName, cell }:
   return (
     <>
       <TearsheetWide />
-      <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right" block>
+      <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right">
         <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+          <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-              <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{project.number}</Typography>
-              <span style={{ color: "#d6dadc" }}>·</span>
-              <Pill color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
+              <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>{project.number}</Typography>
+              <span style={{ color: "var(--color-border-separator)" }}>·</span>
+              <Pill color={stagePillColor(project.stage)} data-pill-color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
             </div>
-            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block", marginTop: 4 }}>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block", marginTop: 4 }}>
               {templateName}
             </Typography>
-            <Typography intent="small" style={{ color: "#6a767c", display: "block", marginTop: 6 }}>
+            <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginTop: 6 }}>
               {project.name}
             </Typography>
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ flex: 1, maxWidth: 320, height: 8, borderRadius: 4, background: "#eceff1", overflow: "hidden" }}>
+              <div style={{ flex: 1, maxWidth: 320, height: 8, borderRadius: 4, background: "var(--color-surface-active)", overflow: "hidden" }}>
                 <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 4, background: cellBarColor(cell), transition: "width 0.2s ease" }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: cellBarColor(cell) }}>{cellStatusLabel(cell)}</span>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <div style={{ flex: 1 }}>
               <input
+                className="i_search"
                 type="search"
                 placeholder="Search sections and items..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 aria-label="Search sections and items"
                 style={{
-                  width: "100%", padding: "7px 12px", border: "1px solid #d6dadc", borderRadius: 4,
+                  width: "100%", padding: "7px 12px", border: "1px solid var(--color-border-separator)", borderRadius: 4,
                   fontSize: 13, fontFamily: "inherit", outline: "none",
                 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = "#1565c0")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#d6dadc")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--color-border-separator)")}
               />
             </div>
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
             {filteredSections.map((section) => (
-              <div key={section.id} style={{ border: "1px solid #d6dadc", borderRadius: 4, marginBottom: 12, overflow: "hidden" }}>
+              <div key={section.id} style={{ border: "1px solid var(--color-border-separator)", borderRadius: 4, marginBottom: 12, overflow: "hidden" }}>
                 <button
                   type="button"
                   onClick={() => toggle(section.id)}
                   style={{
                     width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "10px 16px", background: "#f8f9f9", border: "none", cursor: "pointer",
-                    fontWeight: 600, fontSize: 13, color: "#232729", textAlign: "left", fontFamily: "inherit",
+                    padding: "10px 16px", background: "var(--color-surface-secondary)", border: "none", cursor: "pointer",
+                    fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)", textAlign: "left", fontFamily: "inherit",
                   }}
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {openSections[section.id] ? <ChevronDown size="sm" /> : <ChevronRight size="sm" />}
                     {section.title}
                   </span>
-                  <span style={{ fontSize: 12, color: "#6a767c", fontWeight: 400 }}>{section.items.length} items</span>
+                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontWeight: 400 }}>{section.items.length} items</span>
                 </button>
                 {openSections[section.id] && (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left", padding: "8px 16px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Item</th>
-                        <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Due</th>
-                        <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#6a767c", fontSize: 12 }}>Status</th>
+                        <th style={{ textAlign: "left", padding: "8px 16px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Item</th>
+                        <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Due</th>
+                        <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {section.items.map((item) => (
-                        <tr key={item.id} style={{ borderTop: "1px solid #eef0f1" }}>
+                        <tr key={item.id} style={{ borderTop: "1px solid var(--color-border-separator)" }}>
                           <td style={{ padding: "10px 16px", verticalAlign: "top" }}>
-                            <div style={{ color: "#232729", fontWeight: 500 }}>{item.title}</div>
+                            <div style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>{item.title}</div>
                             {item.acceptanceCriteria && (
-                              <div style={{ marginTop: 4, fontSize: 12, color: "#6a767c" }}>{item.acceptanceCriteria}</div>
+                              <div style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)" }}>{item.acceptanceCriteria}</div>
                             )}
                           </td>
-                          <td style={{ padding: "10px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: item.status === "delayed" ? "#c62828" : "#232729" }}>
+                          <td style={{ padding: "10px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: item.status === "delayed" ? "#c62828" : "var(--color-text-primary)" }}>
                             {item.dueDate ? item.dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                           </td>
                           <td style={{ padding: "10px 12px", verticalAlign: "top" }}>
@@ -277,15 +278,16 @@ export function APv2FullMatrixHubCard() {
         infoTooltip="Projects × Action Plan template columns. Cells show % of items closed, derived from real seed data. Green = complete, red = overdue, blue = in progress."
         actions={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Button variant="secondary" size="sm" onClick={() => setConfigOpen(true)}>
+            <Button variant="secondary" className="b_secondary" size="sm" onClick={() => setConfigOpen(true)}>
               Configure columns
             </Button>
-            <Button variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
+            <Button className="b_tertiary" variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
           </div>
         }
         controls={
           <div style={{ maxWidth: 200 }}>
             <SearchInput
+              className="i_search"
               placeholder="Search projects"
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
@@ -297,24 +299,24 @@ export function APv2FullMatrixHubCard() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 600 }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c", whiteSpace: "nowrap", maxWidth: 180 }}>Project</th>
-                <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c", whiteSpace: "nowrap", minWidth: 140 }}>Stage</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap", maxWidth: 180 }}>Project</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap", minWidth: 140 }}>Stage</th>
                 {activeTemplates.map((t) => (
-                  <th key={t} style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #d6dadc", color: "#6a767c", minWidth: 140 }}>{t}</th>
+                  <th key={t} style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", minWidth: 140 }}>{t}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {matrix.map(({ project, cells }, rowIdx) => (
-                <tr key={project.id} style={{ background: rowIdx % 2 === 0 ? "#fff" : "#fafafa" }}>
-                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#232729", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={project.name}>{project.name}</td>
-                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1" }}>
-                    <Pill color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
+                <tr key={project.id} style={{ background: rowIdx % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                  <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-primary)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={project.name}>{project.name}</td>
+                  <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
+                    <Pill color={stagePillColor(project.stage)} data-pill-color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
                   </td>
                   {cells.map((cell, ci) => (
-                    <td key={activeTemplates[ci]} style={{ padding: "7px 8px", borderBottom: "1px solid #eef0f1", verticalAlign: "middle" }}>
+                    <td key={activeTemplates[ci]} style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", verticalAlign: "middle" }}>
                       {cell.kind === "empty" ? (
-                        <span style={{ fontSize: 12, color: "#6a767c", fontStyle: "italic" }}>No Action Plan created.</span>
+                        <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic" }}>No Action Plan created.</span>
                       ) : (
                         <button
                           type="button"
@@ -328,7 +330,7 @@ export function APv2FullMatrixHubCard() {
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                           <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell) }}>{cellStatusLabel(cell)}</span>
-                          <div style={{ height: 8, borderRadius: 2, background: "#eceff1", overflow: "hidden", marginTop: 4 }}>
+                          <div style={{ height: 8, borderRadius: 2, background: "var(--color-surface-active)", overflow: "hidden", marginTop: 4 }}>
                             <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 2, background: cellBarColor(cell), transition: "width 0.2s ease" }} />
                           </div>
                         </button>
@@ -353,7 +355,7 @@ export function APv2FullMatrixHubCard() {
       <Modal open={configOpen} onClose={() => setConfigOpen(false)} aria-label="Configure Action Plan columns" howToClose={["x", "scrim"]} role="dialog">
         <Modal.Header>Configure Action Plan columns</Modal.Header>
         <Modal.Body>
-          <Typography intent="small" style={{ color: "#6a767c", marginBottom: 16, display: "block", lineHeight: 1.5 }}>
+          <Typography intent="small" style={{ color: "var(--color-text-secondary)", marginBottom: 16, display: "block", lineHeight: 1.5 }}>
             Select templates to show as columns and reorder to match your gate sequence.
           </Typography>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -362,7 +364,7 @@ export function APv2FullMatrixHubCard() {
               return (
                 <div
                   key={t}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", border: "1px solid #d6dadc", borderRadius: 4 }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", border: "1px solid var(--color-border-separator)", borderRadius: 4 }}
                 >
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", flex: 1, fontSize: 13 }}>
                     <input
@@ -388,7 +390,7 @@ export function APv2FullMatrixHubCard() {
                           return next;
                         });
                       }}
-                      style={{ padding: "2px 8px", fontSize: 12, background: "#fff", border: "1px solid #d6dadc", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+                      style={{ padding: "2px 8px", fontSize: 12, background: "var(--color-surface-primary)", border: "1px solid var(--color-border-separator)", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
                       aria-label={`Move ${t} up`}
                     >↑</button>
                     <button
@@ -402,7 +404,7 @@ export function APv2FullMatrixHubCard() {
                           return next;
                         });
                       }}
-                      style={{ padding: "2px 8px", fontSize: 12, background: "#fff", border: "1px solid #d6dadc", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+                      style={{ padding: "2px 8px", fontSize: 12, background: "var(--color-surface-primary)", border: "1px solid var(--color-border-separator)", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
                       aria-label={`Move ${t} down`}
                     >↓</button>
                   </div>
@@ -412,8 +414,8 @@ export function APv2FullMatrixHubCard() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setConfigOpen(false)}>Cancel</Button>
-          <Button variant="primary" onClick={() => setConfigOpen(false)}>Save</Button>
+          <Button variant="secondary" className="b_secondary" onClick={() => setConfigOpen(false)}>Cancel</Button>
+          <Button variant="primary" className="b_primary" onClick={() => setConfigOpen(false)}>Save</Button>
         </Modal.Footer>
       </Modal>
     </>
@@ -494,7 +496,7 @@ export function APv2KpiDashboardHubCard() {
   }, [drillTemplate, allCells]);
 
   const kpiItems = [
-    { label: "Total Plans", value: String(aggStats.totalPlans), color: "#232729" },
+    { label: "Total Plans", value: String(aggStats.totalPlans), color: "var(--color-text-primary)" },
     { label: "Avg Completion", value: `${aggStats.avgCompletion}%`, color: aggStats.avgCompletion >= 70 ? "#2e7d32" : "#1565c0" },
     { label: "Completed", value: String(aggStats.completedPlans), color: "#2e7d32" },
     { label: "Overdue", value: String(aggStats.overduePlans), color: aggStats.overduePlans > 0 ? "#c62828" : "#6a767c" },
@@ -506,13 +508,13 @@ export function APv2KpiDashboardHubCard() {
         title="Action Plans — KPI dashboard"
         infoTooltip="Aggregate KPIs across all Action Plan templates, plus per-template completion rings derived from real seed data. Click a template to see project-level breakdown."
         actions={
-          <Button variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
+          <Button className="b_tertiary" variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
         }
       >
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0, border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
           {kpiItems.map((k, i) => (
-            <div key={k.label} style={{ padding: "12px 16px", borderRight: i < 3 ? "1px solid #d6dadc" : "none" }}>
-              <div style={{ fontSize: 13, color: "#6a767c", marginBottom: 2 }}>{k.label}</div>
+            <div key={k.label} style={{ padding: "12px 16px", borderRight: i < 3 ? "1px solid var(--color-border-separator)" : "none" }}>
+              <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 2 }}>{k.label}</div>
               <div style={{ fontSize: 22, fontWeight: 600, color: k.color, lineHeight: "28px" }}>{k.value}</div>
             </div>
           ))}
@@ -528,27 +530,27 @@ export function APv2KpiDashboardHubCard() {
                 onClick={() => setDrillTemplate(t.name)}
                 style={{
                   display: "flex", alignItems: "center", gap: 14, padding: "10px 12px",
-                  border: "1px solid #d6dadc", borderRadius: 8, background: "#fff", cursor: "pointer",
+                  border: "1px solid var(--color-border-separator)", borderRadius: 8, background: "var(--color-surface-primary)", cursor: "pointer",
                   textAlign: "left", fontFamily: "inherit", transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f9f9")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-primary)")}
               >
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <CompletionRing percent={t.avgPct} color={ringColor} />
-                  <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#232729" }}>
+                  <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)" }}>
                     {t.avgPct}%
                   </span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#232729" }}>{t.name}</div>
-                  <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: 12, color: "#6a767c" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{t.name}</div>
+                  <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)" }}>
                     <span>{t.adopted}/{allCells.length} adopted</span>
                     <span style={{ color: "#2e7d32" }}>{t.completeCount} complete</span>
                     {t.overdueCount > 0 && <span style={{ color: "#c62828", fontWeight: 600 }}>{t.overdueCount} overdue</span>}
                   </div>
                 </div>
-                <ChevronRight size="sm" style={{ color: "#6a767c", flexShrink: 0 } as React.CSSProperties} />
+                <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 } as React.CSSProperties} />
               </button>
             );
           })}
@@ -561,44 +563,43 @@ export function APv2KpiDashboardHubCard() {
         onClose={() => setDrillTemplate(null)}
         aria-label={`Projects using ${drillTemplate}`}
         placement="right"
-        block
       >
         <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
-            <Typography intent="h2" style={{ fontWeight: 700, color: "#232729" }}>{drillTemplate}</Typography>
-            <Typography intent="small" style={{ color: "#6a767c", display: "block", marginTop: 2 }}>
+          <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>{drillTemplate}</Typography>
+            <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginTop: 2 }}>
               {drillProjects.length} project{drillProjects.length !== 1 ? "s" : ""} with this template
             </Typography>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-            <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: "#f5f6f7" }}>
-                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>#</th>
-                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Project</th>
-                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Stage</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Progress</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Status</th>
+                  <tr style={{ background: "var(--color-surface-secondary)" }}>
+                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>#</th>
+                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Project</th>
+                    <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Stage</th>
+                    <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Progress</th>
+                    <th style={{ textAlign: "center", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {drillProjects.map(({ project, cell }, i) => (
-                    <tr key={project.id} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", color: "#6a767c" }}>{project.number}</td>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", fontWeight: 600, color: "#232729" }}>{project.name}</td>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1" }}>
-                        <Pill color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
+                    <tr key={project.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>{project.number}</td>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-primary)" }}>{project.name}</td>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
+                        <Pill color={stagePillColor(project.stage)} data-pill-color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
                       </td>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-                          <div style={{ width: 60, height: 6, borderRadius: 3, background: "#eceff1", overflow: "hidden" }}>
+                          <div style={{ width: 60, height: 6, borderRadius: 3, background: "var(--color-surface-active)", overflow: "hidden" }}>
                             <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 3, background: cellBarColor(cell) }} />
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell) }}>{cell.percent}%</span>
                         </div>
                       </td>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                         {cell.overdue ? (
                           <span style={{ fontSize: 11, fontWeight: 600, color: "#c62828", background: "#fbe9e7", padding: "2px 8px", borderRadius: 4 }}>Overdue</span>
                         ) : cell.percent >= 100 ? (
@@ -653,7 +654,7 @@ export function APv2ProjectCardsHubCard() {
         title="Action Plans — project cards"
         infoTooltip="Each project as a visual card with compact progress dots per template, derived from real seed data. Click a card for template breakdown."
         actions={
-          <Button variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
+          <Button className="b_tertiary" variant="tertiary" size="sm" icon={<EllipsisVertical size="sm" />} aria-label="Card actions" />
         }
       >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
@@ -664,23 +665,23 @@ export function APv2ProjectCardsHubCard() {
               onClick={() => setSelectedProject(project)}
               style={{
                 display: "flex", flexDirection: "column", gap: 8, padding: 14,
-                border: "1px solid #d6dadc", borderRadius: 8, background: "#fff",
+                border: "1px solid var(--color-border-separator)", borderRadius: 8, background: "var(--color-surface-primary)",
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
                 transition: "border-color 0.15s, box-shadow 0.15s",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#1565c0"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d6dadc"; e.currentTarget.style.boxShadow = "none"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border-separator)"; e.currentTarget.style.boxShadow = "none"; }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#232729", lineHeight: 1.3 }}>{project.name}</div>
-                  <div style={{ fontSize: 11, color: "#6a767c", marginTop: 2 }}>{project.number}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)", lineHeight: 1.3 }}>{project.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{project.number}</div>
                 </div>
                 {hasOverdue && (
                   <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: "#c62828", borderRadius: 8, padding: "1px 6px", lineHeight: "16px", flexShrink: 0 }}>!</span>
                 )}
               </div>
-              <Pill color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
+              <Pill color={stagePillColor(project.stage)} data-pill-color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
 
               <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
                 {cells.map((cell, ci) => (
@@ -689,18 +690,18 @@ export function APv2ProjectCardsHubCard() {
                     title={`${TEMPLATE_NAMES[ci]}: ${cell.kind === "empty" ? "No plan" : cellStatusLabel(cell)}`}
                     style={{
                       width: 12, height: 12, borderRadius: "50%",
-                      background: cell.kind === "empty" ? "#eceff1" : cellBarColor(cell),
-                      border: `2px solid ${cell.kind === "empty" ? "#d6dadc" : cellBarColor(cell)}`,
+                      background: cell.kind === "empty" ? "var(--color-surface-active)" : cellBarColor(cell),
+                      border: `2px solid ${cell.kind === "empty" ? "var(--color-border-separator)" : cellBarColor(cell)}`,
                     }}
                   />
                 ))}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                <div style={{ flex: 1, height: 4, borderRadius: 2, background: "#eceff1", overflow: "hidden" }}>
+                <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-surface-active)", overflow: "hidden" }}>
                   <div style={{ width: `${avgPct}%`, height: "100%", borderRadius: 2, background: hasOverdue ? "#c62828" : avgPct >= 100 ? "#2e7d32" : "#1565c0" }} />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#232729" }}>{avgPct}%</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-primary)" }}>{avgPct}%</span>
               </div>
             </button>
           ))}
@@ -713,31 +714,30 @@ export function APv2ProjectCardsHubCard() {
         onClose={() => setSelectedProject(null)}
         aria-label={`Action Plans for ${selectedProject?.name}`}
         placement="right"
-        block
       >
         {selectedProject && (
           <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #d6dadc", flexShrink: 0 }}>
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                <Typography intent="small" style={{ color: "#6a767c", fontWeight: 500 }}>{selectedProject.number}</Typography>
-                <span style={{ color: "#d6dadc" }}>·</span>
-                <Pill color={stagePillColor(selectedProject.stage)}>{stageLabel(selectedProject.stage)}</Pill>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>{selectedProject.number}</Typography>
+                <span style={{ color: "var(--color-border-separator)" }}>·</span>
+                <Pill color={stagePillColor(selectedProject.stage)} data-pill-color={stagePillColor(selectedProject.stage)}>{stageLabel(selectedProject.stage)}</Pill>
               </div>
-              <Typography intent="h2" style={{ fontWeight: 700, color: "#232729", display: "block", marginTop: 4 }}>
+              <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block", marginTop: 4 }}>
                 {selectedProject.name}
               </Typography>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-              <Typography intent="small" style={{ color: "#6a767c", display: "block", marginBottom: 16 }}>
+              <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginBottom: 16 }}>
                 Action Plan templates for this project
               </Typography>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {selectedCells.map(({ template, cell }) => (
-                  <div key={template} style={{ border: "1px solid #d6dadc", borderRadius: 8, padding: "14px 16px" }}>
+                  <div key={template} style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "#232729" }}>{template}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{template}</span>
                       {cell.kind === "empty" ? (
-                        <span style={{ fontSize: 12, color: "#6a767c", fontStyle: "italic" }}>No plan</span>
+                        <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic" }}>No plan</span>
                       ) : cell.overdue ? (
                         <span style={{ fontSize: 11, fontWeight: 600, color: "#c62828", background: "#fbe9e7", padding: "2px 8px", borderRadius: 4 }}>Overdue</span>
                       ) : cell.percent >= 100 ? (
@@ -748,7 +748,7 @@ export function APv2ProjectCardsHubCard() {
                     </div>
                     {cell.kind === "progress" && (
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#eceff1", overflow: "hidden" }}>
+                        <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-active)", overflow: "hidden" }}>
                           <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 4, background: cellBarColor(cell), transition: "width 0.3s ease" }} />
                         </div>
                         <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell), minWidth: 42 }}>{cell.percent}%</span>

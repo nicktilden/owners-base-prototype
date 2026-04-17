@@ -10,13 +10,15 @@ import { useHubFilters } from "@/context/HubFilterContext";
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 48px 24px;
+  gap: 24px 24px;
   width: 100%;
+  height: 90%;
+  margin: 24px 0 0 0;
 `;
 
 const KpiLabel = styled.div`
   font-size: 14px;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 20px;
   letter-spacing: 0.15px;
 `;
@@ -31,15 +33,13 @@ const KpiValueRow = styled.div`
 const KpiValue = styled.div`
   font-size: 26px;
   font-weight: 500;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 1.1;
   letter-spacing: 0.15px;
 `;
 
 const InvoiceList = styled.div`
   width: 100%;
-  border: 1px solid #d6dadc;
-  border-radius: 8px;
   overflow: hidden;
 `;
 
@@ -48,7 +48,7 @@ const InvoiceRow = styled.div`
   grid-template-columns: 160px 1fr auto auto;
   padding: 8px;
   gap: 8px;
-  border-bottom: 1px solid #d6dadc;
+  border-bottom: 1px solid var(--color-border-separator);
 
   &:last-child {
     border-bottom: none;
@@ -56,10 +56,11 @@ const InvoiceRow = styled.div`
 `;
 
 const InvoiceLink = styled.a`
-  color: #1d5cc9;
-  text-decoration: underline;
+  color: var(--color-text-link);
   font-size: 14px;
   line-height: 20px;
+  text-decoration: underline;
+  font-weight: 600;
   cursor: pointer;
   display: inline-block;
   width: 100%;
@@ -79,13 +80,13 @@ const InvoiceMeta = styled.div`
 const Amount = styled.div`
   font-size: 12px;
   font-weight: 600;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 16px;
 `;
 
 const Company = styled.div`
   font-size: 12px;
-  color: #232729;
+  color: var(--color-text-primary);
   line-height: 16px;
 `;
 
@@ -118,25 +119,33 @@ export function FinancialScorecardCard() {
       (sum, p) => sum + p.estimatedCostAtCompletion,
       0
     );
+    const totalCommitted = filteredProjectRows.reduce(
+      (sum, p) => sum + p.jobToDateCost + p.forecastToComplete * 0.35,
+      0
+    );
+    const invoicedToDate = filteredProjectRows.reduce(
+      (sum, p) => sum + p.jobToDateCost * 0.72,
+      0
+    );
     const forecastVsBudget =
       revisedBudget > 0 ? (estCostAtCompletion / revisedBudget) * 100 : 0;
     const projectedOverUnder = estCostAtCompletion - revisedBudget;
 
     return [
-      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Total Committed", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "+2.4%", tone: "positive" as const, trendValue: 1 },
+      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "-3.1%", tone: "positive" as const, trendValue: -1 },
+      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "+5.7%", tone: "negative" as const, trendValue: 1 },
+      { label: "Total Committed", value: formatCurrency(totalCommitted), delta: "+1.8%", tone: "negative" as const, trendValue: 1 },
+      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "-0.6%", tone: "positive" as const, trendValue: -1 },
       {
         label: "Projected Over/Under",
         value: `${projectedOverUnder >= 0 ? "+" : "-"}${formatCurrency(Math.abs(projectedOverUnder))}`,
-        delta: "0%",
+        delta: projectedOverUnder > 0 ? "+4.2%" : "-4.2%",
         tone: projectedOverUnder > 0 ? ("negative" as const) : projectedOverUnder < 0 ? ("positive" as const) : ("neutral" as const),
         trendValue: projectedOverUnder > 0 ? -1 : projectedOverUnder < 0 ? 1 : 0,
       },
-      { label: "Invoiced to Date", value: "$0.00", delta: "0%", tone: "neutral" as const, trendValue: 0 },
-      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "0%", tone: "neutral" as const, trendValue: 0 },
+      { label: "Invoiced to Date", value: formatCurrency(invoicedToDate), delta: "+8.3%", tone: "positive" as const, trendValue: 1 },
+      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "-1.2%", tone: "positive" as const, trendValue: -1 },
     ];
   }, [filteredProjectRows]);
 
@@ -144,13 +153,10 @@ export function FinancialScorecardCard() {
     <HubCardFrame
       title="Financial Scorecard"
       infoTooltip="Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
-      titleSuffix={
-        <>
-          <Pill color={valuePillColor}>Value</Pill>
-        </>
-      }
+      titleSuffix={null}
       actions={
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
@@ -215,6 +221,7 @@ export function InvoicesForApprovalCard() {
       infoTooltip="Invoices currently awaiting approval from the seeded invoice list, filtered by date range and company."
       actions={
         <Button
+          className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
@@ -270,7 +277,7 @@ export function InvoicesForApprovalCard() {
               <Amount>{row.amount}</Amount>
               <Company>{row.company}</Company>
             </InvoiceMeta>
-            <Button variant="secondary" size="sm">View</Button>
+            <Button variant="secondary" className="b_secondary" size="sm">View</Button>
           </InvoiceRow>
         ))}
       </InvoiceList>

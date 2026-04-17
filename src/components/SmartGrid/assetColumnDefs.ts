@@ -3,7 +3,7 @@ import { Pill } from "@procore/core-react";
 import type { ColDef, ValueGetterParams, ValueFormatterParams, ICellRendererParams } from "ag-grid-community";
 import type { Asset, AssetStatus, AssetCondition } from "@/types/assets";
 import { formatDateMMDDYYYY } from "@/utils/date";
-import CostActionsCellRenderer from "./CostActionsCellRenderer";
+import AssetActionsCellRenderer from "./AssetActionsCellRenderer";
 
 type PillColor = "green" | "yellow" | "red" | "gray";
 
@@ -50,8 +50,40 @@ function ConditionPillRenderer(params: ICellRendererParams) {
   return React.createElement(Pill, { color }, capitalize(value));
 }
 
-export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asset>[] {
+export function getAssetColumnDefs(
+  projectMap: Map<string, string>,
+  onAssetClick?: (asset: Asset) => void
+): ColDef<Asset>[] {
   return [
+    {
+      field: "assetCode",
+      headerName: "ID",
+      filter: "agTextColumnFilter",
+      width: 130,
+      minWidth: 100,
+      pinned: "left",
+      cellRenderer: (params: ICellRendererParams<Asset>) => {
+        if (!params.data) return null;
+        return React.createElement(
+          "a",
+          {
+            href: "#",
+            onClick: (e: React.MouseEvent) => {
+              e.preventDefault();
+              onAssetClick?.(params.data!);
+            },
+            style: { color: "var(--color-text-link)", textDecoration: "underline", fontWeight: 500 },
+          },
+          params.value
+        );
+      },
+    },
+    {
+      field: "name",
+      headerName: "Name",
+      filter: "agTextColumnFilter",
+      minWidth: 200,
+    },
     {
       colId: "project",
       headerName: "Project",
@@ -59,12 +91,6 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       minWidth: 200,
       valueGetter: (params: ValueGetterParams<Asset>) =>
         params.data ? projectMap.get(params.data.projectId) ?? params.data.projectId : "",
-    },
-    {
-      field: "name",
-      headerName: "Name",
-      filter: "agTextColumnFilter",
-      minWidth: 200,
     },
     {
       field: "type",
@@ -75,10 +101,26 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
         params.value ? capitalize(params.value) : "",
     },
     {
+      field: "status",
+      headerName: "Status",
+      filter: "agSetColumnFilter",
+      enableRowGroup: true,
+      minWidth: 150,
+      cellRenderer: StatusPillRenderer,
+    },
+    {
+      field: "updatedAt",
+      headerName: "Last Modified",
+      filter: "agDateColumnFilter",
+      valueFormatter: (params: ValueFormatterParams<Asset>) =>
+        formatDateMMDDYYYY(params.value),
+    },
+    {
       field: "trade",
       headerName: "Trade",
       filter: "agSetColumnFilter",
       enableRowGroup: true,
+      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         params.value ? capitalize(params.value) : "",
     },
@@ -87,6 +129,7 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       headerName: "Manufacturer / Model",
       filter: "agTextColumnFilter",
       minWidth: 180,
+      hide: true,
       valueGetter: (params: ValueGetterParams<Asset>) => {
         if (!params.data) return "";
         const { manufacturer, model } = params.data;
@@ -98,16 +141,9 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       field: "serialNumber",
       headerName: "Serial Number",
       filter: "agTextColumnFilter",
+      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         params.value ?? "—",
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      filter: "agSetColumnFilter",
-      enableRowGroup: true,
-      minWidth: 150,
-      cellRenderer: StatusPillRenderer,
     },
     {
       field: "condition",
@@ -115,12 +151,14 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       filter: "agSetColumnFilter",
       enableRowGroup: true,
       minWidth: 130,
+      hide: true,
       cellRenderer: ConditionPillRenderer,
     },
     {
       field: "installDate",
       headerName: "Install Date",
       filter: "agDateColumnFilter",
+      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         formatDateMMDDYYYY(params.value),
     },
@@ -128,12 +166,13 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       field: "warrantyExpiry",
       headerName: "Warranty Expiry",
       filter: "agDateColumnFilter",
+      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         formatDateMMDDYYYY(params.value),
     },
     {
       colId: "actions",
-      headerName: "Actions",
+      headerName: "",
       width: 90,
       minWidth: 90,
       maxWidth: 90,
@@ -143,7 +182,7 @@ export function getAssetColumnDefs(projectMap: Map<string, string>): ColDef<Asse
       suppressMovable: true,
       suppressHeaderMenuButton: true,
       pinned: "right",
-      cellRenderer: CostActionsCellRenderer,
+      cellRenderer: AssetActionsCellRenderer,
       lockPosition: true,
     },
   ];

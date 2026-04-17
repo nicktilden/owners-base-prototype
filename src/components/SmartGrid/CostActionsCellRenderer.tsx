@@ -10,6 +10,7 @@ export default function CostActionsCellRenderer(params: ICellRendererParams) {
     <div style={{ display: "flex", alignItems: "center", gap: 4, height: "100%" }}>
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Eye size="sm" />}
         aria-label="View"
@@ -17,6 +18,7 @@ export default function CostActionsCellRenderer(params: ICellRendererParams) {
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
         aria-label="Edit"

@@ -8,10 +8,10 @@ const PanelWrapper = styled.div<{ $open: boolean }>`
   min-width: ${({ $open }) => ($open ? "400px" : "0px")};
   overflow: hidden;
   transition: width 0.25s ease, min-width 0.25s ease;
-  border-left: ${({ $open }) => ($open ? "1px solid #D6DADC" : "none")};
+  border-left: ${({ $open }) => ($open ? "1px solid var(--color-border-separator)" : "none")};
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--color-surface-primary);
   height: 100%;
 `;
 
@@ -27,13 +27,13 @@ const PanelHeader = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 8px 8px 16px;
-  border-bottom: 1px solid #D6DADC;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
 const PanelSearchRow = styled.div`
   padding: 16px;
-  border-bottom: 1px solid #D6DADC;
+  border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -54,7 +54,7 @@ const ColumnPill = styled.div`
   display: flex;
   align-items: center;
   flex: 1;
-  background: #F4F5F6;
+  background: var(--color-surface-hover);
   border-radius: 4px;
   padding: 4px;
   min-width: 0;
@@ -65,7 +65,7 @@ const EnabledCount = styled.span`
   font-size: 12px;
   line-height: 16px;
   letter-spacing: 0.25px;
-  color: #6A767C;
+  color: var(--color-text-secondary);
   white-space: nowrap;
   margin-left: auto;
   padding-right: 4px;
@@ -76,7 +76,7 @@ const PanelFooter = styled.div`
   align-items: center;
   justify-content: flex-end;
   padding: 8px 16px;
-  border-top: 1px solid #D6DADC;
+  border-top: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -190,11 +190,11 @@ export default function ConfigureColumnsPanel({
         <PanelHeader>
           <Typography
             intent="h3"
-            style={{ flex: 1, fontSize: 16, fontWeight: 600, lineHeight: "24px", letterSpacing: "0.15px", color: "#232729" }}
+            style={{ flex: 1, fontSize: 16, fontWeight: 600, lineHeight: "24px", letterSpacing: "0.15px", color: "var(--color-text-primary)" }}
           >
             Configure Columns
           </Typography>
-          <Button variant="tertiary" onClick={handleReset}>
+          <Button variant="tertiary" className="b_tertiary" onClick={handleReset}>
             Reset
           </Button>
         </PanelHeader>
@@ -230,7 +230,7 @@ export default function ConfigureColumnsPanel({
         </PanelBody>
 
         <PanelFooter>
-          <span style={{ flex: 1, fontSize: 12, color: "#6A767C" }}>
+          <span style={{ flex: 1, fontSize: 12, color: "var(--color-text-secondary)" }}>
             {enabledCount}/{columns.length} columns enabled
           </span>
           <Button variant="primary" onClick={handleApply}>

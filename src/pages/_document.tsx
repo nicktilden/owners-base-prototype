@@ -32,7 +32,9 @@ export default class MyDocument extends Document {
   render() {
     return (
       <Html lang="en">
-        <Head />
+        <Head>
+          <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=JSON.parse(localStorage.getItem('procore-theme-preference')||'{}');var t=p.theme||'owner';var c=p.colorScheme||'dark';var r=c;if(c==='system'){r=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}if(t!=='default'){document.documentElement.setAttribute('data-theme',t)}document.documentElement.setAttribute('data-color-scheme',r)}catch(e){}})()` }} />
+        </Head>
         <body>
           <Main />
           <NextScript />

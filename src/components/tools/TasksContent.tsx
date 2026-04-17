@@ -3,7 +3,6 @@ import {
   Button,
   Dropdown,
   Search,
-  SegmentedController,
   SplitViewCard,
   Tabs,
   ToggleButton,
@@ -13,7 +12,6 @@ import {
   Filter,
   Plus,
   Sliders,
-  ViewRows,
 } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
@@ -34,7 +32,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -54,7 +52,7 @@ const ToolbarRight = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   border-radius: 0;
   overflow: hidden;
 `;
@@ -270,15 +268,6 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                   </ToggleButton>
                 </ToolbarLeft>
                 <ToolbarRight>
-                  <SegmentedController>
-                    <SegmentedController.Segment
-                      selected={true}
-                      onClick={() => {}}
-                      tooltip="List view"
-                    >
-                      <ViewRows />
-                    </SegmentedController.Segment>
-                  </SegmentedController>
                   <ToggleButton
                     selected={configOpen}
                     icon={<Sliders />}
@@ -356,7 +345,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                 style={{
                   padding: "24px",
                   textAlign: "center",
-                  color: "#6a767c",
+                  color: "var(--color-text-secondary)",
                 }}
               >
                 My Tasks coming soon.

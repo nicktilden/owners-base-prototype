@@ -23,9 +23,9 @@ const FilterBarWrap = styled.div`
   align-items: flex-start;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #ffffff;
+  background: var(--color-surface-primary);
   border-radius: 8px;
-  box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 2px 6px 0px var(--color-shadow);
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -50,7 +50,7 @@ const FilterBarRight = styled.div`
 const VerticalSeparator = styled.div`
   width: 1px;
   height: 36px;
-  background: var(--color-border-separator, #d6dadc);
+  background: var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -62,22 +62,22 @@ const FilterSetTrigger = styled.button`
   gap: 6px;
   height: 32px;
   padding: 0 10px;
-  background: #fff;
-  border: 1px solid #d6dadc;
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-separator);
   border-radius: 4px;
   font-size: 14px;
   font-family: inherit;
-  color: #232729;
+  color: var(--color-text-primary);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
 
   &:hover {
-    background: #f5f6f7;
+    background: var(--color-surface-hover);
   }
 
   &[aria-expanded='true'] {
-    border-color: #0d5fcb;
+    border-color: var(--color-border-focus);
     box-shadow: 0 0 0 2px rgba(13, 95, 203, 0.2);
   }
 `;
@@ -168,16 +168,15 @@ function FilterSetDropdown() {
             top: 'calc(100% + 4px)',
             left: 0,
             width: 260,
-            background: '#fff',
-            border: '1px solid #d6dadc',
             borderRadius: 8,
             boxShadow: '0 4px 12px 0 rgba(0,0,0,0.2)',
             zIndex: 200,
             overflow: 'hidden',
           }}
         >
-          <MenuImperative>
+          <MenuImperative className="menu_container">
             <MenuImperative.Search
+              className="i_search"
               placeholder="Search"
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
@@ -193,7 +192,7 @@ function FilterSetDropdown() {
                   </MenuImperative.Item>
                 ))
               ) : (
-                <div style={{ padding: '10px 16px', fontSize: 13, color: '#6a767c' }}>
+                <div style={{ padding: '10px 16px', fontSize: 13, color: 'var(--color-text-secondary)' }}>
                   No filter sets found
                 </div>
               )}
@@ -201,6 +200,7 @@ function FilterSetDropdown() {
             <MenuImperative.Footer>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8 }}>
                 <Button
+                  className="b_tertiary"
                   variant="tertiary"
                   size="sm"
                   onClick={() => setOpen(false)}
@@ -208,6 +208,7 @@ function FilterSetDropdown() {
                   Clear All
                 </Button>
                 <Button
+                  className="b_secondary"
                   variant="secondary"
                   size="sm"
                   icon={<Plus />}
@@ -236,7 +237,7 @@ export default function HubFilterBar() {
   }
 
   return (
-    <FilterBarWrap>
+    <FilterBarWrap className="card_container">
       <FilterBarLeft>
         {/* Apply Filter Set — saved filter set dropdown */}
         <FilterSetDropdown />
@@ -328,11 +329,12 @@ export default function HubFilterBar() {
         </Select>
 
         {/* More Filters toggle — future expansion */}
-        <ToggleButton icon={<Plus />}>More Filters</ToggleButton>
+        <ToggleButton className="b_toggle" icon={<Plus />}>More Filters</ToggleButton>
       </FilterBarLeft>
 
       <FilterBarRight>
         <Button
+          className="b_tertiary"
           variant="tertiary"
           disabled={!hasActiveFilters}
           onClick={clearFilters}

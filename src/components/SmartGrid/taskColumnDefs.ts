@@ -77,7 +77,7 @@ export function buildTaskColumnDefs(
       headerName: "Title",
       minWidth: 250,
       filter: "agTextColumnFilter",
-      cellStyle: { fontWeight: 600, color: "#1d5cc9", cursor: "pointer" },
+      cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
     },
     {
       field: "status",

@@ -213,7 +213,7 @@ export default function ProjectToolPage() {
       <AppLayout>
         <div style={{ padding: 24 }}>
           <h1>{toolName}</h1>
-          <p style={{ color: '#6a767c' }}>Project {id} — tool page coming soon.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Project {id} — tool page coming soon.</p>
         </div>
       </AppLayout>
     </>
