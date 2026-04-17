@@ -217,7 +217,9 @@ import {
   getForecastAllocationBasisDollars,
   getForecastColumnLabels,
   getForecastLeafDollarAmount,
+  expandProjectIsoDatesToCoverCalendarRange,
   getEffectiveProgramForecastMonthAmounts,
+  getForecastOverridePartsCalendarRange,
   getProgramForecastFqLabels,
   getProgramForecastHeaderTitle,
   formatRemainingToForecastCurrency,
@@ -328,7 +330,7 @@ function computeCapitalPlanningGridTotals(
     revised += row.revisedBudget ?? 0;
     jtd += row.jobToDateCosts ?? 0;
 
-    const forecastBasisKey = `${row.curve}|${row.startDate}|${row.endDate}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
+    const forecastBasisKey = `${row.curve}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
     remaining += getRemainingToForecast(
       getForecastAllocationBasisDollars(row),
       getTotalAllocatedForecastDollars(
@@ -554,10 +556,11 @@ function ForecastEditableNumberCell({
   readOnly = false,
   curveBlocksInlineForecastEdit = false,
   onCurveBlocksInlineForecastEdit,
+  onExpandProjectDatesForManualForecast,
 }: {
   rowId: string;
   parts: (string | number)[];
-  /** Curve, dates, planned amount, and job-to-date — when these change, overrides stay tied to the prior basis. */
+  /** Curve + planned + JTD (dates intentionally omitted so span edits and Manual forecast commits stay stable). */
   forecastBasisKey: string;
   computedValue: number;
   overrides: Record<string, number>;
@@ -568,6 +571,11 @@ function ForecastEditableNumberCell({
   /** When true (non-Manual curve), inline edit opens a dialog instead of an input. */
   curveBlocksInlineForecastEdit?: boolean;
   onCurveBlocksInlineForecastEdit?: () => void;
+  /**
+   * Manual curve only: before persisting a positive override, widen project start/end to include this cell’s period
+   * when the user enters dollars in a month/quarter/year outside the current span.
+   */
+  onExpandProjectDatesForManualForecast?: (parts: (string | number)[], committedDollars: number) => void;
 }) {
   const editShellRef = useRef<HTMLDivElement>(null);
   const storageKey = forecastOverrideStorageKey(rowId, parts, forecastBasisKey);
@@ -599,20 +607,34 @@ function ForecastEditableNumberCell({
 
   const handleUpdate = useCallback(() => {
     const trimmed = draft.trim();
+    let committed = 0;
+    let clearOverride = false;
+    if (trimmed === "") {
+      clearOverride = true;
+    } else {
+      const p = moneyStringToNumber(trimmed);
+      if (!Number.isFinite(p)) clearOverride = true;
+      else committed = Math.max(0, p);
+    }
+
+    if (!clearOverride && committed > 0 && onExpandProjectDatesForManualForecast) {
+      onExpandProjectDatesForManualForecast(parts, committed);
+    }
+
     setOverrides((prev) => {
       const next = { ...prev };
-      if (trimmed === "") {
+      if (clearOverride) {
         delete next[storageKey];
+      } else if (Number.isFinite(committed)) {
+        next[storageKey] = committed;
       } else {
-        const p = moneyStringToNumber(trimmed);
-        if (Number.isFinite(p)) next[storageKey] = Math.max(0, p);
-        else delete next[storageKey];
+        delete next[storageKey];
       }
       return next;
     });
     setFocused(false);
     setDraft("");
-  }, [draft, setOverrides, storageKey]);
+  }, [draft, onExpandProjectDatesForManualForecast, parts, setOverrides, storageKey]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setDraft(filterMoneyDraftInput(e.currentTarget.value));
@@ -1019,6 +1041,27 @@ export function CapitalPlanningSmartGrid({
     }
     return getForecastColumnLabels(forecastGranularity, anchorDate);
   }, [forecastGranularity, anchorDate]);
+
+  const expandProjectDatesForManualForecast = useCallback(
+    (
+      rowId: string,
+      startIso: string,
+      endIso: string,
+      parts: (string | number)[],
+      committedDollars: number
+    ) => {
+      if (committedDollars <= 0) return;
+      const range = getForecastOverridePartsCalendarRange(parts, anchorDate, forecastGranularity);
+      if (!range) return;
+      setRowDatesById((prev) => {
+        const cur = prev[rowId] ?? { startDate: startIso, endDate: endIso };
+        const expanded = expandProjectIsoDatesToCoverCalendarRange(cur.startDate, cur.endDate, range);
+        if (expanded.startDate === cur.startDate && expanded.endDate === cur.endDate) return prev;
+        return { ...prev, [rowId]: { ...cur, ...expanded } };
+      });
+    },
+    [anchorDate, forecastGranularity, setRowDatesById]
+  );
 
   useEffect(() => {
     if (forecastGranularity === "quarter") {
@@ -1702,7 +1745,12 @@ export function CapitalPlanningSmartGrid({
               return [
                 groupHeader,
                 ...group.rows.map((row) => {
-              const forecastBasisKey = `${row.curve}|${row.startDate}|${row.endDate}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
+              const forecastBasisKey = `${row.curve}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
+              const manualForecastDateExpand =
+                row.curve === "Manual"
+                  ? (parts: (string | number)[], dollars: number) =>
+                      expandProjectDatesForManualForecast(row.id, row.startDate, row.endDate, parts, dollars)
+                  : undefined;
               const effectiveMonthAmounts = getEffectiveProgramForecastMonthAmounts(
                 row,
                 forecastOverrides,
@@ -2048,6 +2096,7 @@ export function CapitalPlanningSmartGrid({
                               setOverrides={setForecastOverrides}
                               curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                               onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                               ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} total for ${row.project}`}
                             />
                           </Table.BodyCell>,
@@ -2073,6 +2122,7 @@ export function CapitalPlanningSmartGrid({
                                   setOverrides={setForecastOverrides}
                                   curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                                   onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                                  onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                                   readOnly={fq1ReadOnly}
                                   ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} ${fqLabel} total for ${row.project}`}
                                 />
@@ -2099,6 +2149,7 @@ export function CapitalPlanningSmartGrid({
                                     setOverrides={setForecastOverrides}
                                     curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                                     onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                                    onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                                     readOnly={monthFq1ReadOnly}
                                     ariaLabel={`Forecast ${forecastLeafLabels[monthIdx]} (${programForecastFyLabel(fyYear)}) for ${row.project}`}
                                   />
@@ -2127,6 +2178,7 @@ export function CapitalPlanningSmartGrid({
                           setOverrides={setForecastOverrides}
                           curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                           onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                          onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                           ariaLabel={`Forecast ${label} for ${row.project}`}
                         />
                       </Table.BodyCell>
@@ -2143,6 +2195,7 @@ export function CapitalPlanningSmartGrid({
                       setOverrides={setForecastOverrides}
                       curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                       onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                      onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                       ariaLabel={`Forecast ${getProgramForecastHeaderTitle()} total for ${row.project}`}
                     />
                   </Table.BodyCell>
@@ -2166,6 +2219,7 @@ export function CapitalPlanningSmartGrid({
                         setOverrides={setForecastOverrides}
                         curveBlocksInlineForecastEdit={row.curve !== "Manual"}
                         onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                        onExpandProjectDatesForManualForecast={manualForecastDateExpand}
                         ariaLabel={`Forecast ${label} for ${row.project}`}
                       />
                     </Table.BodyCell>

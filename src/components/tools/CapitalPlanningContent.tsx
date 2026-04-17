@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/router";
 import {
   Button,
   Dropdown,
@@ -203,7 +204,18 @@ const CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID = "capital-planning-snapshot-sel
 
 type CapitalPlanningHeaderTab = "capital_plan" | "change_history";
 
-export default function CapitalPlanningContent() {
+/** Default portfolio Capital Planning vs. Next-horizon copy (`/portfolio/capital-planning-next`). */
+export type CapitalPlanningPageVariant = "default" | "next";
+
+export interface CapitalPlanningContentProps {
+  pageVariant?: CapitalPlanningPageVariant;
+}
+
+const PORTFOLIO_CAPITAL_PLANNING_PATH = "/portfolio/capital-planning";
+const PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH = "/portfolio/capital-planning-next";
+
+export default function CapitalPlanningContent({ pageVariant = "default" }: CapitalPlanningContentProps) {
+  const router = useRouter();
   const [headerTab, setHeaderTab] = useState<CapitalPlanningHeaderTab>("capital_plan");
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -356,6 +368,28 @@ export default function CapitalPlanningContent() {
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
+      <Dropdown
+        variant="tertiary"
+        size="md"
+        icon={<EllipsisVertical />}
+        aria-label="Time horizon menu"
+        placement="bottom-right"
+        onSelect={(selection) => {
+          if (selection.action !== "selected") return;
+          const item = String(selection.item);
+          if (item === "next") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH);
+            return;
+          }
+          if (item === "now" || item === "future") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_PATH);
+          }
+        }}
+      >
+        <Dropdown.Item item="now">Now</Dropdown.Item>
+        <Dropdown.Item item="next">Next</Dropdown.Item>
+        <Dropdown.Item item="future">Future</Dropdown.Item>
+      </Dropdown>
     </>
   );
 
@@ -384,7 +418,7 @@ export default function CapitalPlanningContent() {
       title="Capital Planning"
       titleAddon={
         <Pill color="magenta" style={{ flexShrink: 0 }}>
-          Beta
+          {pageVariant === "next" ? "Open Beta" : "Beta"}
         </Pill>
       }
       icon={<CapitalPlanningIcon size="md" />}
