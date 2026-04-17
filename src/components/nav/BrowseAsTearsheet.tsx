@@ -17,7 +17,7 @@ import type { User, UserRole } from '@/types/user';
 // ─── Width override ────────────────────────────────────────────────────────────
 // Tearsheet renders into a Portal so we must use createGlobalStyle to reach it.
 const TearsheetWidthOverride = createGlobalStyle`
-  .sc-ljrxoq-1 {
+  [class*="StyledTearsheetBody"]:has(> .browse-as-tearsheet-root) {
     flex: 0 0 60vw !important;
   }
 `;
@@ -346,6 +346,16 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
         placement="right"
         block
       >
+        <div
+          className="browse-as-tearsheet-root"
+          style={{
+            height: "100%",
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
         {editingUser ? (
           <PermissionsView
             user={editingUser}
@@ -483,6 +493,7 @@ export default function BrowseAsTearsheet({ open, onClose }: BrowseAsTearsheetPr
             </Body>
           </>
         )}
+        </div>
       </Tearsheet>
     </>
   );

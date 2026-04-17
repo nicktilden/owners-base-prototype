@@ -12,7 +12,8 @@ import type { UserRole } from '@/types/user';
 import { THEME_APPEARANCE_PRESETS, type ThemePresetId } from '@/constants/themeDisplay';
 
 const ProfileTearsheetWidth = createGlobalStyle`
-  [class*="StyledTearsheetBody"] {
+  /* Scope to this tearsheet only — unscoped rules steal width from every Tearsheet (e.g. HLBI). */
+  [class*="StyledTearsheetBody"]:has(> .profile-settings-tearsheet-root) {
     flex: 0 0 50vw !important;
   }
 `;
@@ -718,6 +719,10 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
     <>
       <ProfileTearsheetWidth />
       <Tearsheet open={open} onClose={onClose} aria-label="My profile settings" placement="right">
+        <div
+          className="profile-settings-tearsheet-root"
+          style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}
+        >
         <Page style={{ height: '100%', background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}>
           <Page.Main style={{ height: '100%', overflow: 'hidden', background: 'var(--color-surface-primary)' }}>
             <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
@@ -803,6 +808,7 @@ export default function ProfileSettingsTearsheet({ open, onClose }: ProfileSetti
             </Page.Body>
           </Page.Main>
         </Page>
+        </div>
       </Tearsheet>
     </>
   );

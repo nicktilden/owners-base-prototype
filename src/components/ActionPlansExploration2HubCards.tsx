@@ -10,7 +10,7 @@ import type { Project } from "@/types/project";
 import type { ActionPlan } from "@/types/action_plans";
 
 const TearsheetWide = createGlobalStyle`
-  .sc-ljrxoq-1 {
+  [class*="StyledTearsheetBody"]:has(> .action-plans-tearsheet-wide-root) {
     flex: 0 0 80vw !important;
     max-width: 960px !important;
   }
@@ -148,7 +148,7 @@ function RichActionPlanTearsheet({ open, onClose, project, templateName, cell }:
     <>
       <TearsheetWide />
       <Tearsheet open={open} onClose={onClose} aria-label="Action plan detail" placement="right">
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
               <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>{project.number}</Typography>
@@ -563,9 +563,8 @@ export function APv2KpiDashboardHubCard() {
         onClose={() => setDrillTemplate(null)}
         aria-label={`Projects using ${drillTemplate}`}
         placement="right"
-        block
       >
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>{drillTemplate}</Typography>
             <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginTop: 2 }}>
@@ -715,10 +714,9 @@ export function APv2ProjectCardsHubCard() {
         onClose={() => setSelectedProject(null)}
         aria-label={`Action Plans for ${selectedProject?.name}`}
         placement="right"
-        block
       >
         {selectedProject && (
-          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div className="action-plans-tearsheet-wide-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                 <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>{selectedProject.number}</Typography>

@@ -19,7 +19,7 @@ import { getProjectConnection } from "@/data/procoreConnect";
 import { ConnectIconWithPopover } from "@/components/ConnectPopover";
 
 const TearsheetWide = createGlobalStyle`
-  .sc-ljrxoq-1 {
+  [class*="StyledTearsheetBody"]:has(> .schedule-insights-variance-tearsheet-root) {
     flex: 0 0 80vw !important;
     max-width: 1100px !important;
   }
@@ -308,7 +308,7 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
     <>
       <TearsheetWide />
       <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right">
-        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="schedule-insights-variance-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
           <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
             <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>
