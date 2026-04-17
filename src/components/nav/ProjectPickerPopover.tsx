@@ -25,13 +25,19 @@ const Popover = styled.div`
   top: calc(100% + 4px);
   left: 0;
   width: 320px;
-  background: #fff;
+  background: var(--color-surface-primary);
   border-radius: 0 0 8px 8px;
-  box-shadow: 0px 4px 28px 0px rgba(0, 0, 0, 0.28);
+  box-shadow: 0px 4px 28px 0px var(--color-shadow-strong);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 1300;
+  color: var(--color-text-primary);
+
+  html[data-color-scheme="dark"] & span[class],
+  html[data-color-scheme="dark"] & p[class] {
+    color: var(--color-text-primary);
+  }
 `;
 
 const SearchWrap = styled.div`
@@ -60,12 +66,12 @@ const ProjectRow = styled.button`
   text-align: left;
   cursor: pointer;
   transition: background 0.12s;
-  &:hover { background: #f4f5f6; }
+  &:hover { background: var(--color-surface-hover); }
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: #d6dadc;
+  background: var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -93,7 +99,7 @@ const PortfolioRow = styled.button`
   text-align: left;
   cursor: pointer;
   transition: background 0.12s;
-  &:hover { background: #f4f5f6; }
+  &:hover { background: var(--color-surface-hover); }
 `;
 
 interface ProjectPickerPopoverProps {
@@ -185,6 +191,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
     <Popover ref={popoverRef} role="dialog" aria-label="Select project">
       <SearchWrap>
         <Search
+          className="i_search"
           placeholder="Search portfolio..."
           value={query}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
@@ -214,7 +221,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
             </SectionLabel>
             {favorites.length === 0 && sampleFavorites.length === 0 ? (
               <SectionLabel>
-                <Typography intent="body" style={{ color: "#6A767C" }}>
+                <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>
                   No projects
                 </Typography>
               </SectionLabel>
@@ -245,7 +252,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
             )}
             {filtered.length === 0 ? (
               <SectionLabel>
-                <Typography intent="body" style={{ color: "#6A767C" }}>
+                <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>
                   No projects
                 </Typography>
               </SectionLabel>
@@ -261,7 +268,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
 
         {!isFiltering && visibleProjects.length === 0 && (
           <SectionLabel>
-            <Typography intent="body" style={{ color: '#6b7177' }}>
+            <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
               No projects available
             </Typography>
           </SectionLabel>
@@ -272,16 +279,16 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
 
       <Footer>
         <CompanyInfo>
-          <Typography intent="small" style={{ color: '#232729' }}>Current Company</Typography>
+          <Typography intent="small" style={{ color: 'var(--color-text-primary)' }}>Current Company</Typography>
           <Typography intent="body" style={{
-            fontWeight: 600, color: '#232729',
+            fontWeight: 600, color: 'var(--color-text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {account?.companyName ?? 'Acme Development Group'}
           </Typography>
         </CompanyInfo>
         {activeUser && hasPermissionKey(activeUser, 'account:update') && (
-          <Button variant="secondary" size="sm">Change</Button>
+          <Button variant="secondary" className="b_secondary" data-variant="secondary" size="sm">Change</Button>
         )}
       </Footer>
     </Popover>

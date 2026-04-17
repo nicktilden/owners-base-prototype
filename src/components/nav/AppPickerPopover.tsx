@@ -20,15 +20,21 @@ const Popover = styled.div`
   top: calc(100% + 4px);
   right: 0;
   width: 300px;
-  background: #fff;
+  background: var(--color-surface-primary);
   border-radius: 8px;
-  box-shadow: 0px 4px 28px 0px rgba(0, 0, 0, 0.28);
+  box-shadow: 0px 4px 28px 0px var(--color-shadow-strong);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 1300;
   padding: 16px 0;
   gap: 8px;
+  color: var(--color-text-primary);
+
+  html[data-color-scheme="dark"] & span[class],
+  html[data-color-scheme="dark"] & p[class] {
+    color: var(--color-text-primary);
+  }
 `;
 
 const SearchWrap = styled.div`
@@ -57,12 +63,12 @@ const AppRow = styled.button`
   text-align: left;
   cursor: pointer;
   transition: background 0.12s;
-  &:hover { background: #f4f5f6; }
+  &:hover { background: var(--color-surface-hover); }
 `;
 
 const Divider = styled.div`
   height: 1px;
-  background: #d6dadc;
+  background: var(--color-border-separator);
   flex-shrink: 0;
 `;
 
@@ -108,6 +114,7 @@ export default function AppPickerPopover({ anchorRef, onClose }: AppPickerPopove
     <Popover ref={popoverRef} role="dialog" aria-label="Select app">
       <SearchWrap>
         <Search
+          className="i_search"
           placeholder="Search Apps..."
           value={query}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
@@ -127,7 +134,7 @@ export default function AppPickerPopover({ anchorRef, onClose }: AppPickerPopove
         ))}
         {filteredApps.length === 0 && (
           <SectionLabel>
-            <Typography intent="body" style={{ color: '#6b7177' }}>
+            <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
               No apps match &ldquo;{query}&rdquo;
             </Typography>
           </SectionLabel>
@@ -137,8 +144,8 @@ export default function AppPickerPopover({ anchorRef, onClose }: AppPickerPopove
       <Divider />
 
       <Actions>
-        <Button variant="secondary" style={{ width: '100%' }}>Marketplace</Button>
-        <Button variant="secondary" style={{ width: '100%' }}>App Management</Button>
+        <Button variant="secondary" className="b_secondary" data-variant="secondary" style={{ width: '100%' }}>Marketplace</Button>
+        <Button variant="secondary" className="b_secondary" data-variant="secondary" style={{ width: '100%' }}>App Management</Button>
       </Actions>
     </Popover>
   );

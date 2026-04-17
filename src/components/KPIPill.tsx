@@ -16,19 +16,19 @@ const TONE_STYLES: Record<
   { bg: string; border: string; text: string }
 > = {
   positive: {
-    bg: "#E8F7E9",
-    border: "#E8F7E9",
-    text: "#33993B",
+    bg: "var(--color-pill-bg-green)",
+    border: "var(--color-pill-border-green)",
+    text: "var(--color-pill-text-green)",
   },
   negative: {
-    bg: "#FAE5E5",
-    border: "#FAE5E5",
-    text: "#C42223",
+    bg: "var(--color-pill-bg-red)",
+    border: "var(--color-pill-border-red)",
+    text: "var(--color-pill-text-red)",
   },
   neutral: {
-    bg: "#EEF0F1",
-    border: "#EEF0F1",
-    text: "#6A767C",
+    bg: "var(--color-pill-bg-gray)",
+    border: "var(--color-pill-border-gray)",
+    text: "var(--color-pill-text-gray)",
   },
 };
 

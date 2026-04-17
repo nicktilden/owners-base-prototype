@@ -9,6 +9,7 @@ export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'critical'
 
 export interface Asset {
   id: string;
+  assetCode: string;
   accountId: string;
   projectId: string;
   name: string;
@@ -22,6 +23,7 @@ export interface Asset {
   installDate: Date | null;
   warrantyExpiry: Date | null;
   description: string | null;
+  imageUrl: string | null;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

@@ -9,7 +9,7 @@ import {
 import { formatDateMMDDYYYY } from "@/utils/date";
 import { getProjectConnection } from "@/data/procoreConnect";
 import StagePillRenderer from "./StagePillRenderer";
-import ConnectCellRenderer from "./ConnectCellRenderer";
+import ProjectNameCellRenderer from "./ProjectNameCellRenderer";
 import ActionsCellRenderer from "./ActionsCellRenderer";
 
 function fmtCurrency(n: number | null | undefined): string {
@@ -51,20 +51,7 @@ export const portfolioColumnDefs: ColDef<ProjectRow>[] = [
     minWidth: 250,
     filter: "agTextColumnFilter",
     editable: true,
-  },
-  {
-    colId: "connect",
-    headerName: "",
-    width: 40,
-    maxWidth: 40,
-    minWidth: 40,
-    resizable: false,
-    sortable: false,
-    filter: false,
-    suppressMovable: true,
-    suppressHeaderMenuButton: true,
-    cellRenderer: ConnectCellRenderer,
-    pinned: "left",
+    cellRenderer: ProjectNameCellRenderer,
   },
   {
     field: "program",
@@ -161,7 +148,7 @@ export const portfolioColumnDefs: ColDef<ProjectRow>[] = [
       params.value != null ? `${params.value}d` : "0d",
     cellStyle: (params) => {
       if (params.value != null && params.value < 0) {
-        return { color: "#d92626" };
+        return { color: "var(--color-text-error)" };
       }
       return null;
     },

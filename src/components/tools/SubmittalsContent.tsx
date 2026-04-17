@@ -37,11 +37,11 @@ interface SubmittalsContentProps {
 export default function SubmittalsContent({ projectId }: SubmittalsContentProps) {
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" variant="secondary" className="b_secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Create Submittal</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Create Submittal</Button>
     </>
   );
 
@@ -51,8 +51,8 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
       icon={<SubmittalsIcon size="md" />}
       actions={actions}
     >
-      <SplitViewCard>
-        <SplitViewCard.Main>
+      <SplitViewCard style={{ background: 'var(--color-surface-card)', border: '1px solid var(--color-card-border)', borderRadius: '4px' }}>
+        <SplitViewCard.Main style={{ background: 'var(--color-surface-primary)' }}>
           <SplitViewCard.Section heading="Submittals">
             <SmartGridWrapper
               id="submittals-grid"

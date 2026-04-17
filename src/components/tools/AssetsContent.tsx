@@ -4,7 +4,6 @@ import {
   Button,
   Dropdown,
   Search,
-  SegmentedController,
   Select,
   SplitViewCard,
   Tabs,
@@ -13,10 +12,8 @@ import {
 import {
   Assets as AssetsIcon,
   Filter,
-  Location,
   Plus,
   Sliders,
-  ViewRows,
 } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
@@ -30,6 +27,7 @@ import { projects } from "@/data/seed/projects";
 import type { Asset } from "@/types/assets";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import AssetDetailTearsheet from "@/components/tools/AssetDetailTearsheet";
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
@@ -49,7 +47,7 @@ const ToolbarRow = styled.div`
   justify-content: space-between;
   padding: 0 0 8px;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface-primary);
 `;
 
 const ToolbarLeft = styled.div`
@@ -69,7 +67,7 @@ const ToolbarRight = styled.div`
 const GridArea = styled.div`
   display: flex;
   height: 640px;
-  border: 1px solid #E0E4E7;
+  border: 1px solid var(--color-border-default);
   border-radius: 0;
   overflow: hidden;
 `;
@@ -101,6 +99,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const gridApiRef = useRef<GridApi<Asset> | null>(null);
 
   const project = useMemo(
@@ -119,9 +118,13 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
     [isPortfolio, projectId]
   );
 
+  const handleAssetClick = useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+  }, []);
+
   const columnDefs = useMemo(
-    () => getAssetColumnDefs(projectMap),
-    [projectMap]
+    () => getAssetColumnDefs(projectMap, handleAssetClick),
+    [projectMap, handleAssetClick]
   );
 
   const projectFilterOptions = useMemo(() => {
@@ -265,12 +268,12 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
 
   const actions = (
     <>
-      <Dropdown label="Export" variant="secondary">
+      <Dropdown label="Export" className="b_secondary" variant="secondary">
         <Dropdown.Item item="pdf">PDF</Dropdown.Item>
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Button variant="primary" icon={<Plus />}>Add Asset</Button>
+      <Button variant="primary" className="b_primary" icon={<Plus />}>Create Asset</Button>
     </>
   );
 
@@ -320,6 +323,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                   </div>
                   <ToggleButton
                     selected={filtersOpen}
+                    className="b_toggle"
                     icon={<Filter />}
                     onClick={handleFiltersToggle}
                   >
@@ -346,24 +350,9 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                       ))}
                     </Select>
                   </div>
-                  <SegmentedController>
-                    <SegmentedController.Segment
-                      selected={viewMode === "rows"}
-                      onClick={() => setViewMode("rows")}
-                      tooltip="List view"
-                    >
-                      <ViewRows />
-                    </SegmentedController.Segment>
-                    <SegmentedController.Segment
-                      selected={viewMode === "grid"}
-                      onClick={() => setViewMode("grid")}
-                      tooltip="Map view"
-                    >
-                      <Location />
-                    </SegmentedController.Segment>
-                  </SegmentedController>
                   <ToggleButton
                     selected={configOpen}
+                    className="b_toggle"
                     icon={<Sliders />}
                     onClick={handleConfigToggle}
                   >
@@ -373,7 +362,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
               </ToolbarRow>
 
               {viewMode === "grid" ? (
-                <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>
+                <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>
                   Map view coming soon.
                 </div>
               ) : (
@@ -428,13 +417,19 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
         <SplitViewCard>
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Recycle Bin">
-              <Box padding="xl" style={{ textAlign: "center", color: "#6a767c" }}>
+              <Box padding="xl" style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>
                 Recycle Bin coming soon.
               </Box>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
       )}
+      <AssetDetailTearsheet
+        asset={selectedAsset}
+        projectName={selectedAsset ? (projectMap.get(selectedAsset.projectId) ?? selectedAsset.projectId) : ""}
+        open={selectedAsset !== null}
+        onClose={() => setSelectedAsset(null)}
+      />
     </ToolPageLayout>
   );
 }

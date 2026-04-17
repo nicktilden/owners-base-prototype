@@ -16,6 +16,8 @@ import type { Document } from '@/types/documents';
 import type { Asset } from '@/types/assets';
 import type { ActionPlan } from '@/types/action_plans';
 import type { Hub } from '@/types/hubs';
+import type { Rfi } from '@/types/rfis';
+import type { SpecificationDivision } from '@/types/specifications';
 
 export interface SeedData {
   account: Account | null;
@@ -29,6 +31,8 @@ export interface SeedData {
   documents: Document[];
   assets: Asset[];
   actionPlans: ActionPlan[];
+  rfis: Rfi[];
+  specifications: SpecificationDivision[];
 }
 
 const defaultSeedData: SeedData = {
@@ -43,6 +47,8 @@ const defaultSeedData: SeedData = {
   documents: [],
   assets: [],
   actionPlans: [],
+  rfis: [],
+  specifications: [],
 };
 
 interface DataContextValue {

@@ -95,7 +95,7 @@ export default function PortfolioToolPage() {
       <AppLayout>
         <div style={{ padding: 24 }}>
           <h1>{toolName}</h1>
-          <p style={{ color: '#6a767c' }}>Portfolio-level tool page — coming soon.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Portfolio-level tool page — coming soon.</p>
         </div>
       </AppLayout>
     </>

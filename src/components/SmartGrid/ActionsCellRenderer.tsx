@@ -10,6 +10,7 @@ export default function ActionsCellRenderer(params: ICellRendererParams) {
     <div style={{ display: "flex", alignItems: "center", gap: 4, height: "100%" }}>
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<NotepadList size="sm" />}
         aria-label="Notes"
@@ -17,6 +18,7 @@ export default function ActionsCellRenderer(params: ICellRendererParams) {
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Comments size="sm" />}
         aria-label="Comments"
@@ -24,6 +26,7 @@ export default function ActionsCellRenderer(params: ICellRendererParams) {
       />
       <Button
         variant="tertiary"
+        className="b_tertiary"
         size="sm"
         icon={<Pencil size="sm" />}
         aria-label="Edit"

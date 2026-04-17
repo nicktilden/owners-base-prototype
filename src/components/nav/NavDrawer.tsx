@@ -78,11 +78,11 @@ const Drawer = styled.nav<{ $closing: boolean }>`
   left: 0;
   bottom: 0;
   width: 248px;
-  background: linear-gradient(114.42deg, #000000 36.83%, #2e2e2e 81.46%);
+  background: linear-gradient(114.42deg, var(--color-nav-bg) 36.83%, var(--color-nav-surface) 81.46%);
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  box-shadow: 0px 4px 28px 0px rgba(0, 0, 0, 0.28);
+  box-shadow: 0px 4px 28px 0px var(--color-shadow-strong);
   animation: ${({ $closing }) =>
     css`${$closing ? slideOut : slideIn} 0.22s ease forwards`};
   overflow: hidden;
@@ -95,7 +95,7 @@ const DrawerHeader = styled.div`
   padding: 8px;
   position: sticky;
   top: 0;
-  background: #000;
+  background: var(--color-nav-bg);
   z-index: 2;
   flex-shrink: 0;
 `;
@@ -110,10 +110,10 @@ const CloseButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-nav-text);
   flex-shrink: 0;
   transition: background 0.15s;
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 const LogoWrap = styled.div`
@@ -148,16 +148,16 @@ const NavItemEl = styled.a<{ $active?: boolean }>`
   padding: 8px 6px 8px 8px;
   border-radius: 6px;
   text-decoration: none;
-  color: ${({ $active }) => ($active ? '#ffffff' : 'rgba(255, 255, 255, 0.85)')};
-  background: ${({ $active }) => ($active ? 'rgba(117, 131, 138, 0.3)' : 'transparent')};
+  color: ${({ $active }) => ($active ? 'var(--color-nav-text)' : 'var(--color-nav-text-secondary)')};
+  background: ${({ $active }) => ($active ? 'var(--color-nav-hover)' : 'transparent')};
   flex-shrink: 0;
   transition: background 0.15s;
 
-  &:hover { background: rgba(255, 255, 255, 0.1); }
+  &:hover { background: var(--color-nav-hover); }
 
   svg {
     flex-shrink: 0;
-    color: ${({ $active }) => ($active ? '#ffffff' : 'rgba(255, 255, 255, 0.85)')};
+    color: ${({ $active }) => ($active ? 'var(--color-nav-text)' : 'var(--color-nav-text-secondary)')};
   }
 `;
 
@@ -283,7 +283,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
             <Clear size="sm" />
           </CloseButton>
           <LogoWrap>
-            <img src={procoreOwnersLogo.src} alt="Procore Owners" height={32} />
+            <img src={procoreOwnersLogo.src} alt="Procore Owners" height={26} />
           </LogoWrap>
         </DrawerHeader>
 
@@ -293,7 +293,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
             <Typography
               intent="small"
               style={{
-                color: '#acb5b9',
+                color: 'var(--color-nav-text-secondary)',
                 fontWeight: 600,
                 letterSpacing: '0.25px',
                 textTransform: 'uppercase',
@@ -321,7 +321,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
 
           {toolNavItems.length === 0 && (
             <div style={{ padding: '8px' }}>
-              <Typography intent="small" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <Typography intent="small" style={{ color: 'var(--color-nav-text-secondary)' }}>
                 No tools available
               </Typography>
             </div>

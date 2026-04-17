@@ -229,3 +229,29 @@ export function isProjectConnected(projectId: number): boolean {
 
 /** Set of connected project ids for fast membership checks. */
 export const CONNECTED_PROJECT_IDS = new Set(PROJECT_CONNECTIONS.map((c) => c.localProjectId));
+
+// ─── Connected RFIs ──────────────────────────────────────────────────────────
+
+export interface ConnectedRfiInfo {
+  rfiId: string;
+  upstreamAccount: string;
+  upstreamProject: string;
+  syncStatus: "Active" | "Paused";
+}
+
+export const CONNECTED_RFIS: ConnectedRfiInfo[] = [
+  { rfiId: "rfi-3",  upstreamAccount: "Turner Construction Co.",  upstreamProject: "NoVA DC Phase 2 — MEP & Fit-Out",  syncStatus: "Active" },
+  { rfiId: "rfi-7",  upstreamAccount: "Turner Construction Co.",  upstreamProject: "NoVA DC Phase 2 — MEP & Fit-Out",  syncStatus: "Active" },
+  { rfiId: "rfi-15", upstreamAccount: "Skanska USA Building",     upstreamProject: "St. Mary's Emergency Dept — General Construction", syncStatus: "Active" },
+  { rfiId: "rfi-28", upstreamAccount: "Kiewit Infrastructure",    upstreamProject: "Upstate Transmission Line — Civil & Structural",   syncStatus: "Active" },
+];
+
+const connectedRfiMap = new Map(CONNECTED_RFIS.map((r) => [r.rfiId, r]));
+
+export function getConnectedRfiInfo(rfiId: string): ConnectedRfiInfo | undefined {
+  return connectedRfiMap.get(rfiId);
+}
+
+export function isRfiConnected(rfiId: string): boolean {
+  return connectedRfiMap.has(rfiId);
+}
