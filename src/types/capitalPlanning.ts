@@ -15,7 +15,8 @@ export const PRIORITY_OPTIONS = ['High', 'Medium', 'Low'] as const;
 export type ProjectPriority = (typeof PRIORITY_OPTIONS)[number];
 
 export const CURVE_OPTIONS = ['Front-Loaded', 'Back-Loaded', 'Bell', 'Linear', 'Manual'] as const;
-export type ProjectCurve = (typeof CURVE_OPTIONS)[number];
+/** One of {@link CURVE_OPTIONS}, or `""` when the curve cell has no selection yet. */
+export type ProjectCurve = (typeof CURVE_OPTIONS)[number] | '';
 
 export interface CapitalPlanningRow {
   id: string;
