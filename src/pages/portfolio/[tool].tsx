@@ -21,6 +21,15 @@ export default function PortfolioToolPage() {
   const toolName = TOOL_DISPLAY_NAMES[toolKey as keyof typeof TOOL_DISPLAY_NAMES] ?? tool;
 
   // ── Portfolio-only tools ─────────────────────────────────────────────────
+  if (toolKey === 'capital_planning_next') {
+    return (
+      <>
+        <Head><title>Capital Planning — Owner Prototype</title></Head>
+        <CapitalPlanningContent pageVariant="next" />
+      </>
+    );
+  }
+
   if (toolKey === 'capital_planning') {
     return (
       <>

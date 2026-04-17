@@ -8,7 +8,7 @@
  */
 
 import type { CapitalPlanningSampleRow, ProjectCurve } from "./capitalPlanningData";
-import { optionalIsoStringToDate } from "./capitalPlanningData";
+import { dateToIsoString, optionalIsoStringToDate } from "./capitalPlanningData";
 
 export type ForecastGranularity = "month" | "quarter" | "year";
 
@@ -149,6 +149,10 @@ function startOfDayLocal(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+function startOfMonthLocal(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
 function inclusiveCalendarDays(a: Date, b: Date): number {
   const ta = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const tb = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
@@ -174,6 +178,93 @@ export function programGridMonthFirstLastDay(monthIndex: number): { start: Date;
   const lastDay = new Date(fyYear, m + 1, 0).getDate();
   const end = new Date(fyYear, m, lastDay);
   return { start, end };
+}
+
+/**
+ * Calendar range covered by a forecast override cell (program quarter grid or rolling month/year leaves).
+ * Used to expand project start/end when a Manual-curve user commits dollars outside the current span.
+ */
+export function getForecastOverridePartsCalendarRange(
+  parts: readonly (string | number)[],
+  anchor: Date,
+  forecastGranularity: ForecastGranularity
+): { start: Date; end: Date } | null {
+  if (parts.length < 2) return null;
+  const head = parts[0];
+  const kind = parts[1];
+  if (head === "q") {
+    if (kind === "m" && typeof parts[2] === "number") {
+      return programGridMonthFirstLastDay(parts[2]);
+    }
+    if (kind === "r" && typeof parts[2] === "number") {
+      const fq = parts[2];
+      const lo = programGridMonthFirstLastDay(fq * 3);
+      const hi = programGridMonthFirstLastDay(fq * 3 + 2);
+      if (!lo || !hi) return null;
+      return { start: lo.start, end: hi.end };
+    }
+    if (kind === "y" && typeof parts[2] === "number") {
+      const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[parts[2]];
+      if (fyYear === undefined) return null;
+      return { start: new Date(fyYear, 0, 1), end: new Date(fyYear, 11, 31) };
+    }
+    if (kind === "fy") {
+      const y0 = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[0];
+      const y1 = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.length - 1];
+      if (y0 === undefined || y1 === undefined) return null;
+      return { start: new Date(y0, 0, 1), end: new Date(y1, 11, 31) };
+    }
+    return null;
+  }
+  if (head === "x" && kind === forecastGranularity && parts.length >= 4) {
+    const leafKind = parts[2];
+    const idx = parts[3];
+    if (typeof idx !== "number") return null;
+    if (leafKind !== "e" && leafKind !== "c") return null;
+    const d0 = startOfMonthLocal(anchor);
+    if (forecastGranularity === "month") {
+      const d = new Date(d0);
+      d.setMonth(d.getMonth() + idx);
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      return { start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth(), last) };
+    }
+    if (forecastGranularity === "year") {
+      const y = d0.getFullYear() + idx;
+      return { start: new Date(y, 0, 1), end: new Date(y, 11, 31) };
+    }
+  }
+  return null;
+}
+
+/** Widen ISO start/end so the project span fully includes `range` (inclusive calendar days). */
+export function expandProjectIsoDatesToCoverCalendarRange(
+  startIso: string,
+  endIso: string,
+  range: { start: Date; end: Date }
+): { startDate: string; endDate: string } {
+  const rs = startOfDayLocal(range.start);
+  const re = startOfDayLocal(range.end);
+  let pStart = optionalIsoStringToDate(startIso);
+  let pEnd = optionalIsoStringToDate(endIso);
+
+  if (!pStart && !pEnd) {
+    return { startDate: dateToIsoString(rs), endDate: dateToIsoString(re) };
+  }
+  if (!pStart) pStart = rs;
+  if (!pEnd) pEnd = re;
+  pStart = startOfDayLocal(pStart);
+  pEnd = startOfDayLocal(pEnd);
+  if (pEnd.getTime() < pStart.getTime()) {
+    const t = pStart;
+    pStart = pEnd;
+    pEnd = t;
+  }
+
+  let nextStart = pStart;
+  let nextEnd = pEnd;
+  if (rs.getTime() < nextStart.getTime()) nextStart = rs;
+  if (re.getTime() > nextEnd.getTime()) nextEnd = re;
+  return { startDate: dateToIsoString(nextStart), endDate: dateToIsoString(nextEnd) };
 }
 
 /** Map Jan `calendarYear` + 0-based month → program column index, or undefined if outside FY 2026–2031. */
@@ -321,7 +412,11 @@ export function getProgramForecastDollarTotal(row: CapitalPlanningSampleRow): nu
   return getProgramForecastMonthDollarAmounts(row).reduce((a, b) => a + b, 0);
 }
 
-/** Matches Capital Planning grid forecast override storage keys. */
+/**
+ * Matches Capital Planning grid forecast override storage keys.
+ * `forecastBasisKey` is supplied by the grid (curve + planned + JTD — not project dates) so edits can widen the span
+ * without orphaning overrides.
+ */
 export function buildCapitalPlanningForecastOverrideKey(
   rowId: string,
   parts: (string | number)[],
@@ -545,7 +640,7 @@ export function getForecastLeafDollarAmount(
 ): number {
   const monthly = getProgramForecastMonthDollarAmounts(row);
   if (granularity === "month") {
-    const d0 = startOfMonth(anchor);
+    const d0 = startOfMonthLocal(anchor);
     const d = new Date(d0);
     d.setMonth(d.getMonth() + leafIndex);
     const idx = programGridMonthIndexForCalendarMonth(d.getFullYear(), d.getMonth());
@@ -553,7 +648,7 @@ export function getForecastLeafDollarAmount(
     return naiveDollarOutsideProgramGridMonth(row, d.getFullYear(), d.getMonth());
   }
   if (granularity === "year") {
-    const d0 = startOfMonth(anchor);
+    const d0 = startOfMonthLocal(anchor);
     const y = d0.getFullYear() + leafIndex;
     let sum = 0;
     for (let mon = 0; mon < 12; mon++) {
@@ -581,13 +676,9 @@ export function forecastPeriodCount(granularity: ForecastGranularity): number {
   }
 }
 
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
 /** Column headers for the forecast section (starts at anchor month). */
 export function getForecastColumnLabels(granularity: ForecastGranularity, anchor: Date): string[] {
-  const d0 = startOfMonth(anchor);
+  const d0 = startOfMonthLocal(anchor);
   const n = forecastPeriodCount(granularity);
 
   if (granularity === "month") {
