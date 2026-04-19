@@ -17,6 +17,7 @@ import {
   Clear,
   CurrencyUSA as CapitalPlanningIcon,
   Filter,
+  EllipsisVertical,
   Fullscreen,
   FullscreenExit,
   Plus,
