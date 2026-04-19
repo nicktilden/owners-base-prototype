@@ -196,7 +196,7 @@ function useMyOpenItems(): OpenItemRow[] {
           daysOverdue,
           assignee: userName,
           submittedBy: r.createdBy,
-          projectId: 0,
+          projectId: parseInt(r.projectId.replace("proj-", ""), 10),
           projectNumber: proj?.number ?? '',
           projectName: proj?.name ?? '',
           specSection: '',
@@ -238,14 +238,22 @@ function isOverdue(isoDate: string): boolean {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function MyOpenItemsCard() {
+interface MyOpenItemsCardProps {
+  /** When provided, filters open items to only those belonging to this project (matches OpenItemRow.projectId). */
+  projectId?: number;
+}
+
+export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}) {
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<OpenItemRow | null>(null);
   const [projectFilter, setProjectFilter] = useState("All Projects");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const { openPanel: openAiPanel } = useAiPanel();
-  const MY_OPEN_ITEMS = useMyOpenItems();
+  const allOpenItems = useMyOpenItems();
+  const MY_OPEN_ITEMS = projectId != null
+    ? allOpenItems.filter((item) => item.projectId === projectId)
+    : allOpenItems;
 
   const projectOptions = ["All Projects", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.projectName))).sort()];
   const typeOptions = ["All Types", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.type))).sort()];
@@ -320,19 +328,21 @@ export default function MyOpenItemsCard() {
             value={search}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           />
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setProjectFilter(next);
-            }}
-            placeholder="Project Name"
-            style={{ minWidth: 170 }}
-          >
-            {projectOptions.map((opt) => (
-              <Select.Option key={opt} value={opt} selected={projectFilter === opt}>
-                {opt}
-              </Select.Option>
-            ))}
-          </Select>
+          {projectId == null && (
+            <Select
+              onSelect={(next) => {
+                if (typeof next === "string") setProjectFilter(next);
+              }}
+              placeholder="Project Name"
+              style={{ minWidth: 170 }}
+            >
+              {projectOptions.map((opt) => (
+                <Select.Option key={opt} value={opt} selected={projectFilter === opt}>
+                  {opt}
+                </Select.Option>
+              ))}
+            </Select>
+          )}
           <Select
             onSelect={(next) => {
               if (typeof next === "string") setTypeFilter(next);
@@ -365,7 +375,7 @@ export default function MyOpenItemsCard() {
         <ItemTable role="table" aria-label="My open items">
           <TableHeader role="row">
             <HeaderCell role="columnheader">Type</HeaderCell>
-            <HeaderCell role="columnheader">Project Details and Open Item Title</HeaderCell>
+            <HeaderCell role="columnheader">{projectId != null ? "Open Item Title" : "Project Details and Open Item Title"}</HeaderCell>
             <HeaderCell role="columnheader">Due Date</HeaderCell>
             <HeaderCell role="columnheader">Status</HeaderCell>
             <HeaderCell role="columnheader" />
@@ -383,7 +393,7 @@ export default function MyOpenItemsCard() {
                 </TypeCell>
 
                 <TitleCell role="cell">
-                  <ProjectLabel>{item.projectName}</ProjectLabel>
+                  {projectId == null && <ProjectLabel>{item.projectName}</ProjectLabel>}
                   <ItemLinkButton
                     onClick={() => setSelectedItem(item)}
                     aria-label={`Open details for ${item.number}`}

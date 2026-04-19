@@ -5,8 +5,8 @@
  * Filters align with the ProjectRow type from @/data/projects.
  */
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import { sampleProjectRows } from '@/data/projects';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { parseLocationCityState, sampleProjectRows } from '@/data/projects';
 import { projects as seedProjects } from '@/data/seed/projects';
 import type { ProjectRow, ProjectStage, ProjectRegion } from '@/data/projects';
 import type { Project } from '@/types/project';
@@ -63,16 +63,36 @@ interface HubFilterContextValue {
   filteredProjectRows: ProjectRow[];
   /** Seed projects filtered by the current hub filters (stage + region) */
   filteredSeedProjects: Project[];
+  /** Merge edits from the project details tearsheet (and future editors) into hub rows */
+  patchProjectRow: (id: number, patch: Partial<ProjectRow>) => void;
 }
 
 const HubFilterContext = createContext<HubFilterContextValue | null>(null);
 
 export function HubFilterProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<HubFilterState>(EMPTY_HUB_FILTERS);
+  const [projectRowEdits, setProjectRowEdits] = useState<Record<number, Partial<ProjectRow>>>({});
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
 
+  const projectRowsWithEdits = useMemo(
+    () => sampleProjectRows.map((r) => ({ ...r, ...projectRowEdits[r.id] })),
+    [projectRowEdits]
+  );
+
+  const patchProjectRow = useCallback((id: number, patch: Partial<ProjectRow>) => {
+    setProjectRowEdits((prev) => {
+      const merged: Partial<ProjectRow> = { ...prev[id], ...patch };
+      if (patch.location !== undefined) {
+        const { city, state } = parseLocationCityState(patch.location);
+        merged.city = city;
+        merged.state = state;
+      }
+      return { ...prev, [id]: merged };
+    });
+  }, []);
+
   const filteredProjectRows = useMemo(() => {
-    let rows = sampleProjectRows;
+    let rows = projectRowsWithEdits;
     if (filters.stage.length > 0) {
       rows = rows.filter((p) => filters.stage.includes(p.stage));
     }
@@ -86,7 +106,7 @@ export function HubFilterProvider({ children }: { children: React.ReactNode }) {
       rows = rows.filter((p) => filters.projectManager.includes(p.projectManager));
     }
     return rows;
-  }, [filters]);
+  }, [filters, projectRowsWithEdits]);
 
   const filteredSeedProjects = useMemo(() => {
     let projects = seedProjects;
@@ -110,7 +130,7 @@ export function HubFilterProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <HubFilterContext.Provider value={{ filters, setFilters, clearFilters, hasActiveFilters, filteredProjectRows, filteredSeedProjects }}>
+    <HubFilterContext.Provider value={{ filters, setFilters, clearFilters, hasActiveFilters, filteredProjectRows, filteredSeedProjects, patchProjectRow }}>
       {children}
     </HubFilterContext.Provider>
   );

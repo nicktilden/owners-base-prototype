@@ -143,8 +143,8 @@
 
 :root {
   /* Text */
-  --color-text-primary: var(--p-gray-15);
-  --color-text-secondary: var(--p-gray-45);
+  --color-text-primary: #232729;
+  --color-text-secondary: #6A767C;
   --color-text-disabled: var(--p-gray-70);
   --color-text-error: var(--p-red-50);
   --color-text-tinted: var(--p-blue-45);

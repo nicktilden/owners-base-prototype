@@ -16,7 +16,7 @@ import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
 import { getProjectConnection } from "@/data/procoreConnect";
-import { ConnectIconWithPopover } from "@/components/ConnectPopover";
+import { Connect } from "@procore/core-icons";
 
 const TearsheetWide = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .schedule-insights-variance-tearsheet-root) {
@@ -112,7 +112,7 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
                 <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
                   {project.name}
                 </Typography>
-                {(() => { const conn = getProjectConnection(project.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                {getProjectConnection(project.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
                 <Pill color="blue">{project.stage}</Pill>
@@ -349,7 +349,7 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
                             >
                               {r.name}
                             </button>
-                            {(() => { const conn = r.projectId !== undefined ? getProjectConnection(r.projectId) : undefined; return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                            {r.projectId !== undefined && getProjectConnection(r.projectId) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                           </span>
                         </td>
                         <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{r.stage}</td>
@@ -733,7 +733,7 @@ export function ScheduleRiskGHubCard() {
                       >
                         {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                       </button>
-                      {(() => { const conn = getProjectConnection(row.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                      {getProjectConnection(row.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                     </span>
                   </td>
                   <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
@@ -1033,7 +1033,7 @@ export function ScheduleVariance2HubCard() {
                   >
                     {r.name}
                   </button>
-                  {(() => { const conn = getProjectConnection(r.id); return conn ? <ConnectIconWithPopover connection={conn} /> : null; })()}
+                  {getProjectConnection(r.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                 </span>
               </td>
               <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>

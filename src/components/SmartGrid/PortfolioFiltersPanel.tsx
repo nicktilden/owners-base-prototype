@@ -1,10 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Button, MultiSelect, Search, Typography } from "@procore/core-react";
 import styled from "styled-components";
-import {
-  PROJECT_STAGES,
-  PROJECT_PROGRAMS,
-} from "@/data/projects";
+import { PROJECT_STAGES, PROJECT_PROGRAMS } from "@/data/projects";
 
 const PanelWrapper = styled.div<{ $open: boolean }>`
   width: ${({ $open }) => ($open ? "400px" : "0px")};
@@ -102,17 +99,25 @@ interface FilterOption {
 export interface PortfolioFilterValues {
   programs: string[];
   stages: string[];
-  locations: string[];
+  priorities: string[];
+  regions: string[];
+  projectManagers: string[];
+  cities: string[];
+  states: string[];
   startDateFrom: string;
   startDateTo: string;
   endDateFrom: string;
   endDateTo: string;
 }
 
-const EMPTY_FILTERS: PortfolioFilterValues = {
+export const EMPTY_PORTFOLIO_FILTERS: PortfolioFilterValues = {
   programs: [],
   stages: [],
-  locations: [],
+  priorities: [],
+  regions: [],
+  projectManagers: [],
+  cities: [],
+  states: [],
   startDateFrom: "",
   startDateTo: "",
   endDateFrom: "",
@@ -121,51 +126,87 @@ const EMPTY_FILTERS: PortfolioFilterValues = {
 
 interface PortfolioFiltersPanelProps {
   open: boolean;
-  locationOptions: string[];
+  /** Distinct city values derived from current row data */
+  cityOptions: string[];
+  /** Distinct state values derived from current row data */
+  stateOptions: string[];
+  /** Distinct region values derived from current row data */
+  regionOptions: string[];
+  /** Distinct project manager names derived from current row data */
+  projectManagerOptions: string[];
   onApply: (filters: PortfolioFilterValues) => void;
   onClear: () => void;
 }
 
+const PRIORITY_OPTIONS: FilterOption[] = [
+  { id: "high",   label: "High"   },
+  { id: "medium", label: "Medium" },
+  { id: "low",    label: "Low"    },
+];
+
 const getId = (opt: FilterOption) => opt.id;
 const getLabel = (opt: FilterOption) => opt.label;
 
+const ALL_FILTER_GROUPS = [
+  { key: "program",        label: "Program"         },
+  { key: "stage",          label: "Stage"           },
+  { key: "priority",       label: "Priority"        },
+  { key: "region",         label: "Region"          },
+  { key: "projectManager", label: "Project Manager" },
+  { key: "city",           label: "City"            },
+  { key: "state",          label: "State"           },
+  { key: "startDate",      label: "Start Date"      },
+  { key: "endDate",        label: "End Date"        },
+];
+
 export default function PortfolioFiltersPanel({
   open,
-  locationOptions,
+  cityOptions,
+  stateOptions,
+  regionOptions,
+  projectManagerOptions,
   onApply,
   onClear,
 }: PortfolioFiltersPanelProps) {
-  const [filters, setFilters] = useState<PortfolioFilterValues>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<PortfolioFilterValues>(EMPTY_PORTFOLIO_FILTERS);
   const [filterSearch, setFilterSearch] = useState("");
 
-  const programOpts: FilterOption[] = useMemo(
+  const programOpts = useMemo(
     () => [...PROJECT_PROGRAMS].map((p) => ({ id: p, label: p })),
     []
   );
-  const stageOpts: FilterOption[] = useMemo(
+  const stageOpts = useMemo(
     () => [...PROJECT_STAGES].map((s) => ({ id: s, label: s })),
     []
   );
-  const locationOpts: FilterOption[] = useMemo(
-    () => locationOptions.map((loc) => ({ id: loc, label: loc })),
-    [locationOptions]
+  const cityOpts = useMemo(
+    () => cityOptions.map((c) => ({ id: c, label: c })),
+    [cityOptions]
+  );
+  const stateOpts = useMemo(
+    () => stateOptions.map((s) => ({ id: s, label: s })),
+    [stateOptions]
+  );
+  const regionOpts = useMemo(
+    () => regionOptions.map((r) => ({ id: r, label: r })),
+    [regionOptions]
+  );
+  const pmOpts = useMemo(
+    () => projectManagerOptions.map((p) => ({ id: p, label: p })),
+    [projectManagerOptions]
   );
 
-  const selectedPrograms = useMemo(
-    () => programOpts.filter((o) => filters.programs.includes(o.id)),
-    [programOpts, filters.programs]
-  );
-  const selectedStages = useMemo(
-    () => stageOpts.filter((o) => filters.stages.includes(o.id)),
-    [stageOpts, filters.stages]
-  );
-  const selectedLocations = useMemo(
-    () => locationOpts.filter((o) => filters.locations.includes(o.id)),
-    [locationOpts, filters.locations]
-  );
+  // Derived selected sets
+  const selectedPrograms       = useMemo(() => programOpts.filter((o) => filters.programs.includes(o.id)),         [programOpts, filters.programs]);
+  const selectedStages         = useMemo(() => stageOpts.filter((o) => filters.stages.includes(o.id)),             [stageOpts, filters.stages]);
+  const selectedPriorities     = useMemo(() => PRIORITY_OPTIONS.filter((o) => filters.priorities.includes(o.id)),  [filters.priorities]);
+  const selectedRegions        = useMemo(() => regionOpts.filter((o) => filters.regions.includes(o.id)),           [regionOpts, filters.regions]);
+  const selectedProjectManagers= useMemo(() => pmOpts.filter((o) => filters.projectManagers.includes(o.id)),       [pmOpts, filters.projectManagers]);
+  const selectedCities         = useMemo(() => cityOpts.filter((o) => filters.cities.includes(o.id)),              [cityOpts, filters.cities]);
+  const selectedStates         = useMemo(() => stateOpts.filter((o) => filters.states.includes(o.id)),             [stateOpts, filters.states]);
 
   const handleClearAll = useCallback(() => {
-    setFilters(EMPTY_FILTERS);
+    setFilters(EMPTY_PORTFOLIO_FILTERS);
     setFilterSearch("");
     onClear();
   }, [onClear]);
@@ -174,27 +215,49 @@ export default function PortfolioFiltersPanel({
     onApply(filters);
   }, [filters, onApply]);
 
-  const allFilterGroups = [
-    { key: "program", label: "Program" },
-    { key: "stage", label: "Stage" },
-    { key: "location", label: "Location" },
-    { key: "startDate", label: "Start Date" },
-    { key: "endDate", label: "End Date" },
-  ];
-
   const visibleGroups = filterSearch
-    ? allFilterGroups.filter((g) =>
+    ? ALL_FILTER_GROUPS.filter((g) =>
         g.label.toLowerCase().includes(filterSearch.toLowerCase())
       )
-    : allFilterGroups;
+    : ALL_FILTER_GROUPS;
 
   const activeFilterCount = [
     filters.programs.length > 0,
     filters.stages.length > 0,
-    filters.locations.length > 0,
-    filters.startDateFrom || filters.startDateTo,
-    filters.endDateFrom || filters.endDateTo,
+    filters.priorities.length > 0,
+    filters.regions.length > 0,
+    filters.projectManagers.length > 0,
+    filters.cities.length > 0,
+    filters.states.length > 0,
+    !!(filters.startDateFrom || filters.startDateTo),
+    !!(filters.endDateFrom || filters.endDateTo),
   ].filter(Boolean).length;
+
+  const makeMulti = (
+    key: string,
+    label: string,
+    labelId: string,
+    opts: FilterOption[],
+    selected: FilterOption[],
+    field: keyof Pick<PortfolioFilterValues, "programs" | "stages" | "priorities" | "regions" | "projectManagers" | "cities" | "states">,
+    placeholder: string
+  ) => (
+    <FilterGroup key={key}>
+      <FilterLabel id={labelId}>{label}</FilterLabel>
+      <MultiSelect
+        options={opts}
+        value={selected}
+        onChange={(sel: FilterOption[]) =>
+          setFilters((prev) => ({ ...prev, [field]: sel.map((s) => s.id) }))
+        }
+        getId={getId}
+        getLabel={getLabel}
+        placeholder={placeholder}
+        aria-labelledby={labelId}
+        block
+      />
+    </FilterGroup>
+  );
 
   return (
     <PanelWrapper $open={open}>
@@ -207,7 +270,7 @@ export default function PortfolioFiltersPanel({
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </Typography>
           <Button variant="tertiary" className="b_tertiary" onClick={handleClearAll}>
-            Clear All Filters
+            Clear All
           </Button>
         </PanelHeader>
 
@@ -224,70 +287,19 @@ export default function PortfolioFiltersPanel({
           {visibleGroups.map((group) => {
             switch (group.key) {
               case "program":
-                return (
-                  <FilterGroup key="program">
-                    <FilterLabel id="filter-program-label">Program</FilterLabel>
-                    <MultiSelect
-                      options={programOpts}
-                      value={selectedPrograms}
-                      onChange={(selected: FilterOption[]) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          programs: selected.map((s) => s.id),
-                        }))
-                      }
-                      getId={getId}
-                      getLabel={getLabel}
-                      placeholder="Select programs"
-                      aria-labelledby="filter-program-label"
-                      block
-                    />
-                  </FilterGroup>
-                );
-
+                return makeMulti("program", "Program", "filter-program-label", programOpts, selectedPrograms, "programs", "Select programs");
               case "stage":
-                return (
-                  <FilterGroup key="stage">
-                    <FilterLabel id="filter-stage-label">Stage</FilterLabel>
-                    <MultiSelect
-                      options={stageOpts}
-                      value={selectedStages}
-                      onChange={(selected: FilterOption[]) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          stages: selected.map((s) => s.id),
-                        }))
-                      }
-                      getId={getId}
-                      getLabel={getLabel}
-                      placeholder="Select stages"
-                      aria-labelledby="filter-stage-label"
-                      block
-                    />
-                  </FilterGroup>
-                );
-
-              case "location":
-                return (
-                  <FilterGroup key="location">
-                    <FilterLabel id="filter-location-label">Location</FilterLabel>
-                    <MultiSelect
-                      options={locationOpts}
-                      value={selectedLocations}
-                      onChange={(selected: FilterOption[]) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          locations: selected.map((s) => s.id),
-                        }))
-                      }
-                      getId={getId}
-                      getLabel={getLabel}
-                      placeholder="Select locations"
-                      aria-labelledby="filter-location-label"
-                      block
-                    />
-                  </FilterGroup>
-                );
+                return makeMulti("stage", "Stage", "filter-stage-label", stageOpts, selectedStages, "stages", "Select stages");
+              case "priority":
+                return makeMulti("priority", "Priority", "filter-priority-label", PRIORITY_OPTIONS, selectedPriorities, "priorities", "Select priorities");
+              case "region":
+                return makeMulti("region", "Region", "filter-region-label", regionOpts, selectedRegions, "regions", "Select regions");
+              case "projectManager":
+                return makeMulti("projectManager", "Project Manager", "filter-pm-label", pmOpts, selectedProjectManagers, "projectManagers", "Select project managers");
+              case "city":
+                return makeMulti("city", "City", "filter-city-label", cityOpts, selectedCities, "cities", "Select cities");
+              case "state":
+                return makeMulti("state", "State", "filter-state-label", stateOpts, selectedStates, "states", "Select states");
 
               case "startDate":
                 return (
@@ -297,18 +309,14 @@ export default function PortfolioFiltersPanel({
                       <DateField
                         type="date"
                         value={filters.startDateFrom}
-                        onChange={(e) =>
-                          setFilters((prev) => ({ ...prev, startDateFrom: e.target.value }))
-                        }
-                        placeholder="mm/dd/yyyy"
+                        onChange={(e) => setFilters((prev) => ({ ...prev, startDateFrom: e.target.value }))}
+                        placeholder="From"
                       />
                       <DateField
                         type="date"
                         value={filters.startDateTo}
-                        onChange={(e) =>
-                          setFilters((prev) => ({ ...prev, startDateTo: e.target.value }))
-                        }
-                        placeholder="mm/dd/yyyy"
+                        onChange={(e) => setFilters((prev) => ({ ...prev, startDateTo: e.target.value }))}
+                        placeholder="To"
                       />
                     </DateRow>
                   </FilterGroup>
@@ -322,18 +330,14 @@ export default function PortfolioFiltersPanel({
                       <DateField
                         type="date"
                         value={filters.endDateFrom}
-                        onChange={(e) =>
-                          setFilters((prev) => ({ ...prev, endDateFrom: e.target.value }))
-                        }
-                        placeholder="mm/dd/yyyy"
+                        onChange={(e) => setFilters((prev) => ({ ...prev, endDateFrom: e.target.value }))}
+                        placeholder="From"
                       />
                       <DateField
                         type="date"
                         value={filters.endDateTo}
-                        onChange={(e) =>
-                          setFilters((prev) => ({ ...prev, endDateTo: e.target.value }))
-                        }
-                        placeholder="mm/dd/yyyy"
+                        onChange={(e) => setFilters((prev) => ({ ...prev, endDateTo: e.target.value }))}
+                        placeholder="To"
                       />
                     </DateRow>
                   </FilterGroup>

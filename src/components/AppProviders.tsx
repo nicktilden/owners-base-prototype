@@ -11,6 +11,7 @@ import { PersonaProvider, usePersona } from '@/context/PersonaContext';
 import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
 import { AiPanelProvider } from '@/context/AiPanelContext';
+import { ConnectionProvider } from '@/context/ConnectionContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
@@ -88,13 +89,15 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       <DataProvider>
         <PersonaProvider>
           <LevelProvider>
-            <AiPanelProvider>
-              <TearsheetAnimationOverride />
-              <SeedLoader>
-                {children}
-                <AiChatPanel />
-              </SeedLoader>
-            </AiPanelProvider>
+            <ConnectionProvider>
+              <AiPanelProvider>
+                <TearsheetAnimationOverride />
+                <SeedLoader>
+                  {children}
+                  <AiChatPanel />
+                </SeedLoader>
+              </AiPanelProvider>
+            </ConnectionProvider>
           </LevelProvider>
         </PersonaProvider>
       </DataProvider>

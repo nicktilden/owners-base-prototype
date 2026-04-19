@@ -3,6 +3,7 @@
  */
 
 import type { USState } from './shared';
+import type { ProjectConnection } from '@/data/procoreConnect';
 
 export type ProjectNumber = string; // /^[A-Z]{1,2}\d{4}$/
 
@@ -177,4 +178,6 @@ export interface Project {
   startDate: Date;
   endDate: Date;
   description: string;
+  /** Procore Connect — populated when this project is linked to an upstream GC project. */
+  procoreConnect?: ProjectConnection;
 }

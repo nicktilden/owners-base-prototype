@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Checkbox, Search, Typography } from "@procore/core-react";
+import { Connect } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import styled from "styled-components";
 
@@ -90,12 +91,15 @@ interface ConfigureColumnsPanelProps {
   open: boolean;
   gridApi: GridApi | null;
   onClose: () => void;
+  /** Column IDs whose data comes from a connected upstream project — renders a Connect icon next to the name. */
+  connectedColIds?: ReadonlySet<string>;
 }
 
 export default function ConfigureColumnsPanel({
   open,
   gridApi,
   onClose,
+  connectedColIds,
 }: ConfigureColumnsPanelProps) {
   const [columns, setColumns] = useState<ColumnEntry[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -211,6 +215,7 @@ export default function ConfigureColumnsPanel({
         <PanelBody>
           {visibleColumns.map((col) => {
             const checked = getEffectiveVisibility(col);
+            const isConnected = connectedColIds?.has(col.colId) ?? false;
             return (
               <ColumnRow key={col.colId}>
                 <ColumnPill>
@@ -218,10 +223,19 @@ export default function ConfigureColumnsPanel({
                     checked={checked}
                     onChange={() => toggleColumn(col.colId)}
                   >
-                    {col.headerName}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      {col.headerName}
+                      {isConnected && (
+                        <Connect
+                          size="sm"
+                          style={{ color: "#ff5200", flexShrink: 0 }}
+                          aria-label="Connected data"
+                        />
+                      )}
+                    </span>
                   </Checkbox>
                   <EnabledCount>
-                    {checked ? "on" : "off"}
+                    {checked ? "show" : "hide"}
                   </EnabledCount>
                 </ColumnPill>
               </ColumnRow>
