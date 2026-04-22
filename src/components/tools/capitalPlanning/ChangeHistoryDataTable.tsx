@@ -235,6 +235,7 @@ export function ChangeHistoryDataTable() {
       </div>
 
       <div
+        data-tab-scroll-root
         style={{
           width: "100%",
           overflowX: "auto",

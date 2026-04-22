@@ -24,6 +24,7 @@ import {
 } from "@/components/ActionPlansExploration2HubCards";
 import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
 import HubFilterBar from "@/components/HubFilterBar";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 
 const tabs = ["My Work", "Cost Management", "Schedule & Milestones", "Action Plans"] as const;
 type TabName = typeof tabs[number];
@@ -125,6 +126,7 @@ function makeEmptyHidden(): HiddenCards {
 
 function HomeContentInner() {
   const [activeTab, setActiveTab] = useState<TabName>("My Work");
+  useResetScrollOnTabChange(activeTab);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const { hasActiveFilters } = useHubFilters();
 

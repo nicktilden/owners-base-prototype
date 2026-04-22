@@ -51,6 +51,27 @@ export const STATUS_PILL_COLOR: Record<
   Bidding: "blue",
 };
 
+/** Prioritization workflow column (Capital Planning prioritization tab). */
+export const PRIORITIZATION_STATUS_OPTIONS = [
+  "Unassigned",
+  "Under Review",
+  "Approved",
+  "Rejected",
+] as const;
+
+export type PrioritizationStatusOption = (typeof PRIORITIZATION_STATUS_OPTIONS)[number];
+
+/** Pill colors for the prioritization workflow column (matches {@link PRIORITIZATION_STATUS_OPTIONS}). */
+export const PRIORITIZATION_STATUS_PILL_COLOR: Record<
+  PrioritizationStatusOption,
+  "blue" | "cyan" | "gray" | "green" | "magenta" | "yellow"
+> = {
+  Unassigned: "gray",
+  "Under Review": "yellow",
+  Approved: "green",
+  Rejected: "magenta",
+};
+
 export const LUMP_SUM_PLANNED_AMOUNT_SOURCE = "lump-sum-manual";
 
 /** Planned amount source: opens High Level Budget Items tearsheet when chosen. */
@@ -166,6 +187,40 @@ export function withZeroPlannedAmountDatesCleared(row: CapitalPlanningSampleRow)
 export const SAMPLE_PROJECT_ROWS: CapitalPlanningSampleRow[] = capitalPlanning.map(
   ({ accountId: _, ...row }) => row
 );
+
+function hashPrototypeProjectLabel(label: string): number {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) {
+    h = Math.imul(31, h) + label.charCodeAt(i);
+  }
+  return Math.abs(h);
+}
+
+/**
+ * Prioritization “Description” prototype — deterministic short copy from {@link CapitalPlanningSampleRow.project}
+ * (no persisted description field on the row model).
+ */
+export function prototypeProjectDescriptionFromName(projectName: string): string {
+  const name = projectName.trim() || "This project";
+  const h = hashPrototypeProjectLabel(name);
+
+  const variants: readonly (() => string)[] = [
+    () =>
+      `${name}: discretionary capital scope covering base-building systems, life-safety upgrades, and tenant coordination for phased turnover.`,
+    () =>
+      `Owner-operator initiative for ${name} — underwriting tie-in, milestone gates, and portfolio-level risk controls through delivery.`,
+    () =>
+      `${name} bundles hard and soft costs with contingency held at program level; narrative reflects current stage and funding corridor.`,
+    () =>
+      `Portfolio fit for ${name}: near-term cash use, NOI uplift assumptions, and alignment to regional demand in the capital plan cycle.`,
+    () =>
+      `${name} includes deferred maintenance catch-up, accessibility path of travel, and operational resilience work scoped for board review.`,
+    () =>
+      `Program entry for ${name}: lease-structure impacts, schedule float assumptions, and vendor qualification status summarized for prioritization.`,
+  ];
+
+  return variants[h % variants.length]!();
+}
 
 function sampleRowIdNumber(id: string): number {
   const m = /^p(\d+)$/.exec(id);

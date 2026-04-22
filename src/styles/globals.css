@@ -1462,21 +1462,289 @@ div.nextjs-toast {
   white-space: nowrap;
 }
 
-/* Collapsed quarter FQ row: one leaf column — same 132px as month headers (overrides 396px period-header) */
+/* Collapsed quarter FQ row: one leaf column — same 150px as month headers (overrides 396px period-header) */
 .capital-planning-table-scroll
   thead
   tr
   th.capital-planning-forecast-period-header.capital-planning-forecast-period-header--fq-month-width {
-  width: 132px !important;
-  min-width: 132px !important;
-  max-width: 132px !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+}
+
+/* Gantt (View by): one header row — leaf width matches program-grid month columns (150px) */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-gantt-leaf,
+.capital-planning-table-scroll tbody tr td.capital-planning-forecast-gantt-leaf {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-gantt-leaf .capital-planning-forecast-gantt-leaf-inner {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+/* Gantt + View by Year: single forecast header row matches grid forecast band height */
+.capital-planning-table-scroll.capital-planning--gantt-forecast.capital-planning--gantt-forecast-rolling-year
+  thead
+  tr:first-child
+  th {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+/* Gantt + View by Quarter: FY row + FQ row = 96px total (rowspan baseline cells align) */
+.capital-planning-table-scroll.capital-planning--gantt-forecast.capital-planning--gantt-forecast-quarter-bands
+  thead
+  tr:first-child
+  th {
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll.capital-planning--gantt-forecast.capital-planning--gantt-forecast-quarter-bands
+  thead
+  tr:nth-child(2)
+  th {
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll.capital-planning--gantt-forecast
+  tfoot
+  td.capital-planning-table-footer-forecast-cell,
+.capital-planning-table-scroll.capital-planning--gantt-forecast
+  tbody
+  tr.capital-planning-table-status-group
+  td.capital-planning-table-footer-forecast-cell {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+  box-sizing: border-box !important;
+}
+
+/* Gantt: project row schedule bar under forecast columns (Capital Planning explorations — timeline bar) */
+.capital-planning-table-scroll.capital-planning--gantt-forecast
+  tbody
+  tr.capital-planning-table-status-group-child
+  td.capital-planning-gantt-row-timeline-cell {
+  padding: 0 12px !important;
+  vertical-align: middle !important;
+  background-color: var(--color-surface-primary) !important;
+  border-left: 1px solid var(--color-border-separator) !important;
+}
+
+/* Same full-row hover tint as other body cells (timeline cell used !important above) */
+.capital-planning-table-scroll.capital-planning--gantt-forecast
+  tbody
+  tr.capital-planning-table-status-group-child:hover
+  td.capital-planning-gantt-row-timeline-cell {
+  background-color: var(--color-surface-secondary) !important;
+}
+
+/*
+ * Wrapper for Gantt forecast tooltip when dates are incomplete.
+ * Keep the same vertical footprint as rows with dates (24px rail — do not use a taller min-height).
+ */
+.capital-planning-gantt-forecast-tooltip-target {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 24px;
+  padding: 0;
+}
+
+.capital-planning-gantt-row-bar-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 24px;
+  box-sizing: border-box;
+}
+
+/* Full-width rail; positioned segment matches Figma Gantt bar (24px, mint fill, teal border, end handles). */
+.capital-planning-gantt-row-bar-track {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  border-radius: 4px;
+  background-color: transparent;
+  box-sizing: border-box;
+}
+
+/* No dates yet: keep hit area for tooltip / future interaction without a “ghost” bar or extra hover chrome. */
+.capital-planning-gantt-row-bar-track--empty {
+  height: 24px;
+  border-radius: 4px;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* Pointer capture for “draw first bar” lives on the outer track; inner is the tooltip reference. */
+.capital-planning-gantt-row-bar-track--empty-host {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.capital-planning-gantt-row-bar-track--creating {
+  cursor: grabbing;
+}
+
+.capital-planning-gantt-row-bar-track--empty-inner {
+  width: 100%;
+  min-height: 24px;
+  box-sizing: border-box;
+}
+
+.capital-planning-gantt-row-bar-segment {
+  position: absolute;
+  top: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 16px;
+  height: 24px;
+  min-width: 25px;
+  /* 4px from bar border to end handles; 16px between each handle and the label. */
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 1px solid #1b7e6e;
+  border-radius: 4px;
+  background-color: #d5f6f1;
+  /* overflow visible so Procore Shadow 2 bottom (box-shadow) is not clipped */
+  transition: box-shadow 0.12s ease;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.capital-planning-gantt-row-bar-segment:hover {
+  z-index: 1;
+  box-shadow: 0 4px 16px -2px hsla(200, 10%, 15%, 0.32);
+}
+
+.capital-planning-gantt-row-bar-segment:active,
+.capital-planning-gantt-row-bar-segment.capital-planning-gantt-row-bar-segment--dragging {
+  cursor: grabbing;
+}
+
+.capital-planning-gantt-row-bar-handle {
+  width: 2px;
+  height: 14px;
+  border-radius: 2px;
+  background-color: #24a892;
+  pointer-events: none;
+}
+
+/* Invisible strips from inner left/right: w-/e-resize 12px into the bar (no extra gap past the handles) */
+.capital-planning-gantt-row-bar-resize-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  z-index: 3;
+  touch-action: none;
+  background: transparent;
+}
+
+.capital-planning-gantt-row-bar-resize-zone--start {
+  left: 0;
+  cursor: w-resize;
+}
+
+.capital-planning-gantt-row-bar-resize-zone--end {
+  right: 0;
+  cursor: e-resize;
+}
+
+.capital-planning-gantt-row-bar-segment--dragging .capital-planning-gantt-row-bar-resize-zone--start {
+  cursor: w-resize;
+}
+
+.capital-planning-gantt-row-bar-segment--dragging .capital-planning-gantt-row-bar-resize-zone--end {
+  cursor: e-resize;
+}
+
+.capital-planning-gantt-row-bar-label {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: stretch;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--color-text-primary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Gantt bar hover — light popover above the bar (Procore Shadow 2 bottom) */
+.capital-planning-gantt-bar-popover {
+  min-width: 0;
+  max-width: 240px;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 8px;
+  background-color: var(--color-surface-primary);
+  box-shadow: 0 4px 16px -2px hsla(200, 10%, 15%, 0.32);
+  text-align: left;
+}
+
+.capital-planning-gantt-bar-popover-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  margin: 0 0 14px;
+}
+
+.capital-planning-gantt-bar-popover-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.capital-planning-gantt-bar-popover-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.capital-planning-gantt-bar-popover-label {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.capital-planning-gantt-bar-popover-value {
+  text-align: right;
+  color: var(--color-text-primary);
+  font-weight: 400;
 }
 
 /* Quarter view: third header row — same 32px band height as FY + FQ rows */
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header {
-  width: 132px !important;
-  min-width: 132px !important;
-  max-width: 132px !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
   box-sizing: border-box !important;
   overflow: hidden;
   text-align: left !important;
@@ -1516,18 +1784,18 @@ div.nextjs-toast {
 }
 
 .capital-planning-table-scroll tbody tr td.capital-planning-forecast-month-cell {
-  width: 132px !important;
-  min-width: 132px !important;
-  max-width: 132px !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
   box-sizing: border-box;
   overflow: hidden;
 }
 
-/* Collapsed FQ: single leaf column — same 132px band + 32px row height as month headers */
+/* Collapsed FQ: single leaf column — same 150px band + 32px row height as month headers */
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-fq-rollup-header {
-  width: 132px !important;
-  min-width: 132px !important;
-  max-width: 132px !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
   box-sizing: border-box !important;
   text-align: left !important;
   vertical-align: middle !important;
@@ -1544,9 +1812,9 @@ div.nextjs-toast {
 }
 
 .capital-planning-table-scroll tbody tr td.capital-planning-forecast-fq-rollup-cell {
-  width: 132px !important;
-  min-width: 132px !important;
-  max-width: 132px !important;
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -1612,6 +1880,32 @@ div.nextjs-toast {
   box-shadow: 0 0 0 1px #2d87c3 inset !important;
 }
 
+/* View by — same trigger chrome as snapshot select; narrow width set inline (half of snapshot wrap). */
+.capital-planning-view-by-select-wrap {
+  box-sizing: border-box;
+}
+
+.capital-planning-view-by-select [role="combobox"] {
+  border: 1px solid #6a7b83 !important;
+  border-radius: 4px !important;
+  min-height: 36px !important;
+  height: auto !important;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+}
+
+.capital-planning-view-by-select [role="combobox"]:hover {
+  border-color: #5c6d75 !important;
+  background-color: #ffffff !important;
+}
+
+.capital-planning-view-by-select [role="combobox"][aria-expanded="true"] {
+  border-color: #2d87c3 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 1px #2d87c3 inset !important;
+}
+
 /* Group by — Capital Planning filter panel (slate border, 4px radius; DS handles placeholder/caret gray) */
 .capital-planning-group-by-select {
   width: 100%;
@@ -1666,7 +1960,8 @@ div.nextjs-toast {
   min-height: 0;
   width: 100%;
   max-width: 100%;
-  border: 2px solid var(--color-border-default) !important;
+  /* Single outer frame: inner `Table.Container` is also a Card with its own border — strip that inside this scrollport */
+  border: 1px solid var(--color-border-default) !important;
   /* Bounded vertical scrollport so `tfoot` `position: sticky; bottom: 0` pins to this region */
   max-height: min(72vh, calc(100dvh - 14rem));
   overflow-x: auto;
@@ -1737,6 +2032,8 @@ div.nextjs-toast {
 /* One scroll track: region scrolls; inner DS table wrapper does not clip/scroll again */
 .capital-planning-table-scroll-region [class*="StyledTableWrapper"] {
   overflow-x: visible !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Capital Planning (portfolio tool): auto-sized columns from content */
@@ -1744,8 +2041,8 @@ div.nextjs-toast {
   width: max-content;
   min-width: 100%;
   max-width: none;
-  /* Sticky first two columns: col2 `left` must match col1 width */
-  --cp-sticky-col1-width: 260px;
+  /* Sticky first two columns: col2 `left` must match col1 width (wider for long project names) */
+  --cp-sticky-col1-width: 360px;
   /* Second sticky baseline column (Planned Amount when planning is on; else first visible baseline) */
   --cp-sticky-col2-width: 250px;
   /*
@@ -1753,6 +2050,8 @@ div.nextjs-toast {
    * Right-edge elevation for the Planned Amount sticky column (visible at scroll 0 and when scrolled).
    */
   --cp-planned-amount-column-shadow: 4px 0 16px -2px hsla(200, 10%, 15%, 0.32);
+  /* Prioritization score (sticky right): narrow but wide enough for “Prioritization” / “Score” on two lines */
+  --cp-prioritization-score-col-width: 96px;
 }
 
 /* Table Settings row height — Capital Planning [Figma 933-153382] */
@@ -1776,6 +2075,13 @@ div.nextjs-toast {
 .capital-planning-table-scroll th,
 .capital-planning-table-scroll td {
   white-space: nowrap;
+}
+
+/* Criteria Builder columns: equal fixed width from grid styles; allow wrap so headers don’t expand the column */
+.capital-planning-table-scroll th.capital-planning-col-criteria,
+.capital-planning-table-scroll td.capital-planning-col-criteria {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .capital-planning-table-scroll th {
@@ -1888,17 +2194,54 @@ div.nextjs-toast {
   position: sticky;
   left: 0;
   z-index: 4;
-  width: var(--cp-sticky-col1-width);
-  min-width: var(--cp-sticky-col1-width);
-  max-width: var(--cp-sticky-col1-width);
+  /* !important: Procore Table width:100% + many columns must not shrink project below --cp-sticky-col1-width. */
+  width: var(--cp-sticky-col1-width) !important;
+  min-width: var(--cp-sticky-col1-width) !important;
+  max-width: var(--cp-sticky-col1-width) !important;
   box-sizing: border-box;
   background-color: var(--color-surface-primary);
   vertical-align: middle;
 }
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project {
-  z-index: 6;
+  /* Above sticky split (14) so the shared vertical rule is not covered when scrolling horizontally */
+  z-index: 15;
   background-color: var(--color-surface-secondary);
+  overflow: visible;
+}
+
+/* Right edge rule on project header — same idea as sticky-split ::after; survives overlap from the adjacent sticky column */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--color-border-separator);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Project column body/footer: same right rule while horizontal scroll (border-right alone can read weak vs scrolling cells) */
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan])::after,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-project:not([colspan])::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--color-border-separator);
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* When project is the last baseline column, avoid double 1px (last-baseline border + ::after) */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project.capital-planning-col-last-baseline,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project.capital-planning-col-last-baseline:not([colspan]),
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-project.capital-planning-col-last-baseline:not([colspan]) {
+  border-right: none !important;
 }
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-inner {
@@ -1914,6 +2257,45 @@ div.nextjs-toast {
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-label {
   min-width: 0;
+}
+
+/* Estimated Budget: no right edge rule (Prioritization sits criteria to the right; avoid double/separator look). */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-estimated-budget,
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-estimated-budget,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-estimated-budget {
+  border-right: none !important;
+}
+
+/* Prioritization Status: same separator treatment as Estimated Budget when both precede criteria. */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-prioritization-status,
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-prioritization-status,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-prioritization-status {
+  border-right: none !important;
+  min-width: 168px;
+  max-width: 220px;
+}
+
+/* Project description (Prioritization): width band; body cells single-line ellipsis (same line height as row) */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project-description,
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-project-description,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-project-description {
+  min-width: 220px;
+  max-width: 400px;
+  width: min(360px, 28vw);
+}
+
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-project-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Procore TextCell is flex — min-width 0 so ellipsis applies */
+.capital-planning-table-scroll tbody tr > td.capital-planning-col-project-description [class*="StyledTableCellText"] {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Baseline columns that scroll horizontally under the sticky pair */
@@ -1962,14 +2344,104 @@ div.nextjs-toast {
   text-overflow: ellipsis;
 }
 
+/* Project name link: Procore TextCell is flex — min-width 0 + ellipsis on the anchor when text still overflows */
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) [class*="StyledTableCellText"] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) [class*="StyledTableCellText"] a {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .capital-planning-table-scroll tbody tr:hover td.capital-planning-col-project:not([colspan]),
 .capital-planning-table-scroll tbody tr:hover td.capital-planning-col-sticky-split {
   background-color: var(--color-surface-secondary);
 }
 
-/* Vertical rule between last visible baseline column and forecast (header row 1) */
-.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-last-baseline {
-  border-right: 1px solid inherit !important;
+/* Prioritization score (last column, no forecast): pin to scrollport right; left rule via ::before so it stays above scrolling criteria */
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-prioritization-score,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-sticky-prioritization-score,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-sticky-prioritization-score {
+  position: sticky;
+  right: 0;
+  box-sizing: border-box;
+  width: var(--cp-prioritization-score-col-width);
+  min-width: var(--cp-prioritization-score-col-width);
+  max-width: var(--cp-prioritization-score-col-width);
+  vertical-align: middle;
+  text-align: right;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-prioritization-score::before,
+.capital-planning-table-scroll tbody tr td.capital-planning-col-sticky-prioritization-score::before,
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-sticky-prioritization-score::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--color-border-separator);
+  z-index: 8;
+  pointer-events: none;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-prioritization-score {
+  z-index: 16;
+  background-color: var(--color-surface-secondary);
+  /* Override global thead `height` / `max-height: 32px` so two-line label is not clipped */
+  height: auto !important;
+  max-height: none !important;
+  min-height: 44px;
+  white-space: normal;
+  line-height: 1.2 !important;
+  font-size: 12px !important;
+  padding: 6px !important;
+  vertical-align: middle;
+}
+
+.capital-planning-table-scroll thead tr:first-child th.capital-planning-col-sticky-prioritization-score span {
+  display: block;
+  text-align: right;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-sticky-prioritization-score {
+  z-index: 13;
+  background-color: var(--color-surface-primary);
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child:hover td.capital-planning-col-sticky-prioritization-score {
+  background-color: var(--color-surface-secondary);
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-col-sticky-prioritization-score {
+  z-index: 13;
+  background-color: #ffffff;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group:hover td.capital-planning-col-sticky-prioritization-score {
+  background-color: #f5f7f8;
+}
+
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-sticky-prioritization-score {
+  z-index: 28;
+  background-color: var(--color-surface-secondary) !important;
+}
+
+/* Vertical rule between last visible baseline column (e.g. Remaining) and forecast — explicit color; rowspan lives on first row only */
+.capital-planning-table-scroll thead th.capital-planning-col-last-baseline {
+  border-right: 1px solid var(--color-border-separator) !important;
 }
 
 /* Sticky totals row — stays at bottom of the scroll region; matches column alignment on horizontal scroll */
@@ -2016,9 +2488,9 @@ div.nextjs-toast {
   position: sticky;
   left: 0;
   z-index: 22;
-  width: var(--cp-sticky-col1-width);
-  min-width: var(--cp-sticky-col1-width);
-  max-width: var(--cp-sticky-col1-width);
+  width: var(--cp-sticky-col1-width) !important;
+  min-width: var(--cp-sticky-col1-width) !important;
+  max-width: var(--cp-sticky-col1-width) !important;
   box-sizing: border-box;
   background-color: var(--color-surface-secondary) !important;
 }
@@ -2057,11 +2529,15 @@ div.nextjs-toast {
   border-right: 1px solid var(--color-border-separator) !important;
 }
 
-/* Capital Planning: sticky header rows on vertical scroll */
+/* Body: vertical rule between last baseline column (e.g. Remaining) and forecast — matches tfoot / thead */
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-col-last-baseline,
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-last-baseline {
+  border-right: 1px solid var(--color-border-separator) !important;
+}
+
+/* Capital Planning: thead scrolls with body (no vertical pin). First-row th still use horizontal sticky for project / split columns. */
 .capital-planning-table-scroll thead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  position: static;
 }
 
 /* Procore Data Table density: 32px row height (body + header), Capital Planning grid */

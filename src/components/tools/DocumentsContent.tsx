@@ -20,6 +20,7 @@ import { documents } from "@/data/seed/documents";
 import { projects } from "@/data/seed/projects";
 import type { Document, DocumentStatus } from "@/types/documents";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

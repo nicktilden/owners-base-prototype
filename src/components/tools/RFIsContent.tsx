@@ -27,6 +27,7 @@ import { projects } from "@/data/seed/projects";
 import type { Rfi } from "@/types/rfis";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import RfiDetailTearsheet from "@/components/tools/RfiDetailTearsheet";
 
 const ToolbarRow = styled.div`

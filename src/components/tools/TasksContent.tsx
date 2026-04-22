@@ -25,6 +25,7 @@ import { projects } from "@/data/seed/projects";
 import type { Task, TaskStatus } from "@/types/tasks";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 
 const ToolbarRow = styled.div`
   display: flex;
@@ -84,6 +85,7 @@ interface TasksContentProps {
 export default function TasksContent({ projectId }: TasksContentProps) {
   const isPortfolio = projectId === "";
   const [activeTab, setActiveTab] = useState<TabKey>("list");
+  useResetScrollOnTabChange(activeTab);
   const [searchText, setSearchText] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);

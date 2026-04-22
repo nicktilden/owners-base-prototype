@@ -248,23 +248,23 @@ export default function ProjectsTableCard() {
           </ToolbarLeft>
           <ToolbarRight>
             <div style={{ width: 226 }}>
-              <Select
+            <Select
                 placeholder="Group by"
                 label={groupBy?.label}
                 onSelect={handleGroupBySelect}
                 onClear={handleGroupByClear}
                 block
-              >
-                {GROUP_BY_OPTIONS.map((opt) => (
+            >
+              {GROUP_BY_OPTIONS.map((opt) => (
                   <Select.Option
                     key={opt.id}
                     value={opt}
                     selected={groupBy?.id === opt.id}
                   >
-                    {opt.label}
-                  </Select.Option>
-                ))}
-              </Select>
+                  {opt.label}
+                </Select.Option>
+              ))}
+            </Select>
             </div>
             <SegmentedController className="b_radiogroup">
               <SegmentedController.Segment
@@ -293,7 +293,7 @@ export default function ProjectsTableCard() {
           </ToolbarRight>
         </ToolbarRow>
 
-        {viewMode === "map" ? (
+                  {viewMode === "map" ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>
             Map view coming soon.
           </div>
@@ -330,7 +330,7 @@ export default function ProjectsTableCard() {
                   ],
                 }}
               />
-            </div>
+                </div>
             <ConfigureColumnsPanel
               open={configOpen}
               gridApi={gridApiRef.current}
