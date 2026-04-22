@@ -27,6 +27,7 @@ import { projects } from "@/data/seed/projects";
 import type { Asset } from "@/types/assets";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import AssetDetailTearsheet from "@/components/tools/AssetDetailTearsheet";
 
 function capitalize(s: string): string {
@@ -94,6 +95,7 @@ interface AssetsContentProps {
 export default function AssetsContent({ projectId }: AssetsContentProps) {
   const isPortfolio = projectId === "";
   const [activeTab, setActiveTab] = useState<TabKey>("list");
+  useResetScrollOnTabChange(activeTab);
   const [viewMode, setViewMode] = useState<ViewMode>("rows");
   const [searchText, setSearchText] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -307,58 +309,58 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
       actions={actions}
       tabs={tabs}
     >
-      {activeTab === "list" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
-            <SplitViewCard.Section heading="Assets">
+              {activeTab === "list" && (
+                <SplitViewCard>
+                  <SplitViewCard.Main>
+                    <SplitViewCard.Section heading="Assets">
               <ToolbarRow>
-                <ToolbarLeft>
+                        <ToolbarLeft>
                   <div style={{ maxWidth: 260 }}>
                     <Search
-                      placeholder="Search"
+                              placeholder="Search"
                       value={searchText}
                       onChange={handleSearchChange}
                       onClear={handleSearchClear}
-                    />
+                            />
                   </div>
-                  <ToggleButton
+                          <ToggleButton
                     selected={filtersOpen}
                     className="b_toggle"
-                    icon={<Filter />}
+                            icon={<Filter />}
                     onClick={handleFiltersToggle}
-                  >
+                          >
                     Filters
-                  </ToggleButton>
-                </ToolbarLeft>
-                <ToolbarRight>
+                          </ToggleButton>
+                        </ToolbarLeft>
+                        <ToolbarRight>
                   <div style={{ width: 226 }}>
-                    <Select
+                          <Select
                       placeholder="Group by"
                       label={groupBy?.label}
                       onSelect={handleGroupBySelect}
                       onClear={handleGroupByClear}
                       block
-                    >
-                      {GROUP_BY_OPTIONS.map((opt) => (
+                          >
+                            {GROUP_BY_OPTIONS.map((opt) => (
                         <Select.Option
                           key={opt.id}
                           value={opt}
                           selected={groupBy?.id === opt.id}
                         >
-                          {opt.label}
-                        </Select.Option>
-                      ))}
-                    </Select>
+                                {opt.label}
+                              </Select.Option>
+                            ))}
+                          </Select>
                   </div>
-                  <ToggleButton
-                    selected={configOpen}
+                          <ToggleButton
+                            selected={configOpen}
                     className="b_toggle"
-                    icon={<Sliders />}
+                            icon={<Sliders />}
                     onClick={handleConfigToggle}
-                  >
-                    Configure
-                  </ToggleButton>
-                </ToolbarRight>
+                          >
+                            Configure
+                          </ToggleButton>
+                        </ToolbarRight>
               </ToolbarRow>
 
               {viewMode === "grid" ? (
@@ -369,7 +371,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                 <GridArea>
                   <AssetFiltersPanel
                     open={filtersOpen}
-                    isPortfolio={isPortfolio}
+                                      isPortfolio={isPortfolio}
                     projectOptions={projectFilterOptions}
                     typeOptions={typeOptions}
                     tradeOptions={tradeOptions}
@@ -408,22 +410,22 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
                   />
                 </GridArea>
               )}
-            </SplitViewCard.Section>
-          </SplitViewCard.Main>
-        </SplitViewCard>
-      )}
+                    </SplitViewCard.Section>
+                  </SplitViewCard.Main>
+                </SplitViewCard>
+              )}
 
-      {activeTab === "recycle_bin" && (
-        <SplitViewCard>
-          <SplitViewCard.Main>
-            <SplitViewCard.Section heading="Recycle Bin">
+              {activeTab === "recycle_bin" && (
+                <SplitViewCard>
+                  <SplitViewCard.Main>
+                    <SplitViewCard.Section heading="Recycle Bin">
               <Box padding="xl" style={{ textAlign: "center", color: "var(--color-text-secondary)" }}>
-                Recycle Bin coming soon.
-              </Box>
-            </SplitViewCard.Section>
-          </SplitViewCard.Main>
-        </SplitViewCard>
-      )}
+                        Recycle Bin coming soon.
+                      </Box>
+                    </SplitViewCard.Section>
+                  </SplitViewCard.Main>
+                </SplitViewCard>
+              )}
       <AssetDetailTearsheet
         asset={selectedAsset}
         projectName={selectedAsset ? (projectMap.get(selectedAsset.projectId) ?? selectedAsset.projectId) : ""}

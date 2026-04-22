@@ -30,6 +30,15 @@ export default function PortfolioToolPage() {
     );
   }
 
+  if (toolKey === 'capital_planning_future') {
+    return (
+      <>
+        <Head><title>Capital Planning — Owner Prototype</title></Head>
+        <CapitalPlanningContent pageVariant="future" />
+      </>
+    );
+  }
+
   if (toolKey === 'capital_planning') {
     return (
       <>

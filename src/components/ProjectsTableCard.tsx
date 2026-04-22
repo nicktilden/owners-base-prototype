@@ -460,7 +460,7 @@ export default function ProjectsTableCard() {
                   ],
                 }}
               />
-            </div>
+                </div>
             <ConfigureColumnsPanel
               open={configOpen}
               gridApi={gridApi}

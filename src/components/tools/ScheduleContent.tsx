@@ -20,6 +20,7 @@ import { scheduleEntries } from "@/data/seed/schedule";
 import { projects } from "@/data/seed/projects";
 import type { ScheduleEntry, ScheduleItem, Milestone, ScheduleStatus } from "@/types/schedule";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ interface ScheduleContentProps {
 export default function ScheduleContent({ projectId }: ScheduleContentProps) {
   const isPortfolio = projectId === "";
   const [activeTab, setActiveTab] = useState<TabKey>("schedule");
+  useResetScrollOnTabChange(activeTab);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [searchText, setSearchText] = useState("");
   const gridApiRef = useRef<GridApi | null>(null);

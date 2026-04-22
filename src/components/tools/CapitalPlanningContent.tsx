@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/router";
 import {
   Button,
   Dropdown,
+  ErrorBanner,
   Pill,
   Search,
   SegmentedController,
@@ -16,18 +17,31 @@ import {
 import {
   Clear,
   CurrencyUSA as CapitalPlanningIcon,
-  Filter,
   EllipsisVertical,
+  Filter,
   Fullscreen,
   FullscreenExit,
+  Gantt,
   Plus,
   Sliders,
+  ViewGrid,
 } from "@procore/core-icons";
 import styled from "styled-components";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { ChangeHistoryDataTable } from "@/components/tools/capitalPlanning/ChangeHistoryDataTable";
+import {
+  cloneCriteriaBuilderRows,
+  CriteriaBuilderDataTable,
+  type CriteriaBuilderDataTableHandle,
+  type CriteriaBuilderRow,
+  OWNER_OPERATOR_CRITERIA_BUILDER_SEED,
+} from "@/components/tools/capitalPlanning/CriteriaBuilderDataTable";
+import { CapitalPlanningPrioritizationTab } from "@/components/tools/capitalPlanning/CapitalPlanningPrioritizationTab";
+import { CapitalPlanningRequestIntakeFormTab } from "@/components/tools/capitalPlanning/CapitalPlanningRequestIntakeFormTab";
 import { CreateSnapshotModal } from "@/components/tools/capitalPlanning/CreateSnapshotModal";
 import { CapitalPlanningSmartGrid } from "@/components/tools/capitalPlanning/CapitalPlanningSmartGrid";
+import { criteriaBuilderRowsToGridColumns } from "@/components/tools/capitalPlanning/capitalPlanningCriteriaGridColumns";
 import type {
   CapitalPlanningRegion,
   CapitalPlanningSampleRow,
@@ -46,6 +60,7 @@ import {
   PRIORITY_OPTIONS,
   CURVE_SELECT_PLACEHOLDER_LABEL,
   SAMPLE_PROJECT_ROWS,
+  STATUS_PILL_COLOR,
   initialCurves,
   initialPlannedAmountSources,
   initialPriorities,
@@ -53,10 +68,14 @@ import {
   withConceptBudgetColumnsCleared,
   withZeroPlannedAmountDatesCleared,
 } from "@/components/tools/capitalPlanning/capitalPlanningData";
-import type { ForecastGranularity } from "@/components/tools/capitalPlanning/capitalPlanningForecast";
+import { buildInitialPrioritizationCriteriaValues } from "@/components/tools/capitalPlanning/capitalPlanningPrioritizationSeed";
+import {
+  clampProjectIsoDatesToProgramHorizon,
+  type ForecastGranularity,
+} from "@/components/tools/capitalPlanning/capitalPlanningForecast";
 import {
   CAPITAL_PLANNING_TABLE_SETTINGS_COLUMNS,
-  DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY,
+  capitalPlanningProgramTableDefaultVisibility,
   type CapitalPlanningColumnVisibility,
 } from "@/components/tools/capitalPlanning/capitalPlanningColumnGroups";
 import {
@@ -171,6 +190,37 @@ const ColumnToggleLabel = styled.span`
   min-width: 0;
 `;
 
+/** Criteria Builder tab: card content + fixed viewport footer (outside SplitViewCard). */
+const CriteriaBuilderTabRoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+  /* Space for fixed footer so the table is not covered */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+`;
+
+const CriteriaBuilderPageFooter = styled.div`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--color-border-separator);
+  background: var(--color-surface-primary);
+  box-shadow: 0 -4px 12px hsla(200, 10%, 15%, 0.06);
+  box-sizing: border-box;
+`;
+
 type TableRowHeight = "sm" | "md" | "lg";
 
 /**
@@ -202,11 +252,25 @@ const SNAPSHOT_SELECT_OPTIONS = [
 type SnapshotSelectId = (typeof SNAPSHOT_SELECT_OPTIONS)[number]["id"];
 
 const CAPITAL_PLANNING_SNAPSHOT_SELECT_LABEL_ID = "capital-planning-snapshot-select-label";
+const CAPITAL_PLANNING_VIEW_BY_LABEL_ID = "capital-planning-view-by-label";
 
-type CapitalPlanningHeaderTab = "capital_plan" | "change_history";
+const VIEW_BY_OPTIONS = [
+  { value: "month" as const, label: "Month" },
+  { value: "quarter" as const, label: "Quarter" },
+  { value: "year" as const, label: "Year" },
+] as const;
 
-/** Default portfolio Capital Planning vs. Next-horizon copy (`/portfolio/capital-planning-next`). */
-export type CapitalPlanningPageVariant = "default" | "next";
+type CapitalPlanningHeaderTab =
+  | "capital_plan"
+  | "change_history"
+  | "criteria_builder"
+  | "prioritization"
+  | "request_intake_form";
+
+type CapitalPlanningPlanView = "grid" | "gantt";
+
+/** Default / Next (`-next`) / Future (`-future`) portfolio Capital Planning routes. */
+export type CapitalPlanningPageVariant = "default" | "next" | "future";
 
 export interface CapitalPlanningContentProps {
   pageVariant?: CapitalPlanningPageVariant;
@@ -214,10 +278,12 @@ export interface CapitalPlanningContentProps {
 
 const PORTFOLIO_CAPITAL_PLANNING_PATH = "/portfolio/capital-planning";
 const PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH = "/portfolio/capital-planning-next";
+const PORTFOLIO_CAPITAL_PLANNING_FUTURE_PATH = "/portfolio/capital-planning-future";
 
 export default function CapitalPlanningContent({ pageVariant = "default" }: CapitalPlanningContentProps) {
   const router = useRouter();
   const [headerTab, setHeaderTab] = useState<CapitalPlanningHeaderTab>("capital_plan");
+  useResetScrollOnTabChange(headerTab);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   /** Multi-select filters — same interaction model as Procore Data Table filter panels (Projects / Cost Management tables). */
@@ -226,21 +292,41 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
   const [filterRegions, setFilterRegions] = useState<CapitalPlanningRegion[]>([]);
   /** `null` shows placeholder; grid defaults to region grouping until the user picks a dimension. */
   const [groupBy, setGroupBy] = useState<CapitalPlanningGroupBy | null>(null);
+  const [planView, setPlanView] = useState<CapitalPlanningPlanView>("grid");
+  /** Gantt is only offered on the Future route; Now/Next always behave as grid for the program table. */
+  const capitalPlanTablePlanView: CapitalPlanningPlanView =
+    pageVariant === "future" ? planView : "grid";
+  /** Forecast column period size — View by select (month / quarter / year). */
+  const [viewByGranularity, setViewByGranularity] = useState<ForecastGranularity>("month");
   const [configureOpen, setConfigureOpen] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState<CapitalPlanningColumnVisibility>(() =>
-    withCapitalPlanningColumnLocks({ ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY })
+    withCapitalPlanningColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant))
   );
   const [tableRowHeight, setTableRowHeight] = useState<TableRowHeight>("sm");
   const [tableFullscreen, setTableFullscreen] = useState(false);
+  const criteriaBuilderTableRef = useRef<CriteriaBuilderDataTableHandle>(null);
+  const [criteriaBuilderSaveError, setCriteriaBuilderSaveError] = useState<string | null>(null);
+  const [criteriaBuilderRows, setCriteriaBuilderRows] = useState<CriteriaBuilderRow[]>(() =>
+    cloneCriteriaBuilderRows(OWNER_OPERATOR_CRITERIA_BUILDER_SEED)
+  );
+  const [prioritizationCriteriaValues, setPrioritizationCriteriaValues] = useState<
+    Record<string, Record<string, string>>
+  >(() => buildInitialPrioritizationCriteriaValues());
   const [snapshotModalOpen, setSnapshotModalOpen] = useState(false);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<SnapshotSelectId | null>(null);
   /** Filters snapshot menu options while the Select search field is used (Figma 4611-94196). */
   const [snapshotSelectSearchQuery, setSnapshotSelectSearchQuery] = useState("");
-  const [prioritiesByRowId, setPrioritiesByRowId] = useState<Record<string, ProjectPriority>>(initialPriorities);
-  const [rowDatesById, setRowDatesById] = useState<Record<string, { startDate: string; endDate: string }>>(
-    initialRowDates
-  );
+  const [rowDatesById, setRowDatesById] = useState<Record<string, { startDate: string; endDate: string }>>(() => {
+    const raw = initialRowDates();
+    return Object.fromEntries(
+      Object.entries(raw).map(([id, d]) => [
+        id,
+        clampProjectIsoDatesToProgramHorizon(d.startDate, d.endDate, id),
+      ])
+    );
+  });
   const [curvesByRowId, setCurvesByRowId] = useState<Record<string, ProjectCurve>>(initialCurves);
+  const [prioritiesByRowId, setPrioritiesByRowId] = useState<Record<string, ProjectPriority>>(initialPriorities);
   const [plannedAmountSourceByRowId, setPlannedAmountSourceByRowId] = useState<Record<string, string>>(
     () => initialPlannedAmountSources()
   );
@@ -253,8 +339,39 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
   const onSaveHighLevelBudgetPlannedAmount = useCallback((rowId: string, plannedAmount: number) => {
     setPlannedAmountHighLevelBudgetByRowId((prev) => ({ ...prev, [rowId]: plannedAmount }));
   }, []);
-  /** Forecast period columns in the grid (toolbar removed; wire to product control when needed). */
-  const forecastGranularity: ForecastGranularity = "quarter";
+
+  const onCriteriaBuilderCancel = useCallback(() => {
+    setHeaderTab("capital_plan");
+  }, []);
+
+  const clearCriteriaBuilderSaveError = useCallback(() => {
+    setCriteriaBuilderSaveError(null);
+  }, []);
+
+  const onPrioritizationCriteriaValueChange = useCallback(
+    (projectId: string, criterionId: string, value: string) => {
+      setPrioritizationCriteriaValues((prev) => ({
+        ...prev,
+        [projectId]: { ...(prev[projectId] ?? {}), [criterionId]: value },
+      }));
+    },
+    []
+  );
+
+  const capitalPlanGridCriteriaColumns = useMemo(
+    () => criteriaBuilderRowsToGridColumns(criteriaBuilderRows),
+    [criteriaBuilderRows]
+  );
+
+  const onCriteriaBuilderSave = useCallback(() => {
+    const validation = criteriaBuilderTableRef.current?.validateForSave();
+    if (validation && !validation.ok) {
+      setCriteriaBuilderSaveError(validation.message);
+      return;
+    }
+    setCriteriaBuilderSaveError(null);
+    // Prototype: persist criteria when an API exists
+  }, []);
 
   useEffect(() => {
     if (!tableFullscreen) return;
@@ -269,6 +386,23 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
       document.removeEventListener("keydown", onKey);
     };
   }, [tableFullscreen]);
+
+  useEffect(() => {
+    if (
+      pageVariant !== "future" &&
+      (headerTab === "criteria_builder" ||
+        headerTab === "prioritization" ||
+        headerTab === "request_intake_form")
+    ) {
+      setHeaderTab("capital_plan");
+    }
+  }, [pageVariant, headerTab]);
+
+  useEffect(() => {
+    if (headerTab !== "criteria_builder") {
+      setCriteriaBuilderSaveError(null);
+    }
+  }, [headerTab]);
 
   const projectRows = useMemo((): CapitalPlanningSampleRow[] => {
     return SAMPLE_PROJECT_ROWS.map((r) => {
@@ -286,21 +420,24 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
       } else if (source === PROJECT_BUDGET_REVISED_SOURCE) {
         plannedAmount = r.revisedBudget ?? r.plannedAmount;
       }
+      const mergedStart = dates?.startDate ?? r.startDate;
+      const mergedEnd = dates?.endDate ?? r.endDate;
+      const { startDate, endDate } = clampProjectIsoDatesToProgramHorizon(mergedStart, mergedEnd, r.id);
       return withZeroPlannedAmountDatesCleared(
         withConceptBudgetColumnsCleared({
           ...r,
-          priority: prioritiesByRowId[r.id] ?? r.priority,
-          startDate: dates?.startDate ?? r.startDate,
-          endDate: dates?.endDate ?? r.endDate,
+          startDate,
+          endDate,
           curve: curvesByRowId[r.id] ?? r.curve,
+          priority: prioritiesByRowId[r.id] ?? r.priority,
           plannedAmount,
         })
       );
     });
   }, [
-    prioritiesByRowId,
     rowDatesById,
     curvesByRowId,
+    prioritiesByRowId,
     plannedAmountSourceByRowId,
     plannedAmountManualByRowId,
     plannedAmountHighLevelBudgetByRowId,
@@ -322,9 +459,9 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
   }, []);
 
   const resetTableSettings = useCallback(() => {
-    setColumnVisibility(withCapitalPlanningColumnLocks({ ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY }));
+    setColumnVisibility(withCapitalPlanningColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant)));
     setTableRowHeight("sm");
-  }, []);
+  }, [pageVariant]);
 
   const filteredProjectRows = useMemo((): CapitalPlanningSampleRow[] => {
     const q = search.trim().toLowerCase();
@@ -382,7 +519,11 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
             void router.push(PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH);
             return;
           }
-          if (item === "now" || item === "future") {
+          if (item === "future") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_FUTURE_PATH);
+            return;
+          }
+          if (item === "now") {
             void router.push(PORTFOLIO_CAPITAL_PLANNING_PATH);
           }
         }}
@@ -396,6 +537,15 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
 
   const headerTabs = (
     <Tabs>
+      {pageVariant === "future" ? (
+        <Tabs.Tab
+          selected={headerTab === "prioritization"}
+          onPress={() => setHeaderTab("prioritization")}
+          role="button"
+        >
+          <Tabs.Link>Prioritization</Tabs.Link>
+        </Tabs.Tab>
+      ) : null}
       <Tabs.Tab
         selected={headerTab === "capital_plan"}
         onPress={() => setHeaderTab("capital_plan")}
@@ -410,6 +560,24 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
       >
         <Tabs.Link>Change History</Tabs.Link>
       </Tabs.Tab>
+      {pageVariant === "future" ? (
+        <Tabs.Tab
+          selected={headerTab === "criteria_builder"}
+          onPress={() => setHeaderTab("criteria_builder")}
+          role="button"
+        >
+          <Tabs.Link>Criteria Builder</Tabs.Link>
+        </Tabs.Tab>
+      ) : null}
+      {pageVariant === "future" ? (
+        <Tabs.Tab
+          selected={headerTab === "request_intake_form"}
+          onPress={() => setHeaderTab("request_intake_form")}
+          role="button"
+        >
+          <Tabs.Link>Intake Form Builder</Tabs.Link>
+        </Tabs.Tab>
+      ) : null}
     </Tabs>
   );
 
@@ -418,8 +586,8 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
     <ToolPageLayout
       title="Capital Planning"
       titleAddon={
-        <Pill color="magenta" style={{ flexShrink: 0 }}>
-          {pageVariant === "next" ? "Open Beta" : "Beta"}
+        <Pill color={pageVariant === "future" ? "green" : "magenta"} style={{ flexShrink: 0 }}>
+          {pageVariant === "next" ? "Open Beta" : pageVariant === "future" ? "GA" : "Beta"}
         </Pill>
       }
       icon={<CapitalPlanningIcon size="md" />}
@@ -432,6 +600,59 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
           <SplitViewCard.Main>
             <SplitViewCard.Section heading="Change History">
               <ChangeHistoryDataTable />
+            </SplitViewCard.Section>
+          </SplitViewCard.Main>
+        </SplitViewCard>
+      ) : headerTab === "criteria_builder" ? (
+        <CriteriaBuilderTabRoot>
+          <SplitViewCard>
+            <SplitViewCard.Main>
+              <SplitViewCard.Section heading="Criteria Builder">
+                <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
+                  <Typography intent="small" style={{ margin: 0, maxWidth: 720, color: "var(--color-text-secondary)" }}>
+                    Add custom scoring criteria to accurately score projects when capital planning.
+                  </Typography>
+                  {criteriaBuilderSaveError ? (
+                    <ErrorBanner role="alert">
+                      <Typography intent="body">{criteriaBuilderSaveError}</Typography>
+                    </ErrorBanner>
+                  ) : null}
+                  <CriteriaBuilderDataTable
+                    ref={criteriaBuilderTableRef}
+                    onRowsChange={clearCriteriaBuilderSaveError}
+                    rows={pageVariant === "future" ? criteriaBuilderRows : undefined}
+                    onRowsCommit={pageVariant === "future" ? setCriteriaBuilderRows : undefined}
+                  />
+                </div>
+              </SplitViewCard.Section>
+            </SplitViewCard.Main>
+          </SplitViewCard>
+          <CriteriaBuilderPageFooter>
+            <Button type="button" variant="tertiary" className="b_tertiary" onClick={onCriteriaBuilderCancel}>
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" onClick={onCriteriaBuilderSave}>
+              Save
+            </Button>
+          </CriteriaBuilderPageFooter>
+        </CriteriaBuilderTabRoot>
+      ) : headerTab === "prioritization" ? (
+        <SplitViewCard>
+          <SplitViewCard.Main>
+            <SplitViewCard.Section heading="Prioritization">
+              <CapitalPlanningPrioritizationTab
+                criteriaRows={criteriaBuilderRows}
+                criteriaValuesByProjectId={prioritizationCriteriaValues}
+                onCriteriaValueChange={onPrioritizationCriteriaValueChange}
+              />
+            </SplitViewCard.Section>
+          </SplitViewCard.Main>
+        </SplitViewCard>
+      ) : headerTab === "request_intake_form" ? (
+        <SplitViewCard>
+          <SplitViewCard.Main>
+            <SplitViewCard.Section heading="Intake form builder">
+              <CapitalPlanningRequestIntakeFormTab />
             </SplitViewCard.Section>
           </SplitViewCard.Main>
         </SplitViewCard>
@@ -585,6 +806,31 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                   >
                     Filter
                   </ToggleButton>
+                  {filterStatus.includes("Concept") ? (
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 2,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Pill color={STATUS_PILL_COLOR.Concept} style={{ flexShrink: 0 }}>
+                        Concept projects
+                      </Pill>
+                      <Button
+                        type="button"
+                        variant="tertiary"
+                        className="b_tertiary"
+                        size="sm"
+                        icon={<Clear />}
+                        aria-label="Remove Concept from status filter"
+                        onClick={() =>
+                          setFilterStatus((prev) => prev.filter((s) => s !== "Concept"))
+                        }
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <div
                   style={{
@@ -597,6 +843,91 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                     minWidth: 0,
                   }}
                 >
+                  {capitalPlanTablePlanView === "gantt" ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexShrink: 0,
+                        minWidth: 0,
+                        maxWidth: "100%",
+                      }}
+                    >
+                      <Typography
+                        id={CAPITAL_PLANNING_VIEW_BY_LABEL_ID}
+                        intent="small"
+                        weight="semibold"
+                        as="span"
+                        style={{ flexShrink: 0 }}
+                      >
+                        View by
+                      </Typography>
+                      <div
+                        className="capital-planning-view-by-select-wrap"
+                        style={{
+                          boxSizing: "border-box",
+                          minWidth: 100,
+                          maxWidth: "100%",
+                          width: 160,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        <Select
+                          aria-labelledby={CAPITAL_PLANNING_VIEW_BY_LABEL_ID}
+                          className="capital-planning-view-by-select"
+                          block
+                          placeholder="View by"
+                          label={VIEW_BY_OPTIONS.find((o) => o.value === viewByGranularity)?.label}
+                          onSelect={(s) => {
+                            if (s.action !== "selected") return;
+                            const opt = s.item as (typeof VIEW_BY_OPTIONS)[number];
+                            setViewByGranularity(opt.value);
+                          }}
+                        >
+                          {VIEW_BY_OPTIONS.map((o) => (
+                            <Select.Option key={o.value} value={o} selected={viewByGranularity === o.value}>
+                              {o.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  ) : null}
+                  {pageVariant === "future" ? (
+                    <SegmentedController className="b_radiogroup" style={{ flexShrink: 0 }}>
+                      <SegmentedController.Segment
+                        selected={capitalPlanTablePlanView === "grid"}
+                        onClick={() => setPlanView("grid")}
+                      >
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <ViewGrid size="sm" aria-hidden />
+                          Grid
+                        </span>
+                      </SegmentedController.Segment>
+                      <SegmentedController.Segment
+                        selected={planView === "gantt"}
+                        onClick={() => setPlanView("gantt")}
+                      >
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <Gantt size="sm" aria-hidden />
+                          Gantt
+                        </span>
+                      </SegmentedController.Segment>
+                    </SegmentedController>
+                  ) : null}
                   <div style={{ width: 240, maxWidth: "100%", minWidth: 0 }}>
                     <Select
                       className="capital-planning-group-by-select"
@@ -672,7 +1003,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                 </FilterPanelHeader>
                 <FilterPanelBody>
                   <FilterFieldSection>
-                    <FilterFieldLabel htmlFor="capital-planning-filter-status">Status</FilterFieldLabel>
+                    <FilterFieldLabel htmlFor="capital-planning-filter-status">Stage</FilterFieldLabel>
                     <Select
                       id="capital-planning-filter-status"
                       placeholder="Select values"
@@ -738,6 +1069,7 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
             )}
             {/* Horizontal (and fullscreen vertical) scroll only inside this region — side panels stay fixed. */}
             <div
+              data-tab-scroll-root
               className={[
                 "capital-planning-table-scroll-region",
                 tableFullscreen ? "capital-planning-table-scroll-region--fullscreen" : "",
@@ -764,12 +1096,20 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
               setPlannedAmountSourceByRowId={setPlannedAmountSourceByRowId}
               plannedAmountManualByRowId={plannedAmountManualByRowId}
               setPlannedAmountManualByRowId={setPlannedAmountManualByRowId}
-              setPrioritiesByRowId={setPrioritiesByRowId}
               setRowDatesById={setRowDatesById}
               setCurvesByRowId={setCurvesByRowId}
-              forecastGranularity={forecastGranularity}
+              setPrioritiesByRowId={setPrioritiesByRowId}
+              forecastGranularity={
+                capitalPlanTablePlanView === "grid" ? "quarter" : viewByGranularity
+              }
+              planView={capitalPlanTablePlanView}
               onSaveHighLevelBudgetPlannedAmount={onSaveHighLevelBudgetPlannedAmount}
               groupBy={groupBy}
+              criteriaColumns={capitalPlanGridCriteriaColumns}
+              criteriaValuesByProjectId={prioritizationCriteriaValues}
+              onCriteriaValueChange={onPrioritizationCriteriaValueChange}
+              showPrioritizationScoreColumn={false}
+              renderCriteriaColumnsInGrid={false}
             />
             </div>
             {configureOpen && (
@@ -833,7 +1173,9 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                         type="button"
                         onClick={() =>
                           setColumnVisibility(
-                            withCapitalPlanningColumnLocks({ ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY })
+                            withCapitalPlanningColumnLocks(
+                              capitalPlanningProgramTableDefaultVisibility(pageVariant)
+                            )
                           )
                         }
                       >

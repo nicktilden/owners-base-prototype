@@ -22,6 +22,7 @@ import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTypes, actionPlanTemplates } from "@/data/seed/action_plan_types";
 import type { ActionPlan, ActionPlanItem, ActionPlanStatus, ActionPlanItemStatus } from "@/types/action_plans";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -462,6 +463,7 @@ interface ActionPlansContentProps {
 
 export default function ActionPlansContent({ projectId }: ActionPlansContentProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("list");
+  useResetScrollOnTabChange(activeTab);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<ActionPlanStatus[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);

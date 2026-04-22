@@ -19,9 +19,13 @@ export const CAPITAL_PLANNING_COLUMN_GROUP_LABELS: Record<CapitalPlanningColumnG
 
 export type BaselineColumnKey =
   | "project"
+  | "projectDescription"
+  | "estimatedBudget"
+  | "prioritizationStatus"
   | "plannedAmount"
   | "status"
-  | "priority"
+  | "projectPriority"
+  | "prioritizationScore"
   | "originalBudget"
   | "revisedBudget"
   | "jobToDate"
@@ -32,9 +36,13 @@ export type BaselineColumnKey =
 
 /** Per-column visibility for the Capital Planning grid + forecast block (Table Settings). */
 export type CapitalPlanningColumnVisibility = {
+  projectDescription: boolean;
+  estimatedBudget: boolean;
+  prioritizationStatus: boolean;
   plannedAmount: boolean;
   status: boolean;
-  priority: boolean;
+  projectPriority: boolean;
+  prioritizationScore: boolean;
   originalBudget: boolean;
   revisedBudget: boolean;
   jobToDate: boolean;
@@ -46,9 +54,13 @@ export type CapitalPlanningColumnVisibility = {
 };
 
 export const DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY: CapitalPlanningColumnVisibility = {
+  projectDescription: false,
+  estimatedBudget: false,
+  prioritizationStatus: false,
   plannedAmount: true,
   status: true,
-  priority: true,
+  projectPriority: false,
+  prioritizationScore: true,
   originalBudget: true,
   revisedBudget: true,
   jobToDate: true,
@@ -59,6 +71,25 @@ export const DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY: CapitalPlanningColumnVi
   forecast: true,
 };
 
+export type CapitalPlanningProgramPageVariant = "default" | "next" | "future";
+
+/**
+ * Main Capital Plan program table: Now/Next show Priority; Future shows Prioritization Score
+ * (criteria-driven weighted score).
+ */
+export function capitalPlanningProgramTableDefaultVisibility(
+  pageVariant: CapitalPlanningProgramPageVariant
+): CapitalPlanningColumnVisibility {
+  if (pageVariant === "future") {
+    return { ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY };
+  }
+  return {
+    ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY,
+    projectPriority: true,
+    prioritizationScore: false,
+  };
+}
+
 /**
  * Table Settings — columns users may toggle (dates, curve, remaining, forecast stay visible; see
  * {@link withCapitalPlanningColumnLocks} in Capital Planning content).
@@ -67,17 +98,19 @@ export const CAPITAL_PLANNING_TABLE_SETTINGS_COLUMNS: readonly {
   key: keyof CapitalPlanningColumnVisibility;
   label: string;
 }[] = [
-  { key: "status", label: "Stage" },
-  { key: "priority", label: "Priority" },
+  { key: "projectPriority", label: "Priority" },
+  { key: "prioritizationScore", label: "Prioritization Score" },
   { key: "originalBudget", label: "Original Budget" },
   { key: "revisedBudget", label: "Revised Budget" },
   { key: "jobToDate", label: "Job to Date Costs" },
 ] as const;
 
+/** Excludes `estimatedBudget` so that column stays in the horizontal scroll strip (not sticky). */
 const STICKY_SCAN_ORDER: Exclude<BaselineColumnKey, "project">[] = [
   "plannedAmount",
   "status",
-  "priority",
+  "projectPriority",
+  "prioritizationScore",
   "originalBudget",
   "revisedBudget",
   "jobToDate",
@@ -89,9 +122,13 @@ const STICKY_SCAN_ORDER: Exclude<BaselineColumnKey, "project">[] = [
 
 const LEFT_TO_RIGHT_BASELINE: BaselineColumnKey[] = [
   "project",
+  "projectDescription",
+  "estimatedBudget",
+  "prioritizationStatus",
   "plannedAmount",
   "status",
-  "priority",
+  "projectPriority",
+  "prioritizationScore",
   "originalBudget",
   "revisedBudget",
   "jobToDate",
@@ -103,7 +140,14 @@ const LEFT_TO_RIGHT_BASELINE: BaselineColumnKey[] = [
 
 export function columnVisibilityToGroupVisibility(v: CapitalPlanningColumnVisibility): CapitalPlanningColumnGroupVisibility {
   return {
-    planning: v.plannedAmount || v.status || v.priority,
+    planning:
+      v.projectDescription ||
+      v.estimatedBudget ||
+      v.prioritizationStatus ||
+      v.plannedAmount ||
+      v.status ||
+      v.projectPriority ||
+      v.prioritizationScore,
     budget: v.originalBudget || v.revisedBudget || v.jobToDate,
     schedule: v.startDate || v.endDate || v.curve || v.remaining,
     forecast: v.forecast,
@@ -112,9 +156,13 @@ export function columnVisibilityToGroupVisibility(v: CapitalPlanningColumnVisibi
 
 export function countVisibleBaselineDataColumns(v: CapitalPlanningColumnVisibility): number {
   return (
+    (v.projectDescription ? 1 : 0) +
+    (v.estimatedBudget ? 1 : 0) +
+    (v.prioritizationStatus ? 1 : 0) +
     (v.plannedAmount ? 1 : 0) +
     (v.status ? 1 : 0) +
-    (v.priority ? 1 : 0) +
+    (v.projectPriority ? 1 : 0) +
+    (v.prioritizationScore ? 1 : 0) +
     (v.originalBudget ? 1 : 0) +
     (v.revisedBudget ? 1 : 0) +
     (v.jobToDate ? 1 : 0) +
@@ -158,7 +206,23 @@ export function baselineCellClasses(key: BaselineColumnKey, v: CapitalPlanningCo
     parts.push("capital-planning-col-scroll");
   }
 
-  if (key === last) {
+  if (key === "estimatedBudget") {
+    parts.push("capital-planning-col-estimated-budget");
+  }
+  if (key === "prioritizationStatus") {
+    parts.push("capital-planning-col-prioritization-status");
+  }
+  if (key === "projectDescription") {
+    parts.push("capital-planning-col-project-description");
+  }
+
+  /* Text / bridge columns before criteria or forecast should not draw the “last baseline” vertical rule. */
+  if (
+    key === last &&
+    key !== "estimatedBudget" &&
+    key !== "prioritizationStatus" &&
+    key !== "projectDescription"
+  ) {
     parts.push("capital-planning-col-last-baseline");
   }
   return parts.filter(Boolean).join(" ");

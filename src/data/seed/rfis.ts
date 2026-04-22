@@ -1,7 +1,7 @@
 /**
  * RFI SEED DATA
  *
- * Generates 10–15 RFIs per project (20 projects) for Trinity Health.
+ * Generates 10–15 RFIs per project (all projects in seed) for Trinity Health.
  * Uses deterministic pseudo-random generation so data is stable across renders.
  * Statuses are weighted toward Open/Draft for active projects and Closed for
  * inactive/closeout projects. A subset is assigned to the active user (user-009,
