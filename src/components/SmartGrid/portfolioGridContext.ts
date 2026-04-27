@@ -5,4 +5,6 @@ export interface PortfolioGridContext {
   onEditProject?: (row: ProjectRow) => void;
   /** Open the project tearsheet directly on the Connection tab. */
   onOpenConnectionTab?: (row: ProjectRow) => void;
+  /** Open the project tearsheet directly on the Health tab. */
+  onOpenHealthTab?: (row: ProjectRow) => void;
 }

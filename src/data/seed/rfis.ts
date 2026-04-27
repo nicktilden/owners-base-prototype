@@ -168,7 +168,7 @@ function buildRfis(): Rfi[] {
 
   for (const proj of PROJECT_REFS) {
     const statusPool = STATUS_POOLS[proj.status] ?? STATUS_POOLS.active;
-    const rfiCount = 10 + (hash(globalIdx, 99) % 6); // 10–15
+    const rfiCount = 20 + (hash(globalIdx, 99) % 11); // 20–30
 
     for (let i = 0; i < rfiCount; i++) {
       globalIdx++;
@@ -182,9 +182,12 @@ function buildRfis(): Rfi[] {
         ?? `Regarding "${subject.toLowerCase()}": The current drawings and specifications do not provide sufficient detail to proceed with construction. Please provide clarification and any supplemental details needed for field installation.`;
 
       // Assignees — mix of internal users; make some assigned to Bridget (user-009)
-      const assigneeUser = (hash(seed, 3) % 5 === 0)
-        ? INTERNAL_USERS[1] // Bridget, roughly 20% of the time
-        : INTERNAL_USERS[hash(seed, 4) % INTERNAL_USERS.length]!;
+      // First 4 items per project are forced to Bridget to meet the minimum requirement
+      const assigneeUser = i < 4
+        ? INTERNAL_USERS[1] // Bridget O'Sullivan
+        : (hash(seed, 3) % 4 === 0)
+          ? INTERNAL_USERS[1] // Bridget, roughly 25% of remaining
+          : INTERNAL_USERS[hash(seed, 4) % INTERNAL_USERS.length]!;
 
       const rfiManagerUser = INTERNAL_USERS[hash(seed, 5) % INTERNAL_USERS.length]!;
       const receivedFromUser = INTERNAL_USERS[hash(seed, 6) % INTERNAL_USERS.length]!;

@@ -2922,7 +2922,7 @@ export function CapitalPlanningSmartGrid({
               return (
               <Table.BodyRow key={row.id} className="capital-planning-table-status-group-child">
                 <Table.BodyCell className={baselineCellClasses("project", columnVisibility)}>
-                  <Table.LinkCell href={`/project/${row.projectId}`}>{row.project}</Table.LinkCell>
+                  <Table.LinkCell href={`/project/${row.projectId}/overview`}>{row.project}</Table.LinkCell>
                 </Table.BodyCell>
                 {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
                   <Table.BodyCell

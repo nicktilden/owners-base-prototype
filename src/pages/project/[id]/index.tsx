@@ -1,9 +1,15 @@
-import dynamic from 'next/dynamic';
-const ProjectOverviewContent = dynamic(() => import("@/components/ProjectOverviewContent"), {
-  ssr: false,
-  loading: () => <p style={{ padding: 24 }}>Loading...</p>,
-});
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-export default function ProjectOverviewPage() {
-  return <ProjectOverviewContent />;
+export default function ProjectIndexRedirect() {
+  const router = useRouter();
+  const { id } = router.query;
+
+  useEffect(() => {
+    if (id) {
+      router.replace(`/project/${id}/overview`);
+    }
+  }, [id]);
+
+  return null;
 }

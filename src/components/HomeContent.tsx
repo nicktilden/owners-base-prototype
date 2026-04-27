@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import styled from "styled-components";
-import { Button, MenuImperative, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
+import { Button, Dropdown, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
 import { Home, Plus, Filter, EllipsisVertical } from "@procore/core-icons";
 import GlobalHeader from "@/components/nav/GlobalHeader";
 import AppLayout from "@/components/nav/AppLayout";
 import MyOpenItemsCard from "@/components/MyOpenItemsCard";
+import RiskScorecardCard from "@/components/RiskScorecardCard";
 import AIDailyPlannerCard from "@/components/AIDailyPlannerCard";
 import ProjectsTableCard from "@/components/ProjectsTableCard";
 import ScheduleHeatmapCard from "@/components/ScheduleHeatmapCard";
 import CostManagementTableCard from "@/components/CostManagementTableCard";
 import HubsContentLayout from "@/components/hubs/HubsContentLayout";
-import { ScheduleRiskGHubCard, ScheduleVariance2HubCard } from "@/components/ScheduleInsightsHubCards";
+import { ScheduleRiskGHubCard, ScheduleVariance2HubCard, ProjectsByStageHubCard } from "@/components/ScheduleInsightsHubCards";
 import { FinancialScorecardCard, InvoicesForApprovalCard } from "@/components/FinancialHubCards";
 import {
   ActionPlansPortfolioMatrixHubCard,
@@ -25,9 +26,16 @@ import {
 import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
 import HubFilterBar from "@/components/HubFilterBar";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
+import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
+import CostHealthCard from "@/components/health/cards/CostHealthCard";
+import ScheduleHealthCard from "@/components/health/cards/ScheduleHealthCard";
+import DeliveryRiskCard from "@/components/health/cards/DeliveryRiskCard";
+import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
 
-const tabs = ["My Work", "Cost Management", "Schedule & Milestones", "Action Plans"] as const;
+const tabs = ["My Work", "Portfolio Performance", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
+
+const HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
 // Uses the same colors/spacing as Tabs internals so it's visually identical,
@@ -100,16 +108,18 @@ const EllipsisBtn = styled.button`
 
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
-  "My Work": ["My Open Items", "AI Daily Planner", "Projects Table"],
-  "Cost Management": ["Financial Scorecard", "Invoices for Approval", "Cost Management Table"],
-  "Schedule & Milestones": ["Schedule Risk", "Schedule Variance", "Schedule Heatmap"],
-  "Action Plans": [
+  "My Work": ["My Open Items", "Projects by Stage", "Projects Table"],
+  "Health & Risk": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Risk Register"],
+  "Portfolio Performance": ["Risk Signals", "Financial Scorecard", "Schedule Variance", "Action Plans Portfolio Matrix"],
+  "Schedule & Milestones": ["Schedule Risk", "Action Plans Template", "Schedule Heatmap"],
+  "Ideas Hub": [
+    "Invoices for Approval",
     "AP v2 Full Matrix",
-    "Action Plans Portfolio Matrix",
-    "Template Adoption",
+    "AI Daily Planner",
     "Overdue Action Items",
     "AP v2 KPI Dashboard",
     "AP v2 Project Cards",
+    "Cost Management Table",
   ],
 };
 
@@ -118,9 +128,10 @@ type HiddenCards = Record<TabName, Set<string>>;
 function makeEmptyHidden(): HiddenCards {
   return {
     "My Work": new Set(),
-    "Cost Management": new Set(),
+    "Health & Risk": new Set(),
+    "Portfolio Performance": new Set(),
     "Schedule & Milestones": new Set(),
-    "Action Plans": new Set(),
+    "Ideas Hub": new Set(),
   };
 }
 
@@ -130,42 +141,10 @@ function HomeContentInner() {
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const { hasActiveFilters } = useHubFilters();
 
-  // Ellipsis menu state
-  const [menuOpenTab, setMenuOpenTab] = useState<TabName | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const ellipsisBtnRefs = useRef<Partial<Record<TabName, HTMLButtonElement>>>({});
-
   // Edit view modal state
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
   const [hiddenCards, setHiddenCards] = useState<HiddenCards>(makeEmptyHidden);
 
-  // Close dropdown on outside click or Escape
-  useEffect(() => {
-    if (!menuOpenTab) return;
-    function handleClick(e: MouseEvent) {
-      const btn = ellipsisBtnRefs.current[menuOpenTab!];
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        btn &&
-        !btn.contains(e.target as Node)
-      ) {
-        setMenuOpenTab(null);
-      }
-    }
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setMenuOpenTab(null);
-        ellipsisBtnRefs.current[menuOpenTab!]?.focus();
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [menuOpenTab]);
 
   function isCardVisible(tab: TabName, cardName: string) {
     return !hiddenCards[tab].has(cardName);
@@ -183,17 +162,9 @@ function HomeContentInner() {
     });
   }
 
-  function openMenu(tab: TabName, e: React.MouseEvent) {
-    e.stopPropagation();
-    setMenuOpenTab((prev) => (prev === tab ? null : tab));
-  }
-
   function handleMenuAction(action: string) {
-    const tab = menuOpenTab;
-    setMenuOpenTab(null);
-    if (!tab) return;
     if (action === "edit_view") {
-      setEditViewTab(tab);
+      setEditViewTab(activeTab);
     }
   }
 
@@ -233,7 +204,7 @@ function HomeContentInner() {
                 </ToggleButton>
                 <div style={{ width: 2, height: 20, background: "var(--color-border-separator)", borderRadius: 1, flexShrink: 0 }} />
                 <TabBarList className="Tabs__TabsList">
-                  {tabs.map((tab) => {
+                  {tabs.filter((tab) => !HIDDEN_TABS.has(tab)).map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <TabItem
@@ -245,44 +216,24 @@ function HomeContentInner() {
                         <TabInner $selected={isActive}>
                           {tab}
                           {isActive && (
-                            <EllipsisBtn
-                             className="b_tertiary"
-                              ref={(el) => { if (el) ellipsisBtnRefs.current[tab] = el; }}
-                              type="button"
+                            <Dropdown
+                              label=""
+                              icon={<EllipsisVertical size="sm" />}
+                              onSelect={({ item }) => handleMenuAction(item as string)}
+                              onClick={(e) => e.stopPropagation()}
+                              variant="tertiary"
+                              size="sm"
+                              style={{ width: 20, height: 20, padding: 0, minWidth: 0 }}
                               aria-label={`${tab} options`}
-                              aria-haspopup="menu"
-                              aria-expanded={menuOpenTab === tab}
-                              onClick={(e) => openMenu(tab, e)}
-                              style={{ background: menuOpenTab === tab ? "rgba(0,0,0,0.08)" : undefined }}
                             >
-                              <EllipsisVertical size="sm" />
-                            </EllipsisBtn>
+                              <Dropdown.Item item="rename">Rename</Dropdown.Item>
+                              <Dropdown.Item item="edit_view">Edit</Dropdown.Item>
+                              <Dropdown.Item item="share">Share</Dropdown.Item>
+                              <Dropdown.Item item="duplicate">Duplicate</Dropdown.Item>
+                              <Dropdown.Item item="delete">Delete</Dropdown.Item>
+                            </Dropdown>
                           )}
                         </TabInner>
-                        {menuOpenTab === tab && (
-                          <div
-                            ref={menuRef}
-                            style={{
-                              position: "absolute",
-                              top: "calc(100% + 4px)",
-                              left: 0,
-                              zIndex: 100,
-                              minWidth: 150,
-                              borderRadius: 4,
-                              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
-                              backgroundColor: "var(--color-surface-primary)",
-                              overflow: "hidden",
-                            }}
-                          >
-                            <MenuImperative role="menu">
-                              <MenuImperative.Item item="rename" onClick={() => handleMenuAction("rename")}>Rename</MenuImperative.Item>
-                              <MenuImperative.Item item="edit_view" onClick={() => handleMenuAction("edit_view")}>Edit Hub View</MenuImperative.Item>
-                              <MenuImperative.Item item="share" onClick={() => handleMenuAction("share")}>Share</MenuImperative.Item>
-                              <MenuImperative.Item item="duplicate" onClick={() => handleMenuAction("duplicate")}>Duplicate</MenuImperative.Item>
-                              <MenuImperative.Item item="delete" onClick={() => handleMenuAction("delete")}>Delete</MenuImperative.Item>
-                            </MenuImperative>
-                          </div>
-                        )}
                       </TabItem>
                     );
                   })}
@@ -298,10 +249,10 @@ function HomeContentInner() {
             )}
             {activeTab === "My Work" && (
               <HubsContentLayout>
-                {isCardVisible("My Work", "My Open Items") || isCardVisible("My Work", "AI Daily Planner") ? (
-                  <HubsContentLayout.Row>
+                {isCardVisible("My Work", "My Open Items") || isCardVisible("My Work", "Projects by Stage") ? (
+                  <HubsContentLayout.Row columnsTemplate="1fr minmax(0, 440px)">
                     {isCardVisible("My Work", "My Open Items") && <MyOpenItemsCard />}
-                    {isCardVisible("My Work", "AI Daily Planner") && <AIDailyPlannerCard />}
+                    {isCardVisible("My Work", "Projects by Stage") && <ProjectsByStageHubCard />}
                   </HubsContentLayout.Row>
                 ) : null}
                 {isCardVisible("My Work", "Projects Table") && (
@@ -311,29 +262,51 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Cost Management" && (
+            {activeTab === "Health & Risk" && (
               <HubsContentLayout>
-                {isCardVisible("Cost Management", "Financial Scorecard") || isCardVisible("Cost Management", "Invoices for Approval") ? (
-                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
-                    {isCardVisible("Cost Management", "Financial Scorecard") && <FinancialScorecardCard />}
-                    {isCardVisible("Cost Management", "Invoices for Approval") && <InvoicesForApprovalCard />}
+                {isCardVisible("Health & Risk", "Portfolio Health") || isCardVisible("Health & Risk", "Risk Register") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Health & Risk", "Portfolio Health") && <HealthSummaryCard scope="portfolio" />}
+                    {isCardVisible("Health & Risk", "Risk Register") && <RiskRegisterCard scope="portfolio" />}
                   </HubsContentLayout.Row>
                 ) : null}
-                {isCardVisible("Cost Management", "Cost Management Table") && (
+                {isCardVisible("Health & Risk", "Cost Health") || isCardVisible("Health & Risk", "Schedule Health") || isCardVisible("Health & Risk", "Delivery Risk") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Health & Risk", "Cost Health") && <CostHealthCard scope="portfolio" />}
+                    {isCardVisible("Health & Risk", "Schedule Health") && <ScheduleHealthCard scope="portfolio" />}
+                    {isCardVisible("Health & Risk", "Delivery Risk") && <DeliveryRiskCard scope="portfolio" />}
+                  </HubsContentLayout.Row>
+                ) : null}
+              </HubsContentLayout>
+            )}
+            {activeTab === "Portfolio Performance" && (
+              <HubsContentLayout>
+                {isCardVisible("Portfolio Performance", "Risk Signals") && (
+                  <HubsContentLayout.Row>
+                    <RiskScorecardCard />
+                  </HubsContentLayout.Row>
+                )}
+                {isCardVisible("Portfolio Performance", "Financial Scorecard") || isCardVisible("Portfolio Performance", "Schedule Variance") ? (
+                  <HubsContentLayout.Row columnsTemplate="1fr 1fr">
+                    {isCardVisible("Portfolio Performance", "Financial Scorecard") && <FinancialScorecardCard />}
+                    {isCardVisible("Portfolio Performance", "Schedule Variance") && <ScheduleVariance2HubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Portfolio Performance", "Action Plans Portfolio Matrix") && (
                   <HubsContentLayout.Row variant="table">
-                    <CostManagementTableCard />
+                    <ActionPlansPortfolioMatrixHubCard />
                   </HubsContentLayout.Row>
                 )}
               </HubsContentLayout>
             )}
             {activeTab === "Schedule & Milestones" && (
               <HubsContentLayout>
-                {isCardVisible("Schedule & Milestones", "Schedule Risk") || isCardVisible("Schedule & Milestones", "Schedule Variance") ? (
-                  <HubsContentLayout.Row>
+                {(isCardVisible("Schedule & Milestones", "Schedule Risk") || isCardVisible("Schedule & Milestones", "Action Plans Template")) && (
+                  <HubsContentLayout.Row columnsTemplate="1fr 1fr">
                     {isCardVisible("Schedule & Milestones", "Schedule Risk") && <ScheduleRiskGHubCard />}
-                    {isCardVisible("Schedule & Milestones", "Schedule Variance") && <ScheduleVariance2HubCard />}
+                    {isCardVisible("Schedule & Milestones", "Action Plans Template") && <ActionPlansTemplateAdoptionHubCard />}
                   </HubsContentLayout.Row>
-                ) : null}
+                )}
                 {isCardVisible("Schedule & Milestones", "Schedule Heatmap") && (
                   <HubsContentLayout.Row variant="table">
                     <ScheduleHeatmapCard />
@@ -341,25 +314,31 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Action Plans" && (
+            {activeTab === "Ideas Hub" && (
               <HubsContentLayout>
-                {isCardVisible("Action Plans", "AP v2 Full Matrix") && (
+                {isCardVisible("Ideas Hub", "Invoices for Approval") || isCardVisible("Ideas Hub", "AP v2 Full Matrix") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Ideas Hub", "Invoices for Approval") && <InvoicesForApprovalCard />}
+                    {isCardVisible("Ideas Hub", "AP v2 Full Matrix") && <APv2FullMatrixHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Ideas Hub", "AI Daily Planner") || isCardVisible("Ideas Hub", "Overdue Action Items") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Ideas Hub", "AI Daily Planner") && <AIDailyPlannerCard />}
+                    {isCardVisible("Ideas Hub", "Overdue Action Items") && <ActionPlansOverdueItemsHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Ideas Hub", "AP v2 KPI Dashboard") || isCardVisible("Ideas Hub", "AP v2 Project Cards") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Ideas Hub", "AP v2 KPI Dashboard") && <APv2KpiDashboardHubCard />}
+                    {isCardVisible("Ideas Hub", "AP v2 Project Cards") && <APv2ProjectCardsHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Ideas Hub", "Cost Management Table") && (
                   <HubsContentLayout.Row variant="table">
-                    <APv2FullMatrixHubCard />
+                    <CostManagementTableCard />
                   </HubsContentLayout.Row>
                 )}
-                {isCardVisible("Action Plans", "Overdue Action Items") || isCardVisible("Action Plans", "Template Adoption") ? (
-                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
-                    {isCardVisible("Action Plans", "Overdue Action Items") && <ActionPlansOverdueItemsHubCard />}
-                    {isCardVisible("Action Plans", "Template Adoption") && <ActionPlansTemplateAdoptionHubCard />}
-                  </HubsContentLayout.Row>
-                ) : null}
-                {isCardVisible("Action Plans", "AP v2 KPI Dashboard") || isCardVisible("Action Plans", "AP v2 Project Cards") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Action Plans", "AP v2 KPI Dashboard") && <APv2KpiDashboardHubCard />}
-                    {isCardVisible("Action Plans", "AP v2 Project Cards") && <APv2ProjectCardsHubCard />}
-                  </HubsContentLayout.Row>
-                ) : null}
               </HubsContentLayout>
             )}
           </ToolLandingPage.Body>

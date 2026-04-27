@@ -12,6 +12,9 @@ import styled from "styled-components";
 import { sampleOpenItemRows } from "@/data/openitems";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { formatDateMMDDYYYY } from "@/utils/date";
+import { useHubLoading } from "@/context/HubLoadingContext";
+import HubCardSkeleton from "@/components/skeletons/HubCardSkeleton";
+import AIDailyPlannerSkeleton from "@/components/skeletons/AIDailyPlannerSkeleton";
 
 // ─── Hub Card anatomy ─────────────────────────────────────────────────────────
 
@@ -203,7 +206,16 @@ const BRIEF_ROWS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AIDailyPlannerCard() {
+  const { isLoading } = useHubLoading();
   const today = formatDateMMDDYYYY(TODAY);
+
+  if (isLoading) {
+    return (
+      <HubCardSkeleton hasControls={false} actionCount={2}>
+        <AIDailyPlannerSkeleton />
+      </HubCardSkeleton>
+    );
+  }
 
   return (
     <HubCardFrame

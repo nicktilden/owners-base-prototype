@@ -764,6 +764,7 @@
 html,
 body {
   font-family:
+    "Inter",
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -1220,7 +1221,7 @@ div.nextjs-toast {
   border-color: var(--color-text-primary) !important;
 }
 
-
+/* Segmented Controller - Not active (.dcJxLA) */
 [data-color-scheme="dark"] .b_radiogroup .cPdHyw,
 [data-theme="owner"] .b_radiogroup .cPdHyw,
 [data-theme="owner-alt1"] .b_radiogroup .cPdHyw,
@@ -1229,6 +1230,13 @@ div.nextjs-toast {
   color: var(--color-text-secondary) !important;
 }
 
+
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
+  background-color: var(--color-text-primary) !important;
+  color: var(--color-surface-primary) !important;
+}
+
+/* Segmented Controller - Active (.gSxFWX) */
 [data-color-scheme="dark"] .b_radiogroup .eLJGZn,
 [data-theme="owner"] .b_radiogroup .eLJGZn,
 [data-theme="owner-alt1"] .b_radiogroup .eLJGZn,
@@ -1240,11 +1248,6 @@ div.nextjs-toast {
 [data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
   background-color: var(--color-surface-primary) !important;
   color: var(--color-text-secondary) !important;
-}
-
-[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
-  background-color: var(--color-text-primary) !important;
-  color: var(--color-surface-primary) !important;
 }
 
 /* Card and Menu containers */
@@ -1335,6 +1338,12 @@ div.nextjs-toast {
 [class*="StyledTableWrapper"] {
   overflow-x: auto;
 }
+
+/* Standard: core-react Table cell horizontal padding = 8px */
+[class*="StyledTableBodyCell"] {
+  padding: 16px !important;
+}
+
 
 /* AG Grid */
 .ag-cell-inline-editing {

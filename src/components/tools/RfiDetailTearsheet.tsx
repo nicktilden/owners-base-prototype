@@ -8,8 +8,8 @@ import { specifications } from "@/data/seed/specifications";
 import { getConnectedRfiInfo, type ConnectedRfiInfo } from "@/data/procoreConnect";
 
 const RfiTearsheetWidth = createGlobalStyle`
-  [class*="StyledTearsheetBody"] {
-    flex: 0 0 55vw !important;
+  [class*="StyledTearsheetBody"]:has(> .rfi-detail-tearsheet-root) {
+    flex: 0 0 60vw !important;
   }
 `;
 
@@ -200,6 +200,7 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
     <>
       <RfiTearsheetWidth />
       <Tearsheet open={open} onClose={onClose} aria-label="RFI details" placement="right">
+        <div className="rfi-detail-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Page style={{ height: "100%", background: "var(--color-surface-primary)", color: "var(--color-text-primary)" }}>
           <Page.Main style={{ height: "100%", overflow: "hidden", background: "var(--color-surface-primary)" }}>
             <Page.Header style={{ background: "var(--color-surface-primary)", borderColor: "var(--color-border-separator)" }}>
@@ -466,6 +467,7 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
             </Page.Body>
           </Page.Main>
         </Page>
+        </div>
       </Tearsheet>
     </>
   );

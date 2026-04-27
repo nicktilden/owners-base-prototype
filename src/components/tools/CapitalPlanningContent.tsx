@@ -6,7 +6,6 @@ import {
   ErrorBanner,
   Pill,
   Search,
-  SegmentedController,
   Select,
   SplitViewCard,
   Switch,
@@ -27,6 +26,7 @@ import {
   ViewGrid,
 } from "@procore/core-icons";
 import styled from "styled-components";
+import SegmentedControl from "@/components/SegmentedControl";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { ChangeHistoryDataTable } from "@/components/tools/capitalPlanning/ChangeHistoryDataTable";
@@ -1138,26 +1138,26 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                     >
                       Row height
                     </Typography>
-                    <SegmentedController>
-                      <SegmentedController.Segment
+                    <SegmentedControl>
+                      <SegmentedControl.Segment
                         selected={tableRowHeight === "sm"}
                         onClick={() => setTableRowHeight("sm")}
-                      >
-                        Small
-                      </SegmentedController.Segment>
-                      <SegmentedController.Segment
+                        label="Small"
+                        tooltip="Compact row height"
+                      />
+                      <SegmentedControl.Segment
                         selected={tableRowHeight === "md"}
                         onClick={() => setTableRowHeight("md")}
-                      >
-                        Medium
-                      </SegmentedController.Segment>
-                      <SegmentedController.Segment
+                        label="Medium"
+                        tooltip="Default row height"
+                      />
+                      <SegmentedControl.Segment
                         selected={tableRowHeight === "lg"}
                         onClick={() => setTableRowHeight("lg")}
-                      >
-                        Large
-                      </SegmentedController.Segment>
-                    </SegmentedController>
+                        label="Large"
+                        tooltip="Expanded row height"
+                      />
+                    </SegmentedControl>
                   </div>
                   <hr
                     style={{

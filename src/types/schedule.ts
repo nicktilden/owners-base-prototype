@@ -45,6 +45,7 @@ export interface Milestone {
   projectId: string;
   type: 'milestone';
   name: string;
+  status?: ScheduleStatus;
   milestoneDate: Date;
   actualMilestoneDate: Date | null;
   wbs: string;

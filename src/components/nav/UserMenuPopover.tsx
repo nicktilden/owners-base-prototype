@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Typography } from '@procore/core-react';
 import { Person, Cog, Import, Pencil } from '@procore/core-icons';
 import styled from 'styled-components';
+import { useRouter } from 'next/router';
 import { usePersona } from '@/context/PersonaContext';
 import { useData } from '@/context/DataContext';
 import avatarImg from '@/images/avatar-XL.png';
@@ -130,6 +131,7 @@ export default function UserMenuPopover({
   onProfileSettings,
 }: UserMenuPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const { activeUser } = usePersona();
   const { data } = useData();
 
@@ -202,7 +204,17 @@ export default function UserMenuPopover({
         >
           My Profile Settings
         </Button>
-        <Button className="b_secondary" block variant="secondary" data-variant="secondary" icon={<Cog size="sm" />} onClick={onClose}>
+        <Button
+          className="b_secondary"
+          block
+          variant="secondary"
+          data-variant="secondary"
+          icon={<Cog size="sm" />}
+          onClick={() => {
+            onClose();
+            router.push('/settings');
+          }}
+        >
           Account Settings
         </Button>
         <Button block variant="secondary" className="b_secondary" data-variant="secondary" icon={<Import size="sm" />} onClick={onClose}>

@@ -26,6 +26,7 @@ import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
 import { useAiPanel } from '@/context/AiPanelContext';
+import { sampleProjectRows } from '@/data/projects';
 import avatarImg from '@/images/avatar-XL.png';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 
@@ -142,8 +143,8 @@ const SearchBarContainer = styled.div`
   align-items: center;
   pointer-events: none;
   /* Constrain so it can't grow into the side groups — each side keeps its own space */
-  max-width: min(480px, calc(100% - 800px));
-  width: 480px;
+  max-width: min(350px, calc(100% - 800px));
+  width: 350px;
 `;
 
 const RightActions = styled.div`
@@ -213,8 +214,33 @@ const AiButton = styled.button`
   border-radius: 6px;
   flex-shrink: 0;
   transition: background 0.15s;
+  position: relative;
+  isolation: isolate;
+
   &:hover { background: var(--color-nav-surface-hover); }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 7px;
+    background: linear-gradient(var(--angle), #FF5100, #FF7433);
+    z-index: -1;
+    animation: 10s ai-border-rotate linear infinite;
+  }
+
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes ai-border-rotate {
+    to { --angle: 360deg; }
+  }
 `;
+
+
 
 const SearchBarWrap = styled.div`
   display: flex;
@@ -289,15 +315,24 @@ export default function GlobalHeader() {
   const account = data.account;
   const companyName = account?.companyName ?? 'Procore';
 
-  // Project picker label: show active project name if at project level
+  // Project picker label: show active project name if at project level.
+  // activeProjectId may be a seed string ('proj-001') or numeric string ('1') from the URL.
   const activeProject = activeProjectId
     ? data.projects.find((p) => p.id === activeProjectId)
     : null;
-  const rawLabel = activeProject ? activeProject.name : 'Select Project';
-  const pickerLabel = rawLabel.length > 22 ? rawLabel.slice(0, 22) + '…' : rawLabel;
-  const pickerSublabel = level === 'project' && activeProject
-    ? activeProject.number
-    : companyName;
+
+  // Fallback: URL-based numeric ID → look up in sampleProjectRows
+  const activeProjectRow = !activeProject && activeProjectId
+    ? sampleProjectRows.find((r) => r.id === Number(activeProjectId))
+    : null;
+
+  const rawLabel = activeProject
+    ? `${activeProject.number} — ${activeProject.name}`
+    : activeProjectRow
+    ? `${activeProjectRow.number} — ${activeProjectRow.name}`
+    : 'Select Project';
+  const pickerLabel = rawLabel.length > 30 ? rawLabel.slice(0, 30) + '…' : rawLabel;
+  const pickerSublabel = companyName;
 
   return (
     <>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Button, Modal, Pill, Search as SearchInput, Tearsheet, Typography } from "@procore/core-react";
+import { Button, Modal, Pill, ProgressBar, Search as SearchInput, Tearsheet, Typography } from "@procore/core-react";
 import { ChevronDown, ChevronRight, EllipsisVertical } from "@procore/core-icons";
 import { createGlobalStyle } from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
@@ -8,11 +8,11 @@ import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTemplates } from "@/data/seed/action_plan_types";
 import type { Project } from "@/types/project";
 import type { ActionPlan } from "@/types/action_plans";
+import { completionBg, completionFg, HEATMAP_NEUTRAL_BG } from "@/utils/heatmapColors";
 
 const TearsheetWide = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .action-plans-tearsheet-wide-root) {
-    flex: 0 0 80vw !important;
-    max-width: 960px !important;
+    flex: 0 0 50vw !important;
   }
 `;
 
@@ -79,11 +79,8 @@ function computeCell(projectId: string, templateName: string): MatrixCell {
 }
 
 function cellBarColor(cell: MatrixCell): string {
-  if (cell.kind === "empty") return "#eceff1";
-  if (cell.percent >= 100) return "#2e7d32";
-  if (cell.overdue) return "#c62828";
-  if (cell.percent > 0) return "#1565c0";
-  return "#9e9e9e";
+  if (cell.kind === "empty") return HEATMAP_NEUTRAL_BG;
+  return completionBg(cell.percent, cell.overdue);
 }
 
 function cellStatusLabel(cell: MatrixCell): string {
@@ -139,7 +136,10 @@ function RichActionPlanTearsheet({ open, onClose, project, templateName, cell }:
   })).filter((s) => s.items.length > 0);
 
   const statusColor = (s: string) =>
-    s === "closed" ? "#2e7d32" : s === "delayed" ? "#c62828" : s === "in_progress" ? "#1565c0" : "#6a767c";
+    s === "closed" ? completionBg(100, false) :
+    s === "delayed" ? completionBg(0, true) :
+    s === "in_progress" ? completionBg(50, false) :
+    "#6a767c";
 
   const statusLabel = (s: string) =>
     s === "closed" ? "Closed" : s === "delayed" ? "Delayed" : s === "in_progress" ? "In Progress" : "Open";
@@ -426,13 +426,14 @@ export function APv2FullMatrixHubCard() {
 // Card B: Portfolio Action Plans — KPI Dashboard
 // ═════════════════════════════════════════════════════════════════════════════
 
-function CompletionRing({ percent, size = 48, color }: { percent: number; size?: number; color: string }) {
+function CompletionRing({ percent, overdue = false, size = 48 }: { percent: number; overdue?: boolean; size?: number }) {
   const r = (size - 6) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (percent / 100) * circ;
+  const color = completionBg(percent, overdue);
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#eceff1" strokeWidth={5} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={HEATMAP_NEUTRAL_BG} strokeWidth={5} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={5}
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
         style={{ transition: "stroke-dashoffset 0.4s ease" }}
@@ -497,9 +498,9 @@ export function APv2KpiDashboardHubCard() {
 
   const kpiItems = [
     { label: "Total Plans", value: String(aggStats.totalPlans), color: "var(--color-text-primary)" },
-    { label: "Avg Completion", value: `${aggStats.avgCompletion}%`, color: aggStats.avgCompletion >= 70 ? "#2e7d32" : "#1565c0" },
-    { label: "Completed", value: String(aggStats.completedPlans), color: "#2e7d32" },
-    { label: "Overdue", value: String(aggStats.overduePlans), color: aggStats.overduePlans > 0 ? "#c62828" : "#6a767c" },
+    { label: "Avg Completion", value: `${aggStats.avgCompletion}%`, color: completionBg(aggStats.avgCompletion, false) },
+    { label: "Completed", value: String(aggStats.completedPlans), color: completionBg(100, false) },
+    { label: "Overdue", value: String(aggStats.overduePlans), color: aggStats.overduePlans > 0 ? completionBg(0, true) : "#6a767c" },
   ];
 
   return (
@@ -521,39 +522,36 @@ export function APv2KpiDashboardHubCard() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {perTemplate.map((t) => {
-            const ringColor = t.avgPct >= 100 ? "#2e7d32" : t.overdueCount > 0 ? "#c62828" : "#1565c0";
-            return (
-              <button
-                key={t.name}
-                type="button"
-                onClick={() => setDrillTemplate(t.name)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14, padding: "10px 12px",
-                  border: "1px solid var(--color-border-separator)", borderRadius: 8, background: "var(--color-surface-primary)", cursor: "pointer",
-                  textAlign: "left", fontFamily: "inherit", transition: "background 0.1s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-primary)")}
-              >
-                <div style={{ position: "relative", flexShrink: 0 }}>
-                  <CompletionRing percent={t.avgPct} color={ringColor} />
-                  <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)" }}>
-                    {t.avgPct}%
-                  </span>
+          {perTemplate.map((t) => (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => setDrillTemplate(t.name)}
+              style={{
+                display: "flex", alignItems: "center", gap: 14, padding: "10px 12px",
+                border: "1px solid var(--color-border-separator)", borderRadius: 8, background: "var(--color-surface-primary)", cursor: "pointer",
+                textAlign: "left", fontFamily: "inherit", transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-surface-primary)")}
+            >
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <CompletionRing percent={t.avgPct} overdue={t.overdueCount > 0} />
+                <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)" }}>
+                  {t.avgPct}%
+                </span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{t.name}</div>
+                <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  <span>{t.adopted}/{allCells.length} adopted</span>
+                  <span style={{ color: completionBg(100, false) }}>{t.completeCount} complete</span>
+                  {t.overdueCount > 0 && <span style={{ color: completionBg(0, true), fontWeight: 600 }}>{t.overdueCount} overdue</span>}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{t.name}</div>
-                  <div style={{ display: "flex", gap: 12, marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)" }}>
-                    <span>{t.adopted}/{allCells.length} adopted</span>
-                    <span style={{ color: "#2e7d32" }}>{t.completeCount} complete</span>
-                    {t.overdueCount > 0 && <span style={{ color: "#c62828", fontWeight: 600 }}>{t.overdueCount} overdue</span>}
-                  </div>
-                </div>
-                <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 } as React.CSSProperties} />
-              </button>
-            );
-          })}
+              </div>
+              <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)", flexShrink: 0 } as React.CSSProperties} />
+            </button>
+          ))}
         </div>
       </HubCardFrame>
 
@@ -591,22 +589,20 @@ export function APv2KpiDashboardHubCard() {
                       <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
                         <Pill color={stagePillColor(project.stage)} data-pill-color={stagePillColor(project.stage)}>{stageLabel(project.stage)}</Pill>
                       </td>
-                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-                          <div style={{ width: 60, height: 6, borderRadius: 3, background: "var(--color-surface-active)", overflow: "hidden" }}>
-                            <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 3, background: cellBarColor(cell) }} />
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell) }}>{cell.percent}%</span>
+                      <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <ProgressBar value={cell.percent} style={{ flex: 1 }} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell), whiteSpace: "nowrap" }}>{cell.percent}%</span>
                         </div>
                       </td>
                       <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
-                        {cell.overdue ? (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#c62828", background: "#fbe9e7", padding: "2px 8px", borderRadius: 4 }}>Overdue</span>
-                        ) : cell.percent >= 100 ? (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#2e7d32", background: "#e8f5e9", padding: "2px 8px", borderRadius: 4 }}>Complete</span>
-                        ) : (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "#1565c0", background: "#e3f2fd", padding: "2px 8px", borderRadius: 4 }}>In Progress</span>
-                        )}
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+                          background: completionBg(cell.percent, cell.overdue && cell.percent < 100),
+                          color: completionFg(cell.percent, cell.overdue && cell.percent < 100),
+                        }}>
+                          {cell.overdue && cell.percent < 100 ? "Overdue" : cell.percent >= 100 ? "Complete" : "In Progress"}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -669,7 +665,7 @@ export function APv2ProjectCardsHubCard() {
                 cursor: "pointer", textAlign: "left", fontFamily: "inherit",
                 transition: "border-color 0.15s, box-shadow 0.15s",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#1565c0"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-action-primary)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border-separator)"; e.currentTarget.style.boxShadow = "none"; }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -699,7 +695,7 @@ export function APv2ProjectCardsHubCard() {
 
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
                 <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-surface-active)", overflow: "hidden" }}>
-                  <div style={{ width: `${avgPct}%`, height: "100%", borderRadius: 2, background: hasOverdue ? "#c62828" : avgPct >= 100 ? "#2e7d32" : "#1565c0" }} />
+                  <div style={{ width: `${avgPct}%`, height: "100%", borderRadius: 2, background: completionBg(avgPct, hasOverdue) }} />
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-primary)" }}>{avgPct}%</span>
               </div>
@@ -738,19 +734,19 @@ export function APv2ProjectCardsHubCard() {
                       <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{template}</span>
                       {cell.kind === "empty" ? (
                         <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic" }}>No plan</span>
-                      ) : cell.overdue ? (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#c62828", background: "#fbe9e7", padding: "2px 8px", borderRadius: 4 }}>Overdue</span>
-                      ) : cell.percent >= 100 ? (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#2e7d32", background: "#e8f5e9", padding: "2px 8px", borderRadius: 4 }}>Complete</span>
                       ) : (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#1565c0", background: "#e3f2fd", padding: "2px 8px", borderRadius: 4 }}>In Progress</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+                          background: completionBg(cell.percent, cell.overdue && cell.percent < 100),
+                          color: completionFg(cell.percent, cell.overdue && cell.percent < 100),
+                        }}>
+                          {cell.overdue && cell.percent < 100 ? "Overdue" : cell.percent >= 100 ? "Complete" : "In Progress"}
+                        </span>
                       )}
                     </div>
                     {cell.kind === "progress" && (
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-active)", overflow: "hidden" }}>
-                          <div style={{ width: `${cell.percent}%`, height: "100%", borderRadius: 4, background: cellBarColor(cell), transition: "width 0.3s ease" }} />
-                        </div>
+                        <ProgressBar value={cell.percent} style={{ flex: 1 }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: cellBarColor(cell), minWidth: 42 }}>{cell.percent}%</span>
                       </div>
                     )}

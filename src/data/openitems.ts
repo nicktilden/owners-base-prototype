@@ -172,11 +172,14 @@ const TODAY = "2026-03-27";
 // ---------------------------------------------------------------------------
 
 const ASSIGNEES = [
-  "Hector Rodriguez",
-  "Sarah Maragos",
-  "Sidney Shah",
-  "Will Bauer",
-  "Brent Baker",
+  "Bridget O'Sullivan",
+  "Marcus Webb",
+  "Derek Huang",
+  "Rachel Kim",
+  "Carlos Mendez",
+  "Tyrone Jackson",
+  "Victoria Langford",
+  "Priya Nair",
 ] as const;
 
 const SUBMITTERS = [
@@ -407,14 +410,19 @@ const PRIORITY_POOL: OpenItemPriority[] = [
   "Low", "Low",
 ];
 
-function buildItem(globalId: number, project: ProjectSeed, localIndex: number): OpenItemRow {
+function buildItem(globalId: number, project: ProjectSeed, localIndex: number, forceAssignee?: string): OpenItemRow {
   const seed = globalId * 97 + localIndex;
 
   const type = pick(OPEN_ITEM_TYPES, seed, 1);
-  const status = STATUS_POOL[hash(seed, 2) % STATUS_POOL.length];
+  // Forced-assignee items (first 4 per project) are always open so they appear
+  // in the My Open Items card.
+  const rawStatus = STATUS_POOL[hash(seed, 2) % STATUS_POOL.length];
+  const status: OpenItemStatus = forceAssignee
+    ? (rawStatus === "Closed" || rawStatus === "Void" ? "Open" : rawStatus)
+    : rawStatus;
   const priority = PRIORITY_POOL[hash(seed, 3) % PRIORITY_POOL.length];
   const trade = pick(OPEN_ITEM_TRADES, seed, 4);
-  const assignee = pick(ASSIGNEES, seed, 5);
+  const assignee = forceAssignee ?? pick(ASSIGNEES, seed, 5);
   const submittedBy = pick(SUBMITTERS, seed, 6);
   const specSection = pick(SPEC_SECTIONS, seed, 7);
   const titlePool = TITLE_POOLS[type];
@@ -472,7 +480,10 @@ function buildAllOpenItems(): OpenItemRow[] {
   let globalId = 1;
   for (const project of PROJECT_SEEDS) {
     for (let i = 0; i < project.itemCount; i++) {
-      rows.push(buildItem(globalId, project, i));
+      // First 4 items per project are forced to Bridget O'Sullivan so the
+      // My Open Items card always shows at least 4 items at project level.
+      const forceAssignee = i < 4 ? "Bridget O'Sullivan" : undefined;
+      rows.push(buildItem(globalId, project, i, forceAssignee));
       globalId++;
     }
   }

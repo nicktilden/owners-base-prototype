@@ -12,9 +12,11 @@ import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
 import { AiPanelProvider } from '@/context/AiPanelContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
+import { HubLoadingProvider } from '@/context/HubLoadingContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
+const DevResetButton = dynamic(() => import('@/components/DevResetButton'), { ssr: false });
 
 const TearsheetAnimationOverride = createGlobalStyle`
   /* Tearsheet panel: use CSS transitions instead of keyframe animations */
@@ -91,11 +93,14 @@ export default function AppProviders({ children }: { children: React.ReactNode }
           <LevelProvider>
             <ConnectionProvider>
               <AiPanelProvider>
-                <TearsheetAnimationOverride />
-                <SeedLoader>
-                  {children}
-                  <AiChatPanel />
-                </SeedLoader>
+                <HubLoadingProvider>
+                  <TearsheetAnimationOverride />
+                  <SeedLoader>
+                    {children}
+                    <AiChatPanel />
+                    <DevResetButton />
+                  </SeedLoader>
+                </HubLoadingProvider>
               </AiPanelProvider>
             </ConnectionProvider>
           </LevelProvider>

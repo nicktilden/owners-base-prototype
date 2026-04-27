@@ -4,6 +4,7 @@
  */
 
 export { account } from './account';
+export { risks, getRisksForProject } from './risks';
 export { activeUser } from './activeUser';
 export { users } from './users';
 export { projects } from './projects';
@@ -25,7 +26,7 @@ export { changeEvents } from './change_events';
 export { invoicing } from './invoicing';
 export { primeContracts } from './prime_contracts';
 export { punchList } from './punch_list';
-export { specifications } from './specifications';
+export { specifications, specificationSections } from './specifications';
 export { submittals } from './submittals';
 export { observations } from './observations';
 export { correspondence } from './correspondence';

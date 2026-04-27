@@ -4,20 +4,25 @@ import {
   Dropdown,
   Pill,
   Search,
+  Select,
   SplitViewCard,
   Tabs,
+  ToggleButton,
 } from "@procore/core-react";
 import {
   ChevronDown,
   ChevronRight,
   Clear,
   ClipboardCheck as ActionPlansIcon,
+  Filter,
   Plus,
+  Sliders,
 } from "@procore/core-icons";
 import type { ColDef, GridApi, ICellRendererParams, RowClickedEvent } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTypes, actionPlanTemplates } from "@/data/seed/action_plan_types";
 import type { ActionPlan, ActionPlanItem, ActionPlanStatus, ActionPlanItemStatus } from "@/types/action_plans";
@@ -108,6 +113,13 @@ const ToolbarLeft = styled.div`
   align-items: center;
   gap: 8px;
   flex: 1;
+`;
+
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 `;
 
 const GridArea = styled.div`
@@ -457,6 +469,16 @@ const templateColumnDefs: ColDef[] = [
 type TabKey = "list" | "templates";
 const STATUS_OPTIONS: ActionPlanStatus[] = ["draft", "in_progress", "complete"];
 
+interface GroupByOption {
+  id: "type" | "status";
+  label: string;
+}
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { id: "type",   label: "Type"   },
+  { id: "status", label: "Status" },
+];
+
 interface ActionPlansContentProps {
   projectId: string;
 }
@@ -467,6 +489,8 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<ActionPlanStatus[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<ActionPlan | null>(null);
   const gridApiRef = useRef<GridApi<ActionPlan> | null>(null);
   const templateGridApiRef = useRef<GridApi | null>(null);
@@ -534,6 +558,44 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     applyStatusFilter([]);
   }
 
+  const handleFiltersToggle = useCallback(() => {
+    setFilterOpen((prev) => { if (!prev) setConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleConfigToggle = useCallback(() => {
+    setConfigOpen((prev) => { if (!prev) setFilterOpen(false); return !prev; });
+  }, []);
+
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
+
   const hasFilters = statusFilter.length > 0;
 
 
@@ -579,14 +641,44 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                       onClear={handleSearchClear}
                     />
                   </div>
-                  <Button
-                    variant={filterOpen || hasFilters ? "primary" : "secondary"}
-                    size="md"
-                    onClick={() => setFilterOpen((v) => !v)}
+                  <ToggleButton
+                    selected={filterOpen}
+                    className="b_toggle"
+                    icon={<Filter />}
+                    onClick={handleFiltersToggle}
                   >
-                    Filter{hasFilters ? ` (${statusFilter.length})` : ""}
-                  </Button>
+                    Filters{hasFilters ? ` (${statusFilter.length})` : ""}
+                  </ToggleButton>
                 </ToolbarLeft>
+                <ToolbarRight>
+                  <div style={{ width: 200 }}>
+                    <Select
+                      placeholder="Group by"
+                      label={groupBy ? `Group by: ${groupBy.label}` : undefined}
+                      onSelect={handleGroupBySelect}
+                      onClear={groupBy ? handleGroupByClear : undefined}
+                      block
+                    >
+                      {GROUP_BY_OPTIONS.map((opt) => (
+                        <Select.Option
+                          key={opt.id}
+                          value={opt}
+                          selected={groupBy?.id === opt.id}
+                        >
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ToggleButton
+                    selected={configOpen}
+                    className="b_toggle"
+                    icon={<Sliders />}
+                    onClick={handleConfigToggle}
+                  >
+                    Configure
+                  </ToggleButton>
+                </ToolbarRight>
               </ToolbarRow>
 
               {filterOpen && (
@@ -630,6 +722,8 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     rowData={rowData}
                     columnDefs={planColumnDefs}
                     getRowId={getRowId}
+                    groupDisplayType="groupRows"
+                    autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
                     onGridReady={(event) => {
                       gridApiRef.current = event.api;
@@ -649,6 +743,11 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     onClose={() => setSelectedPlan(null)}
                   />
                 )}
+                <ConfigureColumnsPanel
+                  open={configOpen}
+                  gridApi={gridApiRef.current}
+                  onClose={() => setConfigOpen(false)}
+                />
               </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>

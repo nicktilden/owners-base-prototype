@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { Avatar, Button, Card, H2, Link, Pill, Select, Tearsheet, Typography } from "@procore/core-react";
-import { Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
+import { useRouter } from "next/router";
+import { Avatar, Button, Card, H2, Link, Pill, Popover, Select, Table, Tearsheet, Typography } from "@procore/core-react";
+import { ChevronDown, ChevronRight, Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -10,8 +11,11 @@ import {
   PROJECT_MILESTONES,
   varianceColors,
   PROJECT_MANAGER_CONTACTS,
+  getDaysRemaining,
+  getProjectPortfolioScheduleSummary,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
+import HubCardTable from "@/components/HubCardTable";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
@@ -20,12 +24,31 @@ import { Connect } from "@procore/core-icons";
 
 const TearsheetWide = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .schedule-insights-variance-tearsheet-root) {
-    flex: 0 0 80vw !important;
-    max-width: 1100px !important;
+    flex: 0 0 60vw !important;
+  }
+`;
+
+const TearsheetProject = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .schedule-project-tearsheet-root) {
+    flex: 0 0 60vw !important;
   }
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const STAGE_COLORS: Record<string, "blue" | "green" | "yellow" | "gray" | "magenta" | "cyan"> = {
+  "Conceptual":             "magenta",
+  "Feasibility":            "magenta",
+  "Final design":           "cyan",
+  "Permitting":             "yellow",
+  "Bidding":                "yellow",
+  "Pre-Construction":       "blue",
+  "Course of Construction": "green",
+  "Post-Construction":      "green",
+  "Handover":               "blue",
+  "Closeout":               "gray",
+  "Maintenance":            "gray",
+};
 
 function addDaysLocal(isoDate: string, days: number): string {
   const d = new Date(isoDate);
@@ -63,6 +86,8 @@ interface ProjectScheduleTearsheetProps {
 }
 
 function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearsheetProps) {
+  const [pastExpanded, setPastExpanded] = useState(false);
+  const [currentExpanded, setCurrentExpanded] = useState(true);
   const project = useMemo(
     () => projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null,
     [projectId]
@@ -75,208 +100,251 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
     () => project ? scheduleVarianceData.find((d) => d.project === project.name)?.variance ?? 0 : 0,
     [project]
   );
-  const currentMilestone = project ? getCurrentMilestoneLabelForProject(project) : "";
+
+  const { lastMilestone, nextMilestone } = useMemo(
+    () => project ? getProjectPortfolioScheduleSummary(project) : { lastMilestone: "—", nextMilestone: "—" },
+    [project]
+  );
 
   const firstMilestoneWithActual = milestones.find(m => m.actualDate !== null);
   const startVariance = firstMilestoneWithActual?.varianceDays ?? 0;
   const actualStartDate = startVariance !== 0 && project ? addDaysLocal(project.startDate, startVariance) : null;
-  const expectedEndDate = scheduleVariance !== 0 && project ? addDaysLocal(project.endDate, scheduleVariance) : null;
   const pmContact = project ? PROJECT_MANAGER_CONTACTS[project.projectManager] ?? null : null;
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const pastMilestones = milestones.filter(m => m.baselineDate < todayIso);
+  const currentMilestones = milestones.filter(m => m.baselineDate >= todayIso);
+
+  // Combined bar timeline: baseline bar + actual overlay
   const timeline = useMemo(() => {
     if (!project) return null;
     const bStart = new Date(project.startDate).getTime();
     const bEnd = new Date(project.endDate).getTime();
     const aStart = actualStartDate ? new Date(actualStartDate).getTime() : bStart;
-    const eEnd = expectedEndDate ? new Date(expectedEndDate).getTime() : bEnd;
+    const aEnd = scheduleVariance !== 0 ? new Date(project.endDate).getTime() + scheduleVariance * 86400000 : bEnd;
     const tMin = Math.min(bStart, aStart);
-    const tMax = Math.max(bEnd, eEnd);
+    const tMax = Math.max(bEnd, aEnd);
     const span = tMax - tMin || 1;
     return {
       baselineLeft: ((bStart - tMin) / span) * 100,
       baselineWidth: ((bEnd - bStart) / span) * 100,
-      expectedLeft: ((aStart - tMin) / span) * 100,
-      expectedWidth: ((eEnd - aStart) / span) * 100,
+      actualLeft: ((aStart - tMin) / span) * 100,
+      actualWidth: ((aEnd - aStart) / span) * 100,
+      startLabel: formatDate(actualStartDate ?? project.startDate),
+      endLabel: formatDate(scheduleVariance !== 0 ? addDaysLocal(project.endDate, scheduleVariance) : project.endDate),
     };
-  }, [project, actualStartDate, expectedEndDate]);
+  }, [project, actualStartDate, scheduleVariance]);
 
   return (
-    <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right">
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Header */}
-        <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
-          {project ? (
-            <>
-              <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
-                  {project.name}
-                </Typography>
-                {getProjectConnection(project.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
-                <Pill color="blue">{project.stage}</Pill>
-                <Typography intent="small" color="gray45">
-                  <Typography intent="small" weight="bold">Schedule Variance:</Typography>{" "}
-                  {varianceBadge(scheduleVariance)}
-                </Typography>
-                <Typography intent="small" color="gray45">
-                  <Typography intent="small" weight="bold">Current Milestone:</Typography> {currentMilestone}
-                </Typography>
-              </div>
-            </>
-          ) : (
-            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>Project Schedule</Typography>
-          )}
-        </div>
-
-        {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {project && (
-            <>
-              {/* ── Schedule Duration ── */}
-              <Card style={{ margin: 16, padding: 16 }}>
-                <H2 style={{ marginBottom: 16 }}>Schedule Duration</H2>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: 16 }}>
-                  <div>
-                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Start Date (Baseline)</Typography>
-                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.startDate)}</Typography>
-                  </div>
-                  <div>
-                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Actual Start</Typography>
-                    <Typography intent="body" style={{ fontWeight: 500 }}>
-                      {actualStartDate ? (
-                        <><span style={{ color: varianceColors(startVariance).bg }}>{formatDate(actualStartDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(startVariance)}</span></>
-                      ) : (
-                        <>{formatDate(project.startDate)} <Pill color="green">On Time</Pill></>
-                      )}
-                    </Typography>
-                  </div>
-                  <div>
-                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>End Date</Typography>
-                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.endDate)}</Typography>
-                  </div>
-                  <div>
-                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Expected Completion</Typography>
-                    <Typography intent="body" style={{ fontWeight: 500 }}>
-                      {expectedEndDate ? (
-                        <><span style={{ color: varianceColors(scheduleVariance).bg }}>{formatDate(expectedEndDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(scheduleVariance)}</span></>
-                      ) : (
-                        <>{formatDate(project.endDate)} <Pill color="green">On Schedule</Pill></>
-                      )}
-                    </Typography>
-                  </div>
+    <>
+      <TearsheetProject />
+      <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right">
+        <div className="schedule-project-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {/* Header */}
+          <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+            {project ? (
+              <>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
+                    {project.name}
+                  </Typography>
+                  {getProjectConnection(project.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                 </div>
-                {timeline && (
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
-                        <div style={{ position: "absolute", left: `${timeline.baselineLeft}%`, width: `${timeline.baselineWidth}%`, height: "100%", background: "#b0b8bc", borderRadius: 4 }} />
-                      </div>
-                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Baseline</Typography>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
-                        <div style={{ position: "absolute", left: `${timeline.expectedLeft}%`, width: `${timeline.expectedWidth}%`, height: "100%", background: varianceColors(scheduleVariance).bg, borderRadius: 4, opacity: 0.85 }} />
-                      </div>
-                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Expected</Typography>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingRight: 64 }}>
-                      <Typography intent="small" color="gray45">{formatDate(actualStartDate ?? project.startDate)}</Typography>
-                      <Typography intent="small" color="gray45">{formatDate(expectedEndDate ?? project.endDate)}</Typography>
-                    </div>
-                  </div>
-                )}
-              </Card>
-
-              {/* ── Project Manager ── */}
-              {pmContact && (
-                <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
-                  <H2 style={{ marginBottom: 16 }}>Project Manager</H2>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                    <Avatar size="lg" role="img" aria-label={pmContact.name}>
-                      <Avatar.Label>{pmContact.name.split(" ").map(n => n[0]).join("")}</Avatar.Label>
-                    </Avatar>
-                    <div>
-                      <Typography intent="body" weight="bold">{pmContact.name}</Typography>
-                      <Typography intent="small" color="gray45">{pmContact.company}</Typography>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                    <Button variant="secondary" size="sm" icon={<Envelope size="sm" />}>Send Mail</Button>
-                    <Button variant="secondary" size="sm" icon={<Comment size="sm" />}>Direct Message</Button>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
-                    <Envelope size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
-                    <Link href={`mailto:${pmContact.email}`} style={{ fontSize: 13, flex: 1 }}>{pmContact.email}</Link>
-                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.email)} aria-label="Copy email" />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
-                    <PhoneMobile size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
-                    <Link href={`tel:${pmContact.mobile}`} style={{ fontSize: 13 }}>{pmContact.mobile}</Link>
-                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(mobile)</Typography>
-                    <span style={{ flex: 1 }} />
-                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.mobile)} aria-label="Copy mobile" />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
-                    <Phone size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
-                    <Link href={`tel:${pmContact.office}`} style={{ fontSize: 13 }}>{pmContact.office}</Link>
-                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(office)</Typography>
-                    <span style={{ flex: 1 }} />
-                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.office)} aria-label="Copy office" />
-                  </div>
-                </Card>
-              )}
-            </>
-
-          )}
-
-          {/* ── Project Milestones ── */}
-          <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
-            <H2 style={{ marginBottom: 16 }}>Project Milestones</H2>
-            {milestones.length === 0 ? (
-              <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+                  <Pill color="blue">{project.stage.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</Pill>
+                  <Typography intent="small" color="gray45">
+                    <Typography intent="small" weight="bold">Schedule Variance:</Typography>{" "}
+                    {varianceBadge(scheduleVariance)}
+                  </Typography>
+                  <Typography intent="small" color="gray45">
+                    <Typography intent="small" weight="bold">Last Milestone:</Typography> {lastMilestone}
+                  </Typography>
+                  <Typography intent="small" color="gray45">
+                    <Typography intent="small" weight="bold">Next Milestone:</Typography> {nextMilestone}
+                  </Typography>
+                </div>
+              </>
             ) : (
-              <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: "#f5f6f7" }}>
-                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
-                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
-                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
-                      <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {milestones.map((m, i) => {
-                      const isCurrent = m.name === currentMilestone;
-                      return (
-                        <tr
-                          key={m.name}
-                          style={{
-                            background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
-                          }}
-                        >
-                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
-                            {m.name}
-                            {isCurrent && (
-                              <Pill color="blue" style={{ marginLeft: 8 }}>Current</Pill>
-                            )}
-                          </td>
-                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
-                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
-                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>Project Schedule</Typography>
             )}
-          </Card>
+          </div>
+
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {project && (
+              <>
+                {/* ── Schedule Duration ── */}
+                <Card style={{ margin: 16, padding: 16 }}>
+                  <H2 style={{ marginBottom: 16 }}>Schedule Duration</H2>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", marginBottom: 14 }}>
+                    <div>
+                      <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Baseline</Typography>
+                      <Typography intent="body" style={{ fontWeight: 500 }}>
+                        {formatDate(project.startDate)} → {formatDate(project.endDate)}
+                      </Typography>
+                    </div>
+                    <div>
+                      <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Actual</Typography>
+                      <Typography intent="body" style={{ fontWeight: 500 }}>
+                        {actualStartDate ? (
+                          <>{formatDate(actualStartDate)} → {scheduleVariance !== 0 ? formatDate(addDaysLocal(project.endDate, scheduleVariance)) : formatDate(project.endDate)}</>
+                        ) : "—"}
+                      </Typography>
+                    </div>
+                  </div>
+                  {timeline && (
+                    <div>
+                      {/* Combined bar: baseline (gray) with actual (primary) overlay */}
+                      <div style={{ position: "relative", width: "100%", height: 16, background: "#f0f1f3", borderRadius: 4, marginBottom: 6 }}>
+                        {/* Baseline bar */}
+                        <div style={{
+                          position: "absolute",
+                          left: `${timeline.baselineLeft}%`,
+                          width: `${timeline.baselineWidth}%`,
+                          height: "100%",
+                          background: "hsl(200, 8%, 90%)",
+                          borderRadius: 4,
+                        }} />
+                        {/* Actual bar */}
+                        <div style={{
+                          position: "absolute",
+                          left: `${timeline.actualLeft}%`,
+                          width: `${timeline.actualWidth}%`,
+                          height: "100%",
+                          background: "var(--color-action-primary)",
+                          borderRadius: 4,
+                          opacity: 0.9,
+                        }} />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <Typography intent="small" color="gray45">{timeline.startLabel}</Typography>
+                        <Typography intent="small" color="gray45">{timeline.endLabel}</Typography>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
+                {/* ── Project Manager ── */}
+                {pmContact && (
+                  <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+                    <H2 style={{ marginBottom: 16 }}>Project Manager</H2>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                      <Avatar size="lg" role="img" aria-label={pmContact.name}>
+                        <Avatar.Label>{pmContact.name.split(" ").map(n => n[0]).join("")}</Avatar.Label>
+                      </Avatar>
+                      <div>
+                        <Typography intent="body" weight="bold" style={{ display: "block" }}>{pmContact.name}</Typography>
+                        <Typography intent="small" color="gray45">{pmContact.company}</Typography>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button variant="secondary" size="sm" icon={<Envelope size="sm" />}>Send Email</Button>
+                      <Button variant="secondary" size="sm" icon={<Comment size="sm" />}>Direct Message</Button>
+                      <Button variant="secondary" size="sm" icon={<PhoneMobile size="sm" />}>Call Cell</Button>
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* ── Project Milestones ── */}
+            <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+              <H2 style={{ marginBottom: 16 }}>Project Milestones</H2>
+              {milestones.length === 0 ? (
+                <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No milestone data available.</Typography>
+              ) : (
+                <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
+                  <Table.Container>
+                    <Table>
+                      <Table.Header>
+                        <Table.HeaderRow>
+                          <Table.HeaderCell>Milestone</Table.HeaderCell>
+                          <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Baseline Date</Table.HeaderCell>
+                          <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Actual / Forecast</Table.HeaderCell>
+                          <Table.HeaderCell style={{ textAlign: "right", whiteSpace: "nowrap" }}>Variance</Table.HeaderCell>
+                          <Table.HeaderCell>Note</Table.HeaderCell>
+                        </Table.HeaderRow>
+                      </Table.Header>
+                      <Table.Body>
+                        {/* ── Past Milestones (collapsed) ── */}
+                        <Table.BodyRow
+                          style={{ background: "var(--color-surface-secondary)", cursor: "pointer" }}
+                          onClick={() => setPastExpanded(x => !x)}
+                        >
+                          <Table.BodyCell colSpan={5} style={{ height: 48 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {pastExpanded
+                                ? <ChevronDown size="sm" style={{ color: "var(--color-text-secondary)" }} />
+                                : <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)" }} />
+                              }
+                              <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
+                                Past Milestones ({pastMilestones.length})
+                              </Typography>
+                            </div>
+                          </Table.BodyCell>
+                        </Table.BodyRow>
+                        {pastExpanded && pastMilestones.map((m) => (
+                          <Table.BodyRow key={`past-${m.name}`}>
+                            <Table.BodyCell style={{ height: 48 }}>{m.name}</Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, color: m.actualDate ? undefined : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                              {m.actualDate ? formatDate(m.actualDate) : "—"}
+                            </Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, textAlign: "right" }}>
+                              {m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
+                            </Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48 }}>
+                              {m.note ? (
+                                <Typography intent="small" style={{ color: "var(--color-text-secondary)" }}>{m.note}</Typography>
+                              ) : null}
+                            </Table.BodyCell>
+                          </Table.BodyRow>
+                        ))}
+                        {/* ── Current & Upcoming Milestones ── */}
+                        <Table.BodyRow
+                          style={{ background: "var(--color-surface-secondary)", cursor: "pointer" }}
+                          onClick={() => setCurrentExpanded(x => !x)}
+                        >
+                          <Table.BodyCell colSpan={5} style={{ height: 48 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {currentExpanded
+                                ? <ChevronDown size="sm" style={{ color: "var(--color-text-secondary)" }} />
+                                : <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)" }} />
+                              }
+                              <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
+                                Current &amp; Upcoming Milestones ({currentMilestones.length})
+                              </Typography>
+                            </div>
+                          </Table.BodyCell>
+                        </Table.BodyRow>
+                        {currentExpanded && currentMilestones.map((m) => (
+                          <Table.BodyRow key={`current-${m.name}`}>
+                            <Table.BodyCell style={{ height: 48, fontWeight: 500 }}>{m.name}</Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, color: m.actualDate ? undefined : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                              {m.actualDate ? formatDate(m.actualDate) : "—"}
+                            </Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48, textAlign: "right" }}>
+                              {m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
+                            </Table.BodyCell>
+                            <Table.BodyCell style={{ height: 48 }}>
+                              {m.note ? (
+                                <Typography intent="small" style={{ color: "var(--color-text-secondary)" }}>{m.note}</Typography>
+                              ) : null}
+                            </Table.BodyCell>
+                          </Table.BodyRow>
+                        ))}
+                      </Table.Body>
+                    </Table>
+                  </Table.Container>
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
-      </div>
-    </Tearsheet>
+      </Tearsheet>
+    </>
   );
 }
 
@@ -302,11 +370,10 @@ interface VarianceBucketTearsheetProps {
 }
 
 function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceBucketTearsheetProps) {
-  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const router = useRouter();
 
   return (
     <>
-      <TearsheetWide />
       <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right">
         <div className="schedule-insights-variance-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
@@ -324,52 +391,51 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
               <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No projects in this range.</Typography>
             ) : (
               <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: "var(--color-surface-secondary)" }}>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>#</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Name</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Stage</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Current Milestone</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Next Milestone</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Start Date</th>
-                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>End Date</th>
-                      <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Variance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r, i) => (
-                      <tr key={r.number} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{r.number}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <button
-                              onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
-                              style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", fontSize: 13, textAlign: "left" }}
-                            >
-                              {r.name}
-                            </button>
-                            {r.projectId !== undefined && getProjectConnection(r.projectId) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
-                          </span>
-                        </td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{r.stage}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)" }}>{r.currentMilestone}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>{r.nextMilestone}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.startDate)}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.endDate)}</td>
-                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", whiteSpace: "nowrap" }}>
-                          {varianceBadge(r.varianceDays)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Table.Container>
+                  <Table>
+                    <Table.Header>
+                      <Table.HeaderRow>
+                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>#</Table.HeaderCell>
+                        <Table.HeaderCell>Name</Table.HeaderCell>
+                        <Table.HeaderCell>Stage</Table.HeaderCell>
+                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Current Milestone</Table.HeaderCell>
+                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Next Milestone</Table.HeaderCell>
+                        <Table.HeaderCell style={{ textAlign: "right", whiteSpace: "nowrap" }}>Variance</Table.HeaderCell>
+                      </Table.HeaderRow>
+                    </Table.Header>
+                    <Table.Body>
+                      {rows.map((r) => (
+                        <Table.BodyRow key={r.number}>
+                          <Table.BodyCell style={{ height: 48, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{r.number}</Table.BodyCell>
+                          <Table.BodyCell style={{ height: 48 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <button
+                                onClick={() => r.projectId !== undefined && router.push(`/project/${r.projectId}/overview`)}
+                                style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", fontSize: 13, textAlign: "left", textDecoration: "underline" }}
+                              >
+                                {r.name}
+                              </button>
+                              {r.projectId !== undefined && getProjectConnection(r.projectId) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
+                            </span>
+                          </Table.BodyCell>
+                          <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>
+                            <Pill color={STAGE_COLORS[r.stage] ?? "gray"}>{r.stage}</Pill>
+                          </Table.BodyCell>
+                          <Table.BodyCell style={{ height: 48 }}>{r.currentMilestone}</Table.BodyCell>
+                          <Table.BodyCell style={{ height: 48, color: "var(--color-text-secondary)" }}>{r.nextMilestone}</Table.BodyCell>
+                          <Table.BodyCell style={{ height: 48, textAlign: "right", whiteSpace: "nowrap" }}>
+                            {varianceBadge(r.varianceDays)}
+                          </Table.BodyCell>
+                        </Table.BodyRow>
+                      ))}
+                    </Table.Body>
+                  </Table>
+                </Table.Container>
               </div>
             )}
           </div>
         </div>
       </Tearsheet>
-      <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>
   );
 }
@@ -381,145 +447,209 @@ const HISTOGRAM_BUCKETS = [
   { label: "14+ days", min: 14, max: Infinity, color: "#b71c1c" },
 ];
 
+type GroupByKey = "stage" | "program" | "region" | "priority" | "type";
+
+const GROUP_BY_OPTIONS: { value: GroupByKey; label: string }[] = [
+  { value: "stage",    label: "Stage"    },
+  { value: "program",  label: "Program"  },
+  { value: "region",   label: "Region"   },
+  { value: "priority", label: "Priority" },
+  { value: "type",     label: "Type"     },
+];
+
+const TYPE_KEYWORDS: [RegExp, string][] = [
+  [/fit-?out|tenant improvement/i,              "Fit-Out"],
+  [/renovation|remodel|retrofit/i,              "Renovation"],
+  [/expansion|expand/i,                         "Expansion"],
+  [/upgrade|replacement|replace/i,              "Upgrade"],
+  [/phase \d|buildout|build-out|new construction/i, "New Construction"],
+  [/solar|substation|transmission|gas main|network/i, "Infrastructure"],
+];
+
+function deriveProjectType(name: string): string {
+  for (const [re, label] of TYPE_KEYWORDS) {
+    if (re.test(name)) return label;
+  }
+  return "New Construction";
+}
+
+const BAR_COLORS = ["#1d5cc9", "#00a878", "#6b4ce6", "#f6a623", "#e05263"];
+const OTHER_COLOR = "#9e9e9e";
+
+const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+import type { ProjectRow } from "@/data/projects";
+
+function getGroupValue(row: ProjectRow, key: GroupByKey): string {
+  switch (key) {
+    case "stage":    return row.stage ?? "Unknown";
+    case "program":  return row.program ?? "No Program";
+    case "region":   return row.region ?? "Unknown";
+    case "priority": return row.priority ? row.priority.charAt(0).toUpperCase() + row.priority.slice(1) : "Unknown";
+    case "type":     return deriveProjectType(row.name);
+  }
+}
+
 export function ProjectsByStageHubCard() {
-  const [programFilter, setProgramFilter] = useState<string>("All Programs");
-  const [stageFilter, setStageFilter] = useState<string>("All Stages");
+  const [groupBy, setGroupBy] = useState<GroupByKey>("stage");
   const { filteredProjectRows } = useHubFilters();
-  const stageColors = ["#1d5cc9", "#00a878", "#6b4ce6", "#f6a623", "#e05263", "#4a6572"];
-  const programOptions = useMemo(
-    () => ["All Programs", ...Array.from(new Set(filteredProjectRows.map((r) => r.program))).sort()],
-    [filteredProjectRows]
-  );
-  const stageOptions = useMemo(
-    () => ["All Stages", ...Array.from(new Set(filteredProjectRows.map((r) => r.stage))).sort()],
-    [filteredProjectRows]
-  );
-  const filteredProjects = useMemo(
-    () =>
-      filteredProjectRows.filter((r) => {
-        const programOk = programFilter === "All Programs" || r.program === programFilter;
-        const stageOk = stageFilter === "All Stages" || r.stage === stageFilter;
-        return programOk && stageOk;
-      }),
-    [filteredProjectRows, programFilter, stageFilter]
-  );
-  const stageRows = useMemo(() => {
+
+  const rows = useMemo(() => {
     const counts = new Map<string, number>();
-    filteredProjects.forEach((p) => {
-      counts.set(p.stage, (counts.get(p.stage) ?? 0) + 1);
+    filteredProjectRows.forEach((p) => {
+      const key = getGroupValue(p, groupBy);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     });
-    return Array.from(counts.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredProjects]);
-  const total = useMemo(
-    () => stageRows.reduce((sum, s) => sum + s.value, 0),
-    [stageRows]
-  );
-  const maxStageValue = useMemo(
-    () => Math.max(...stageRows.map((s) => s.value), 1),
-    [stageRows]
-  );
+
+    let sorted = Array.from(counts.entries())
+      .map(([name, value]) => ({ name, value }));
+
+    if (groupBy === "priority") {
+      sorted.sort((a, b) => (PRIORITY_ORDER[a.name.toLowerCase()] ?? 9) - (PRIORITY_ORDER[b.name.toLowerCase()] ?? 9));
+    } else {
+      sorted.sort((a, b) => b.value - a.value);
+    }
+
+    if (sorted.length <= 5) return sorted.map((r, i) => ({ ...r, color: BAR_COLORS[i % BAR_COLORS.length], isOther: false }));
+
+    const top5 = sorted.slice(0, 5);
+    const otherCount = sorted.slice(5).reduce((s, r) => s + r.value, 0);
+    return [
+      ...top5.map((r, i) => ({ ...r, color: BAR_COLORS[i], isOther: false })),
+      { name: "Other", value: otherCount, color: OTHER_COLOR, isOther: true },
+    ];
+  }, [filteredProjectRows, groupBy]);
+
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  const maxVal = Math.max(...rows.map((r) => r.value), 1);
+
+  const groupByLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? "Stage";
 
   return (
     <HubCardFrame
-      title="Projects by Stage"
-      infoTooltip="Distribution of projects by current stage from the sample project dataset, with optional Program and Stage filters."
+      title={`Project by ${groupByLabel}`}
+      infoTooltip={`Distribution of projects grouped by ${groupByLabel.toLowerCase()}. Shows top 5 values; remaining are grouped into "Other".`}
       actions={
         <Button
           className="b_tertiary"
           variant="tertiary"
           size="sm"
           icon={<ExternalLink size="sm" />}
-          aria-label="View all projects by stage"
+          aria-label={`View all projects by ${groupByLabel}`}
         >
           View All
         </Button>
       }
       controls={
-        <>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setProgramFilter(next);
-            }}
-            placeholder="Program"
-            style={{ minWidth: 180 }}
-          >
-            {programOptions.map((opt) => (
-              <Select.Option key={opt} value={opt} selected={programFilter === opt}>
-                {opt}
-              </Select.Option>
-            ))}
-          </Select>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setStageFilter(next);
-            }}
-            placeholder="Stage"
-            style={{ minWidth: 160 }}
-          >
-            {stageOptions.map((opt) => (
-              <Select.Option key={opt} value={opt} selected={stageFilter === opt}>
-                {opt}
-              </Select.Option>
-            ))}
-          </Select>
-        </>
+        <Select
+          onSelect={(selection: { item: unknown }) => {
+            const val = selection.item as string;
+            setGroupBy(val as GroupByKey);
+          }}
+          placeholder="Group by"
+          style={{ minWidth: 140 }}
+        >
+          {GROUP_BY_OPTIONS.map((opt) => (
+            <Select.Option key={opt.value} value={opt.value} selected={groupBy === opt.value}>
+              {opt.label}
+            </Select.Option>
+          ))}
+        </Select>
       }
     >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.max(stageRows.length, 1)}, minmax(56px, 1fr))`,
-              gap: 10,
-              alignItems: "end",
-              height: 210,
-            }}
-            aria-label="Projects by Stage column chart"
-          >
-            {stageRows.map((s, i) => {
-              const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
-              const barHeight = `${Math.max(s.value > 0 ? 12 : 0, (s.value / maxStageValue) * 140)}px`;
-              return (
-                <div key={s.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
-                    {s.value}
+      <div aria-label={`Project by ${groupByLabel} column chart`}>
+        {/* Bar + count area */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.max(rows.length, 1)}, minmax(52px, 1fr))`,
+            gap: 8,
+            alignItems: "end",
+            height: 160,
+            paddingTop: 8,
+            borderBottom: "2px solid var(--color-border-separator)",
+          }}
+        >
+          {rows.map((r) => {
+            const barHeight = Math.max(r.value > 0 ? 12 : 0, (r.value / maxVal) * 120);
+            const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
+            const popoverContent = (
+              <div style={{ padding: "8px 12px", minWidth: 140 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 4 }}>{r.name}</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  <span style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>{r.value}</span> project{r.value !== 1 ? "s" : ""}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{pct}% of portfolio</div>
+              </div>
+            );
+            return (
+              <Popover
+                key={r.name}
+                overlay={<Popover.Content>{popoverContent}</Popover.Content>}
+                trigger={["hover"]}
+                placement="top"
+              >
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "default" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
+                    {r.value}
                   </span>
                   <div
                     style={{
                       width: "100%",
-                      maxWidth: 48,
+                      maxWidth: 44,
                       height: barHeight,
-                      borderRadius: "6px 6px 0 0",
-                      background: stageColors[i % stageColors.length],
+                      borderRadius: "5px 5px 0 0",
+                      background: r.color,
+                      opacity: r.isOther ? 0.7 : 1,
+                      transition: "height 0.3s ease",
                     }}
                   />
-                  <span
-                    style={{
-                      width: "100%",
-                      fontSize: 12,
-                      color: "var(--color-text-primary)",
-                      textAlign: "center",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={s.name}
-                  >
-                    {s.name}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    {pct}%
-                  </span>
                 </div>
-              );
-            })}
-            {stageRows.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>
-                No projects for selected filters.
+              </Popover>
+            );
+          })}
+          {rows.length === 0 && (
+            <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center", paddingTop: 40 }}>
+              No projects match the current filters.
+            </div>
+          )}
+        </div>
+        {/* Label + percentage area */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.max(rows.length, 1)}, minmax(52px, 1fr))`,
+            gap: 8,
+            paddingTop: 6,
+          }}
+        >
+          {rows.map((r) => {
+            const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
+            return (
+              <div key={r.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                <span
+                  style={{
+                    width: "100%",
+                    fontSize: 11,
+                    color: r.isOther ? "var(--color-text-secondary)" : "var(--color-text-primary)",
+                    textAlign: "center",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontStyle: r.isOther ? "italic" : "normal",
+                  }}
+                  title={r.name}
+                >
+                  {r.name}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                  {pct}%
+                </span>
               </div>
-            )}
-          </div>
+            );
+          })}
+        </div>
+      </div>
     </HubCardFrame>
   );
 }
@@ -622,16 +752,15 @@ export function ScheduleRiskGHubCard() {
 
   return (
     <>
-      {openBucketIdx !== null && (
-        <VarianceBucketTearsheet
-          open={true}
-          onClose={() => setOpenBucketIdx(null)}
-          bucketLabel={HISTOGRAM_BUCKETS[openBucketIdx].label}
-          rows={tearsheetRows}
-        />
-      )}
+      <TearsheetWide />
+      <VarianceBucketTearsheet
+        open={openBucketIdx !== null}
+        onClose={() => setOpenBucketIdx(null)}
+        bucketLabel={openBucketIdx !== null ? HISTOGRAM_BUCKETS[openBucketIdx].label : ""}
+        rows={tearsheetRows}
+      />
     <HubCardFrame
-      title="Schedule Variance"
+      title="Schedule Variance 1"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -711,54 +840,52 @@ export function ScheduleRiskGHubCard() {
           {/* <div style={{ fontSize: 11, fontWeight: 600, color: "#444", borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 6 }}>
             Critical milestones (&gt;=14d)
           </div> */}
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Project</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>End Date</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Expected Completion</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Variance</th>
-                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>% Complete</th>
-                <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
-              </tr>
-            </thead>
-            <tbody>
+          <HubCardTable columns="1fr 90px 120px 80px 80px 36px">
+            <HubCardTable.Header>
+              <HubCardTable.HeaderCell>Project</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>End Date</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Expected Completion</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Variance</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>% Complete</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell />
+            </HubCardTable.Header>
+            <HubCardTable.Body>
               {criticalRows.map(({ row, varianceDays, pctComplete, endDate, expectedCompletionDate }, i) => (
-                <tr key={row.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
-                  <td style={{ padding: "8px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
+                <HubCardTable.Row key={row.id} index={i} onClick={() => setOpenProjectId(row.id)}>
+                  <HubCardTable.Cell>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <button
-                        onClick={() => setOpenProjectId(row.id)}
-                        style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
-                      >
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
-                      </button>
+                      </span>
                       {getProjectConnection(row.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                     </span>
-                  </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                     {endDate ? formatDate(endDate) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ textAlign: "center", whiteSpace: "nowrap" }}>
                     {expectedCompletionDate ? formatDate(expectedCompletionDate) : "—"}
-                  </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ textAlign: "center" }}>
                     {varianceBadge(varianceDays)}
-                  </td>
-                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "var(--color-text-primary)" }}>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ textAlign: "center", fontWeight: 600 }}>
                     {pctComplete}%
-                  </td>
-                  <td style={{ padding: "4px 4px", borderBottom: "1px solid #eee", textAlign: "center" }}>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ textAlign: "center" }}>
                     <button
-                      onClick={() => openAiPanel({
-                        itemName: sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
-                        itemId: `#${row.id}`,
-                        projectId: row.id,
-                        pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],
-                        aiSummary: `This project is ${varianceDays} days behind schedule at ${pctComplete}% completion.`,
-                        cardType: 'schedule_variance',
-                        userRoles: ['owner', 'owner_admin', 'project_manager'],
-                      })}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAiPanel({
+                          itemName: sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
+                          itemId: `#${row.id}`,
+                          projectId: row.id,
+                          pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],
+                          aiSummary: `This project is ${varianceDays} days behind schedule at ${pctComplete}% completion.`,
+                          cardType: 'schedule_variance',
+                          userRoles: ['owner', 'owner_admin', 'project_manager'],
+                        });
+                      }}
                       aria-label="AI actions for this project"
                       style={{
                         width: 28,
@@ -775,11 +902,11 @@ export function ScheduleRiskGHubCard() {
                     >
                       <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
                     </button>
-                  </td>
-                </tr>
+                  </HubCardTable.Cell>
+                </HubCardTable.Row>
               ))}
-            </tbody>
-          </table>
+            </HubCardTable.Body>
+          </HubCardTable>
     </HubCardFrame>
     <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>
@@ -789,21 +916,20 @@ export function ScheduleRiskGHubCard() {
 export function ScheduleVariance2HubCard() {
   const [openSegment, setOpenSegment] = useState<"average" | "onSchedule" | "delays" | "critical" | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
+  const [viewAllOpen, setViewAllOpen] = useState(false);
   const { openPanel: openAiPanel } = useAiPanel();
   const { filteredProjectRows } = useHubFilters();
 
   const portfolioRows = useMemo(() => {
+    const today = Date.now();
     return filteredProjectRows
+      .filter((row) => new Date(row.endDate).getTime() > today)
       .map((row) => {
         const milestones = sampleProjectMilestones.get(row.id) ?? [];
         const worstVariance = milestones.reduce(
           (max, m) => Math.max(max, m.varianceDays),
           0
         );
-        const delayed = milestones.filter((m) => m.varianceDays >= 7).length;
-        const drift = milestones.length
-          ? Math.round((delayed / milestones.length) * 100)
-          : 0;
         const costDeltaMillions = Math.max(
           0.4,
           Math.round((worstVariance * 0.32 + row.id * 0.11) * 10) / 10
@@ -811,8 +937,9 @@ export function ScheduleVariance2HubCard() {
         return {
           id: row.id,
           name: row.name,
-          drift,
           worstVariance,
+          endDate: row.endDate,
+          daysRemaining: getDaysRemaining(row.endDate),
           costDeltaLabel:
             costDeltaMillions >= 1
               ? `+$${costDeltaMillions.toFixed(1)}M`
@@ -821,7 +948,7 @@ export function ScheduleVariance2HubCard() {
       })
       .sort((a, b) => b.worstVariance - a.worstVariance);
   }, [filteredProjectRows]);
-  const rows = useMemo(() => portfolioRows.slice(0, 6), [portfolioRows]);
+  const rows = useMemo(() => portfolioRows.slice(0, 5), [portfolioRows]);
 
   const avgVariance = useMemo(() => {
     if (!portfolioRows.length) return 0;
@@ -835,6 +962,27 @@ export function ScheduleVariance2HubCard() {
     (r) => r.worstVariance >= 7 && r.worstVariance <= 13
   ).length;
   const criticalCount = portfolioRows.filter((r) => r.worstVariance >= 14).length;
+
+  // Build tearsheet rows helper
+  const buildTearsheetRows = (projectsForSegment: typeof filteredProjectRows) =>
+    projectsForSegment
+      .map((project) => {
+        const d = scheduleVarianceData.find((x) => x.project === project.name);
+        const varianceDays = d?.variance ?? 0;
+        const { lastMilestone: currentMilestone, nextMilestone } = getProjectPortfolioScheduleSummary(project);
+        return {
+          number: project.number,
+          projectId: project.id,
+          name: project.name,
+          stage: project.stage,
+          currentMilestone,
+          nextMilestone,
+          startDate: project.startDate,
+          endDate: project.endDate,
+          varianceDays,
+        };
+      })
+      .sort((a, b) => b.varianceDays - a.varianceDays);
 
   // Build tearsheet rows for the selected KPI segment
   const tearsheetRows = useMemo(() => {
@@ -857,29 +1005,14 @@ export function ScheduleVariance2HubCard() {
         return (d?.variance ?? 0) >= 14;
       });
     }
-    return projectsForSegment
-      .map((project) => {
-        const d = scheduleVarianceData.find((x) => x.project === project.name);
-        const varianceDays = d?.variance ?? 0;
-        const currentMilestone = getCurrentMilestoneLabelForProject(project);
-        const curIdx = PROJECT_MILESTONES.indexOf(currentMilestone as typeof PROJECT_MILESTONES[number]);
-        const nextMilestone = curIdx >= 0 && curIdx + 1 < PROJECT_MILESTONES.length
-          ? PROJECT_MILESTONES[curIdx + 1]
-          : "—";
-        return {
-          number: project.number,
-          projectId: project.id,
-          name: project.name,
-          stage: project.stage,
-          currentMilestone,
-          nextMilestone,
-          startDate: project.startDate,
-          endDate: project.endDate,
-          varianceDays,
-        };
-      })
-      .sort((a, b) => b.varianceDays - a.varianceDays);
+    return buildTearsheetRows(projectsForSegment);
   }, [openSegment, filteredProjectRows]);
+
+  // All-projects rows for "View all" tearsheet
+  const allProjectsRows = useMemo(
+    () => buildTearsheetRows(filteredProjectRows),
+    [filteredProjectRows]
+  );
 
   const tearsheetLabel = openSegment === "average"
     ? "All Projects (Average View)"
@@ -900,14 +1033,19 @@ export function ScheduleVariance2HubCard() {
 
   return (
     <>
-      {openSegment !== null && (
-        <VarianceBucketTearsheet
-          open={true}
-          onClose={() => setOpenSegment(null)}
-          bucketLabel={tearsheetLabel}
-          rows={tearsheetRows}
-        />
-      )}
+      <TearsheetWide />
+      <VarianceBucketTearsheet
+        open={openSegment !== null}
+        onClose={() => setOpenSegment(null)}
+        bucketLabel={tearsheetLabel}
+        rows={tearsheetRows}
+      />
+      <VarianceBucketTearsheet
+        open={viewAllOpen}
+        onClose={() => setViewAllOpen(false)}
+        bucketLabel="All Projects"
+        rows={allProjectsRows}
+      />
     <HubCardFrame
       title="Schedule Risk"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
@@ -944,6 +1082,7 @@ export function ScheduleVariance2HubCard() {
             variant="secondary"
             size="sm"
             aria-label="View all schedule variance rows"
+            onClick={() => setViewAllOpen(true)}
           >
             View all
           </Button>
@@ -969,7 +1108,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Average</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(avgVariance).bg, marginTop: 4 }}>+{avgVariance} days</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>+{avgVariance} days</div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -982,7 +1121,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>On Schedule</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(0).bg, marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -994,8 +1133,8 @@ export function ScheduleVariance2HubCard() {
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(10).bg, marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (7–13 days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(false)}
@@ -1008,82 +1147,41 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (14+ days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(21).bg, marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Project</th>
-            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Drift</th>
-            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Variance</th>
-            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Cost Delta</th>
-            <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
-          </tr>
-        </thead>
-        <tbody>
+      <HubCardTable columns="1fr 100px 80px 80px">
+        <HubCardTable.Header>
+          <HubCardTable.HeaderCell>Project</HubCardTable.HeaderCell>
+          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Days Remaining</HubCardTable.HeaderCell>
+          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Variance</HubCardTable.HeaderCell>
+          <HubCardTable.HeaderCell style={{ textAlign: "right" }}>Cost Delta</HubCardTable.HeaderCell>
+        </HubCardTable.Header>
+        <HubCardTable.Body>
           {rows.map((r, i) => (
-            <tr key={r.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
+            <HubCardTable.Row key={r.id} index={i} onClick={() => setOpenProjectId(r.id)}>
+              <HubCardTable.Cell>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <button
-                    onClick={() => setOpenProjectId(r.id)}
-                    style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
-                  >
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {r.name}
-                  </button>
+                  </span>
                   {getProjectConnection(r.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                 </span>
-              </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
-                {(() => { const c = varianceColors(r.worstVariance); return (
-                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 600 }}>
-                    {r.drift}%
-                  </span>
-                ); })()}
-              </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
+              </HubCardTable.Cell>
+              <HubCardTable.Cell style={{ textAlign: "center", fontWeight: 600 }}>
+                {r.daysRemaining}d
+              </HubCardTable.Cell>
+              <HubCardTable.Cell style={{ textAlign: "center" }}>
                 {varianceBadge(r.worstVariance)}
-              </td>
-              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
+              </HubCardTable.Cell>
+              <HubCardTable.Cell style={{ textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
                 {r.costDeltaLabel}
-              </td>
-              <td style={{ padding: "4px 4px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
-                <button
-                  onClick={() => openAiPanel({
-                    itemName: r.name,
-                    itemId: `#${r.id}`,
-                    projectId: r.id,
-                    pills: [
-                      { label: `+${r.worstVariance}d variance`, color: r.worstVariance >= 14 ? 'red' : r.worstVariance >= 7 ? 'yellow' : 'green' },
-                      { label: `${r.drift}% drift`, color: r.drift >= 50 ? 'red' : 'yellow' },
-                    ],
-                    aiSummary: `This project has a worst-case variance of +${r.worstVariance} days with ${r.drift}% milestone drift and an estimated cost delta of ${r.costDeltaLabel}.`,
-                    cardType: 'schedule_variance',
-                    userRoles: ['owner', 'owner_admin', 'project_manager'],
-                  })}
-                  aria-label="AI actions for this project"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 4,
-                    border: '1px solid #FF5100',
-                    background: '#FFF8F5',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                  }}
-                >
-                  <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
-                </button>
-              </td>
-            </tr>
+              </HubCardTable.Cell>
+            </HubCardTable.Row>
           ))}
-        </tbody>
-      </table>
+        </HubCardTable.Body>
+      </HubCardTable>
     </HubCardFrame>
     <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>

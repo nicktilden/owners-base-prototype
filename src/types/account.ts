@@ -4,6 +4,7 @@
  */
 
 import type { USState } from './shared';
+import type { AccountHealthConfig, RiskType } from './health';
 
 export interface Account {
   id: string;
@@ -11,6 +12,10 @@ export interface Account {
   logo: string | null;
   timeZone: string;
   office: Office;
+  hasGovernmentContracts: boolean;
+  healthConfig: AccountHealthConfig;
+  /** Account-level Risk Type templates. Procore ships defaults; customers can add/edit. */
+  riskTypes: RiskType[];
 }
 
 export interface Office {

@@ -40,6 +40,7 @@ export const PERMISSION_TIER: Record<ToolPermissionLevel, number> = {
 // Role tool permission defaults
 export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
+  health:            'read',
   documents:         'read',
   schedule:          'read',
   assets:            'read',
@@ -47,7 +48,6 @@ export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'admin',
   budget:            'create',
   bidding:           'read',
-  action_plans:      'update',
   change_events:     'update',
   change_orders:     'update',
   invoicing:         'update',
@@ -64,6 +64,7 @@ export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'admin',
+  health:            'admin',
   documents:         'admin',
   schedule:          'admin',
   assets:            'admin',
@@ -71,7 +72,6 @@ export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'admin',
   budget:            'admin',
   bidding:           'admin',
-  action_plans:      'admin',
   change_events:     'admin',
   change_orders:     'admin',
   invoicing:         'admin',
@@ -88,6 +88,7 @@ export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
+  health:            'create',
   documents:         'create',
   schedule:          'create',
   assets:            'create',
@@ -95,7 +96,6 @@ export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'create',
   budget:            'admin',
   bidding:           'admin',
-  action_plans:      'admin',
   change_events:     'admin',
   change_orders:     'admin',
   invoicing:         'admin',
@@ -112,6 +112,7 @@ export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
+  health:            'read',
   documents:         'create',
   schedule:          'create',
   assets:            'create',
@@ -119,7 +120,6 @@ export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'none',
   budget:            'none',
   bidding:           'create',
-  action_plans:      'create',
   change_events:     'create',
   change_orders:     'create',
   invoicing:         'create',
@@ -136,6 +136,7 @@ export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'read',
+  health:            'read',
   documents:         'read',
   schedule:          'read',
   assets:            'none',
@@ -143,7 +144,6 @@ export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'none',
   budget:            'none',
   bidding:           'none',
-  action_plans:      'none',
   change_events:     'none',
   change_orders:     'none',
   invoicing:         'none',
@@ -160,6 +160,7 @@ export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'update',
+  health:            'read',
   documents:         'update',
   schedule:          'read',
   assets:            'read',
@@ -167,7 +168,6 @@ export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
   funding_source:    'none',
   budget:            'none',
   bidding:           'none',
-  action_plans:      'read',
   change_events:     'none',
   change_orders:     'none',
   invoicing:         'none',

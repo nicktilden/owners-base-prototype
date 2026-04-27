@@ -5,15 +5,19 @@ import {
   Search,
   Select,
   SplitViewCard,
+  ToggleButton,
 } from "@procore/core-react";
 import {
   ChartBar as BudgetIcon,
+  Filter,
   Plus,
+  Sliders,
 } from "@procore/core-icons";
 import type { ColDef, GridApi, ValueFormatterParams, ValueGetterParams } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { budgetLineItems } from "@/data/seed/budget";
 import { projects } from "@/data/seed/projects";
 import type { BudgetLineItem } from "@/types/budget";
@@ -68,6 +72,13 @@ const ToolbarLeft = styled.div`
   flex: 1;
 `;
 
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 const GridArea = styled.div`
   display: flex;
   height: 640px;
@@ -77,6 +88,16 @@ const GridArea = styled.div`
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+interface GroupByOption {
+  id: "programCode" | "costTypeCode";
+  label: string;
+}
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { id: "programCode", label: "Program" },
+  { id: "costTypeCode", label: "Cost Type" },
+];
+
 interface BudgetContentProps {
   projectId: string;
 }
@@ -85,6 +106,9 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
   const isPortfolio = projectId === "";
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [searchText, setSearchText] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const gridApiRef = useRef<GridApi<BudgetLineItem> | null>(null);
 
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
@@ -254,6 +278,50 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
     gridApiRef.current?.setGridOption("quickFilterText", "");
   }, []);
 
+  const handleFiltersToggle = useCallback(() => {
+    setFiltersOpen((prev) => { if (!prev) setConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleFilterClear = useCallback(async () => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    await api.setFilterModel(null);
+    api.onFilterChanged();
+  }, []);
+
+  const handleConfigToggle = useCallback(() => {
+    setConfigOpen((prev) => { if (!prev) setFiltersOpen(false); return !prev; });
+  }, []);
+
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
 
   const actions = (
     <>
@@ -284,6 +352,14 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                     onClear={handleSearchClear}
                   />
                 </div>
+                <ToggleButton
+                  selected={filtersOpen}
+                  className="b_toggle"
+                  icon={<Filter />}
+                  onClick={handleFiltersToggle}
+                >
+                  Filters
+                </ToggleButton>
                 {isPortfolio && (
                   <div style={{ width: 260 }}>
                     <Select
@@ -307,10 +383,40 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                   </div>
                 )}
               </ToolbarLeft>
+              <ToolbarRight>
+                <div style={{ width: 200 }}>
+                  <Select
+                    placeholder="Group by"
+                    label={groupBy ? `Group by: ${groupBy.label}` : undefined}
+                    onSelect={handleGroupBySelect}
+                    onClear={groupBy ? handleGroupByClear : undefined}
+                    block
+                  >
+                    {GROUP_BY_OPTIONS.map((opt) => (
+                      <Select.Option key={opt.id} value={opt} selected={groupBy?.id === opt.id}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <ToggleButton
+                  selected={configOpen}
+                  className="b_toggle"
+                  icon={<Sliders />}
+                  onClick={handleConfigToggle}
+                >
+                  Configure
+                </ToggleButton>
+              </ToolbarRight>
             </ToolbarRow>
 
             <GridArea>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {filtersOpen && (
+                <div style={{ width: 240, borderRight: "1px solid var(--color-border-default)", padding: "16px 12px", background: "var(--color-surface-secondary)", flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Filters</span>
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0, transition: "flex 0.25s ease" }}>
                 <SmartGridWrapper<BudgetLineItem>
                   id="budget-grid"
                   localStorageKey="owner-prototype-budget-grid"
@@ -318,6 +424,8 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                   rowData={rowData}
                   columnDefs={columnDefs}
                   getRowId={getRowId}
+                  groupDisplayType="groupRows"
+                  autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
                   grandTotalRow="bottom"
                   onGridReady={(event) => {
@@ -331,6 +439,11 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                   }}
                 />
               </div>
+              <ConfigureColumnsPanel
+                open={configOpen}
+                gridApi={gridApiRef.current}
+                onClose={() => setConfigOpen(false)}
+              />
             </GridArea>
           </SplitViewCard.Section>
         </SplitViewCard.Main>
