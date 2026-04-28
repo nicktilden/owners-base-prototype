@@ -7,25 +7,34 @@
 import type { ColDef } from 'ag-grid-community';
 import { KPI_LABELS, KPI_CATEGORY_MAP, type KPIKey } from '@/types/health';
 import PortfolioRiskKpiCellRenderer from './PortfolioRiskKpiCellRenderer';
+import StagePillRenderer from './StagePillRenderer';
+import PortfolioRiskProjectNameCellRenderer from './PortfolioRiskProjectNameCellRenderer';
 
 export interface PortfolioRiskRow {
   id: string;
   number: string;
   name: string;
   stage: string;
+  program: string;
   region: string;
   sector: string;
   // KPI values keyed by KPIKey — each is a { status, displayValue } object
   [key: string]: unknown;
 }
 
-const STAGE_LABELS: Record<string, string> = {
+export const STAGE_LABELS: Record<string, string> = {
   conceptual:              'Conceptual',
   feasibility:             'Feasibility',
+  final_design:            'Final design',
+  permitting:              'Permitting',
   design:                  'Design',
   bidding:                 'Bidding',
-  course_of_construction:  'Under Construction',
+  'Pre-Construction':      'Pre-Construction',
+  course_of_construction:  'Course of Construction',
+  post_construction:       'Post-Construction',
+  handover:                'Handover',
   closeout:                'Closeout',
+  maintenance:             'Maintenance',
   warranty:                'Warranty',
   complete:                'Complete',
   on_hold:                 'On Hold',
@@ -51,19 +60,31 @@ export const portfolioRiskFixedCols: ColDef<PortfolioRiskRow>[] = [
   {
     field: 'name',
     headerName: 'Project Name',
-    minWidth: 240,
+    minWidth: 300,
     flex: 2,
     pinned: 'left',
     filter: 'agTextColumnFilter',
     enableRowGroup: true,
+    cellRenderer: PortfolioRiskProjectNameCellRenderer,
   },
   {
     field: 'stage',
     headerName: 'Stage',
-    width: 160,
+    width: 420,
     filter: 'agSetColumnFilter',
     enableRowGroup: true,
     valueFormatter: (p) => (p.value ? (STAGE_LABELS[p.value as string] ?? p.value) : '—'),
+    cellRenderer: StagePillRenderer,
+    // StagePillRenderer reads params.value — pass the display label, not the key
+    valueGetter: (p) => p.data ? (STAGE_LABELS[p.data.stage] ?? p.data.stage) : '',
+  },
+  {
+    field: 'program',
+    headerName: 'Program',
+    width: 150,
+    filter: 'agSetColumnFilter',
+    enableRowGroup: true,
+    valueFormatter: (p) => p.value ?? '—',
   },
   {
     field: 'region',
@@ -102,9 +123,10 @@ export function buildKpiColumns(activeKPIs: KPIKey[]): ColDef<PortfolioRiskRow>[
         colId: key,
         field: key,
         headerName: KPI_LABELS[key],
-        width: 130,
+        width: 150,
         sortable: true,
         filter: 'agSetColumnFilter',
+        cellRendererParams: { kpiKey: key },
         filterParams: {
           values: ['green', 'yellow', 'red', 'unavailable'],
           valueFormatter: (p: { value: string }) => {
@@ -117,10 +139,12 @@ export function buildKpiColumns(activeKPIs: KPIKey[]): ColDef<PortfolioRiskRow>[
         // Sort by status severity: red < yellow < green < unavailable
         comparator: (a, b) => {
           const order: Record<string, number> = { red: 0, yellow: 1, green: 2, unavailable: 3 };
-          return (order[a?.status ?? 'unavailable'] ?? 3) - (order[b?.status ?? 'unavailable'] ?? 3);
+          const aStatus = (a as { status?: string })?.status ?? 'unavailable';
+          const bStatus = (b as { status?: string })?.status ?? 'unavailable';
+          return (order[aStatus] ?? 3) - (order[bStatus] ?? 3);
         },
-        // For set filter, filter by status string
-        valueGetter: (p) => {
+        // For set filter, extract status string without overriding the cell value
+        filterValueGetter: (p) => {
           const val = p.data?.[key] as { status: string } | undefined;
           return val?.status ?? 'unavailable';
         },
@@ -137,7 +161,7 @@ export function buildOverallHealthCol(): ColDef<PortfolioRiskRow> {
     colId: 'overallHealth',
     field: 'overallHealth',
     headerName: 'Overall',
-    width: 120,
+    width: 150,
     pinned: 'left',
     filter: 'agSetColumnFilter',
     filterParams: {
@@ -146,9 +170,11 @@ export function buildOverallHealthCol(): ColDef<PortfolioRiskRow> {
     cellRenderer: PortfolioRiskKpiCellRenderer,
     comparator: (a, b) => {
       const order: Record<string, number> = { red: 0, yellow: 1, green: 2, unavailable: 3 };
-      return (order[a?.status ?? 'unavailable'] ?? 3) - (order[b?.status ?? 'unavailable'] ?? 3);
+      const aStatus = (a as { status?: string })?.status ?? 'unavailable';
+      const bStatus = (b as { status?: string })?.status ?? 'unavailable';
+      return (order[aStatus] ?? 3) - (order[bStatus] ?? 3);
     },
-    valueGetter: (p) => {
+    filterValueGetter: (p) => {
       const val = p.data?.['overallHealth'] as { status: string } | undefined;
       return val?.status ?? 'unavailable';
     },

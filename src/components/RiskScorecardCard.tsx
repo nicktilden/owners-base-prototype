@@ -304,7 +304,7 @@ function toneFromStatus(status: KPIResult['status']): KPITone {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RiskScorecardCard() {
+export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKey[] } = {}) {
   const { isLoading } = useHubLoading();
   const { data } = useData();
   const config = data.account?.healthConfig;
@@ -312,8 +312,7 @@ export default function RiskScorecardCard() {
 
   const [selectedKPIKey, setSelectedKPIKey] = useState<KPIKey | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
-  // Start empty so users experience the empty state and can configure via the modal
-  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>([]);
+  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>(defaultKPIs ?? []);
   const [draftIds, setDraftIds] = useState<KPIKey[]>([]);
   const dragIndexRef = useRef<number | null>(null);
 

@@ -25,6 +25,12 @@ import {
 import type { KpiCellValue } from '@/components/SmartGrid/PortfolioRiskKpiCellRenderer';
 import type { KPIKey } from '@/types/health';
 
+// Derive a program label from sector string (e.g. "Institutional > Health Care > Hospital" → "Hospital")
+function deriveProgram(sector: string): string {
+  const parts = sector.split('>').map(s => s.trim());
+  return parts[parts.length - 1] ?? sector;
+}
+
 // ─── Styled ───────────────────────────────────────────────────────────────────
 
 const ToolbarRow = styled.div`
@@ -59,14 +65,15 @@ const GridArea = styled.div`
 // ─── Group-by options ─────────────────────────────────────────────────────────
 
 interface GroupByOption {
-  id: 'region' | 'stage' | 'sector';
+  id: 'program' | 'region' | 'stage' | 'sector';
   label: string;
 }
 
 const GROUP_BY_OPTIONS: GroupByOption[] = [
-  { id: 'region', label: 'Region' },
-  { id: 'stage',  label: 'Stage'  },
-  { id: 'sector', label: 'Sector' },
+  { id: 'program', label: 'Program' },
+  { id: 'region',  label: 'Region'  },
+  { id: 'stage',   label: 'Stage'   },
+  { id: 'sector',  label: 'Sector'  },
 ];
 
 // AG Grid sidebar config — shows filters panel when toggled
@@ -93,7 +100,7 @@ export default function PortfolioRiskTableCard() {
   const [searchText, setSearchText] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [groupBys, setGroupBys] = useState<GroupByOption[]>([{ id: 'region', label: 'Region' }]);
+  const [groupBys, setGroupBys] = useState<GroupByOption[]>([{ id: 'program', label: 'Program' }]);
 
   // ── Build row data from seed projects + health engine ──────────────────────
   const activeKPIs = useMemo<KPIKey[]>(
@@ -130,6 +137,7 @@ export default function PortfolioRiskTableCard() {
         number: project.number,
         name: project.name,
         stage: project.stage,
+        program: deriveProgram(project.sector),
         region: project.region,
         sector: project.sector,
         overallHealth,
@@ -220,9 +228,13 @@ export default function PortfolioRiskTableCard() {
     (event: { api: GridApi<PortfolioRiskRow> }) => {
       gridApiRef.current = event.api;
       setGridApi(event.api);
-      // Apply initial region grouping
+      // Apply initial program grouping and fix column widths after autoSizeAllColumns runs
       event.api.applyColumnState({
-        state: [{ colId: 'region', rowGroup: true, rowGroupIndex: 0, hide: true }],
+        state: [
+          { colId: 'program', rowGroup: true, rowGroupIndex: 0, hide: true },
+          { colId: 'stage', width: 420 },
+          { colId: 'name', width: 300 },
+        ],
       });
     },
     []
@@ -287,7 +299,7 @@ export default function PortfolioRiskTableCard() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <SmartGridWrapper<PortfolioRiskRow>
             id="portfolio-risk-grid"
-            localStorageKey="owner-prototype-portfolio-risk-grid"
+            localStorageKey="owner-prototype-portfolio-risk-grid-v3"
             height="100%"
             rowData={rowData}
             columnDefs={columnDefs}

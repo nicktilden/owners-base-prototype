@@ -265,7 +265,7 @@ function HomeContentInner() {
             {activeTab === "Health & Risk" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row variant="table">
-                  <RiskScorecardCard />
+                  <RiskScorecardCard defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />
                 </HubsContentLayout.Row>
                 <HubsContentLayout.Row columnsTemplate="2fr 1fr">
                   <TopRiskProjectsCard />
