@@ -895,20 +895,22 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                     </div>
                   ) : null}
                   {pageVariant === "future" ? (
-                    <SegmentedControl>
-                      <SegmentedControl.Segment
-                        selected={capitalPlanTablePlanView === "grid"}
-                        onClick={() => setPlanView("grid")}
-                        icon={<ViewGrid size="sm" />}
-                        label="Grid"
-                      />
-                      <SegmentedControl.Segment
-                        selected={planView === "gantt"}
-                        onClick={() => setPlanView("gantt")}
-                        icon={<Gantt size="sm" />}
-                        label="Gantt"
-                      />
-                    </SegmentedControl>
+                    <div style={{ flexShrink: 0 }}>
+                      <SegmentedControl>
+                        <SegmentedControl.Segment
+                          icon={<ViewGrid size="sm" aria-hidden />}
+                          label="Grid"
+                          selected={capitalPlanTablePlanView === "grid"}
+                          onClick={() => setPlanView("grid")}
+                        />
+                        <SegmentedControl.Segment
+                          icon={<Gantt size="sm" aria-hidden />}
+                          label="Gantt"
+                          selected={planView === "gantt"}
+                          onClick={() => setPlanView("gantt")}
+                        />
+                      </SegmentedControl>
+                    </div>
                   ) : null}
                   <div style={{ width: 240, maxWidth: "100%", minWidth: 0 }}>
                     <Select
