@@ -1,30 +1,47 @@
 /**
  * HEALTH SPARKLINE
- * Inline SVG trend line from healthHistory.
- * Solid line = actuals, dashed = forecast extension. 30/60/90d window.
- * No chart library — pure SVG.
+ * Highcharts line chart showing health trend over 30/60/90d window.
+ * Series 1 (solid): actuals from healthHistory.
+ * Series 2 (dashed): single-point forecast extension.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import styled from 'styled-components';
 import { Typography } from '@procore/core-react';
+import type { Options, SeriesLineOptions } from 'highcharts';
+import { HC_COLORS } from '@/lib/highcharts';
 import type { HealthSnapshot, HealthScore } from '@/types/health';
 
-// ─── Score → Y value (higher on chart = better) ──────────────────────────────
+// ─── SSR-safe import ──────────────────────────────────────────────────────────
 
-const SCORE_Y: Record<HealthScore, number> = { green: 10, yellow: 40, red: 70 };
+const HighchartsReact = dynamic(
+  () => import('highcharts-react-official'),
+  { ssr: false }
+);
+
+let Highcharts: typeof import('highcharts') | null = null;
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Highcharts = require('@/lib/highcharts').default as typeof import('highcharts');
+}
+
+// ─── Score mapping ────────────────────────────────────────────────────────────
+
+const SCORE_Y: Record<HealthScore, number> = { green: 3, yellow: 2, red: 1 };
+
 const SCORE_COLOR: Record<HealthScore, string> = {
-  green:  'var(--color-pill-border-green)',
-  yellow: 'var(--color-pill-border-yellow)',
-  red:    'var(--color-pill-border-red)',
+  green:  HC_COLORS.green,
+  yellow: HC_COLORS.yellow,
+  red:    HC_COLORS.red,
 };
 
-// ─── Styled components ────────────────────────────────────────────────────────
+// ─── Styled ───────────────────────────────────────────────────────────────────
 
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 `;
 
 const Controls = styled.div`
@@ -44,9 +61,98 @@ const WindowBtn = styled.button<{ $active: boolean }>`
   transition: background 0.12s, border-color 0.12s;
 `;
 
-const ChartArea = styled.div`
-  position: relative;
-`;
+// ─── Chart options ────────────────────────────────────────────────────────────
+
+function buildSparklineOptions(
+  snapshots: HealthSnapshot[],
+  forecastScore: HealthScore | undefined,
+  height: number,
+): Options {
+  const lastScore = snapshots[snapshots.length - 1]?.score ?? 'green';
+  const lineColor = SCORE_COLOR[lastScore];
+
+  // Actual data points: [index, y-value]
+  const actualData = snapshots.map((s, i) => ({ x: i, y: SCORE_Y[s.score] }));
+
+  // Forecast: repeat last actual point then extend one step
+  const forecastData: { x: number; y: number }[] = forecastScore
+    ? [
+        { x: snapshots.length - 1, y: SCORE_Y[lastScore] },
+        { x: snapshots.length,     y: SCORE_Y[forecastScore] },
+      ]
+    : [];
+
+  const series: SeriesLineOptions[] = [
+    {
+      type: 'line',
+      name: 'Health',
+      data: actualData,
+      color: lineColor,
+      lineWidth: 2,
+      marker: {
+        enabled: true,
+        radius: 3,
+        symbol: 'circle',
+        fillColor: lineColor,
+        lineColor: '#fff',
+        lineWidth: 1.5,
+      },
+      zIndex: 2,
+    },
+  ];
+
+  if (forecastData.length > 0 && forecastScore) {
+    series.push({
+      type: 'line',
+      name: 'Forecast',
+      data: forecastData,
+      color: SCORE_COLOR[forecastScore],
+      lineWidth: 2,
+      dashStyle: 'Dash',
+      opacity: 0.7,
+      marker: { enabled: false },
+      zIndex: 1,
+    });
+  }
+
+  return {
+    chart: {
+      type: 'line',
+      height,
+      margin: [8, 8, 24, 36],
+      animation: false,
+    },
+    xAxis: {
+      visible: false,
+      min: 0,
+      max: snapshots.length + (forecastScore ? 1 : 0),
+    },
+    yAxis: {
+      min: 0.5,
+      max: 3.5,
+      tickPositions: [1, 2, 3],
+      gridLineColor: HC_COLORS.gridLine,
+      gridLineWidth: 1,
+      lineWidth: 0,
+      tickWidth: 0,
+      labels: {
+        style: { fontSize: '9px', color: HC_COLORS.textLight },
+        formatter() {
+          const map: Record<number, string> = { 3: 'Good', 2: 'Risk', 1: 'Crit' };
+          return map[this.value as number] ?? '';
+        },
+      },
+    },
+    tooltip: {
+      formatter() {
+        const labels: Record<number, string> = { 3: 'Healthy', 2: 'At Risk', 1: 'Critical' };
+        const name = this.series.name === 'Forecast' ? ' (forecast)' : '';
+        return `<b>${labels[this.y as number] ?? ''}${name}</b>`;
+      },
+    },
+    series,
+  };
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -64,12 +170,12 @@ export default function HealthSparkline({
   history,
   forecastScore,
   className,
-  width = 300,
-  height = 80,
+  height = 100,
 }: HealthSparklineProps) {
   const [window, setWindow] = useState<Window>(90);
 
   const filtered = history.slice(-window);
+
   if (filtered.length === 0) {
     return (
       <Wrapper className={className}>
@@ -80,28 +186,12 @@ export default function HealthSparkline({
     );
   }
 
-  const padX = 4;
-  const padY = 8;
-  const chartW = width - padX * 2;
-  const chartH = height - padY * 2;
-
-  // Build polyline points for actuals
-  const pts = filtered.map((snap, i) => {
-    const x = padX + (i / Math.max(filtered.length - 1, 1)) * chartW;
-    const y = padY + (SCORE_Y[snap.score] / 80) * chartH;
-    return { x, y, snap };
-  });
-
-  const actualPoints = pts.map(p => `${p.x},${p.y}`).join(' ');
-
-  // Forecast extension: one extra point beyond the last actual
-  const lastPt = pts[pts.length - 1];
-  const forecastY = forecastScore ? padY + (SCORE_Y[forecastScore] / 80) * chartH : null;
-  const forecastPoints = forecastY != null ? `${lastPt.x},${lastPt.y} ${width - padX},${forecastY}` : null;
-
-  // Determine line color based on last score
-  const lastScore = filtered[filtered.length - 1].score;
-  const lineColor = SCORE_COLOR[lastScore];
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const options = useMemo(
+    () => buildSparklineOptions(filtered, forecastScore, height),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered.length, forecastScore, height, window]
+  );
 
   return (
     <Wrapper className={className}>
@@ -118,63 +208,13 @@ export default function HealthSparkline({
         </Controls>
       </div>
 
-      <ChartArea>
-        <svg width={width} height={height} aria-label={`Health trend over last ${window} days`} role="img">
-          {/* Grid lines */}
-          {[10, 40, 70].map((yVal, i) => (
-            <line
-              key={i}
-              x1={padX} y1={padY + (yVal / 80) * chartH}
-              x2={width - padX} y2={padY + (yVal / 80) * chartH}
-              stroke="var(--color-border-separator)"
-              strokeWidth={0.5}
-              strokeDasharray="3,3"
-            />
-          ))}
-
-          {/* Actual trend line */}
-          <polyline
-            points={actualPoints}
-            fill="none"
-            stroke={lineColor}
-            strokeWidth={2}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-
-          {/* Forecast extension (dashed) */}
-          {forecastPoints && forecastScore && (
-            <polyline
-              points={forecastPoints}
-              fill="none"
-              stroke={SCORE_COLOR[forecastScore]}
-              strokeWidth={2}
-              strokeDasharray="4,3"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              opacity={0.7}
-            />
-          )}
-
-          {/* Data points */}
-          {pts.map((p, i) => (
-            <circle
-              key={i}
-              cx={p.x} cy={p.y} r={3}
-              fill={SCORE_COLOR[p.snap.score]}
-              stroke="var(--color-surface-card)"
-              strokeWidth={1.5}
-            />
-          ))}
-        </svg>
-
-        {/* Y-axis labels */}
-        <div style={{ position: 'absolute', left: 0, top: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height, pointerEvents: 'none' }}>
-          <span style={{ fontSize: 9, color: 'var(--color-pill-text-green)', paddingTop: padY - 4 }}>Good</span>
-          <span style={{ fontSize: 9, color: 'var(--color-pill-text-yellow)' }}>Risk</span>
-          <span style={{ fontSize: 9, color: 'var(--color-pill-text-red)', paddingBottom: padY - 4 }}>Critical</span>
-        </div>
-      </ChartArea>
+      {Highcharts && (
+        <HighchartsReact
+          highcharts={Highcharts}
+          options={options}
+          containerProps={{ style: { width: '100%' } }}
+        />
+      )}
     </Wrapper>
   );
 }

@@ -19,7 +19,7 @@ const SCORE_STYLES: Record<HealthScore, { bg: string; border: string; text: stri
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
-const Badge = styled.button<{ $score: HealthScore; $interactive: boolean }>`
+const Badge = styled.div<{ $score: HealthScore; $interactive: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -88,16 +88,19 @@ export default function HealthScoreBadge({
   const defaultAriaLabel = ariaLabel ??
     `Health: ${label}${showForecast ? ` · Forecast: ${forecastLabel}` : ''}${trend ? ` · Trend: ${trend}` : ''}`;
 
+  const interactive = !!(onClick || onMouseEnter);
+
   return (
     <Badge
+      as={interactive ? 'button' : 'div'}
       $score={score}
-      $interactive={!!(onClick || onMouseEnter)}
+      $interactive={interactive}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={className}
       aria-label={defaultAriaLabel}
-      type="button"
+      {...(interactive ? { type: 'button' } : {})}
     >
       {label}
       {showForecast && forecastScore && (
