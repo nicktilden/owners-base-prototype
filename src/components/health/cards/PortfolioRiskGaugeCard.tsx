@@ -1,21 +1,38 @@
 /**
  * PORTFOLIO RISK GAUGE CARD
- * SVG semicircle gauge showing overall portfolio risk level (0–100).
+ * Highcharts solid gauge showing overall portfolio risk level (0–100).
  * Score = % of active projects that are red or yellow.
- * Clicking the gauge or summary opens HealthDetailTearsheet for the worst project.
+ * Clicking the gauge label or summary opens HealthDetailTearsheet for the worst project.
  */
 
 import React, { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Button, Typography } from '@procore/core-react';
 import styled from 'styled-components';
+import type { Options } from 'highcharts';
 import HubCardFrame from '@/components/hubs/HubCardFrame';
 import HealthDetailTearsheet from '../HealthDetailTearsheet';
 import { buildHealthResult } from '@/utils/healthEngine';
 import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
+import { HC_COLORS } from '@/lib/highcharts';
 import type { HealthResult } from '@/types/health';
 import type { Project } from '@/types/project';
+
+// ─── SSR-safe Highcharts import ───────────────────────────────────────────────
+
+const HighchartsReact = dynamic(
+  () => import('highcharts-react-official'),
+  { ssr: false }
+);
+
+// Highcharts + modules loaded client-side only
+let Highcharts: typeof import('highcharts') | null = null;
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Highcharts = require('@/lib/highcharts').default as typeof import('highcharts');
+}
 
 // ─── Styled ───────────────────────────────────────────────────────────────────
 
@@ -23,23 +40,8 @@ const GaugeWrap = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 8px 8px;
-  gap: 12px;
-`;
-
-const GaugeSvgWrap = styled.button`
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  &:hover { opacity: 0.85; }
-`;
-
-const GaugeLabel = styled.div`
-  text-align: center;
+  padding: 8px 8px 12px;
+  gap: 8px;
 `;
 
 const SummaryText = styled.button`
@@ -53,87 +55,74 @@ const SummaryText = styled.button`
   &:hover { color: var(--color-text-primary); }
 `;
 
-// ─── Gauge SVG helpers ────────────────────────────────────────────────────────
+// ─── Gauge score → color ──────────────────────────────────────────────────────
 
-/**
- * Semicircle gauge with color zones drawn as arc segments.
- * score: 0–100, where 0 = all healthy, 100 = all critical
- */
-function GaugeSvg({ score }: { score: number }) {
-  const cx = 100;
-  const cy = 100;
-  const r = 80;
+function gaugeColor(score: number): string {
+  if (score <= 33) return HC_COLORS.green;
+  if (score <= 66) return HC_COLORS.yellow;
+  return HC_COLORS.red;
+}
 
-  // Semicircle goes from 180° to 0° (left to right across bottom)
-  function polarToXY(angleDeg: number) {
-    const rad = (angleDeg * Math.PI) / 180;
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy - r * Math.sin(rad),
-    };
-  }
+function gaugeLabel(score: number): string {
+  if (score <= 33) return 'Low Risk';
+  if (score <= 66) return 'Moderate Risk';
+  return 'High Risk';
+}
 
-  function arcPath(startDeg: number, endDeg: number) {
-    const start = polarToXY(startDeg);
-    const end = polarToXY(endDeg);
-    const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
-    // Going counter-clockwise from startDeg to endDeg (sweep = 0 for CCW)
-    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
-  }
+// ─── Chart options ────────────────────────────────────────────────────────────
 
-  // Map score (0–100) to needle angle: 180° (left, 0) → 0° (right, 100)
-  const needleAngleDeg = 180 - score * 1.8;
-  const needleTip = polarToXY(needleAngleDeg);
-
-  // Zone colors using CSS vars approximations (SVG can't use CSS vars on fills easily)
-  // Zones: green 0–33 (180→120°), yellow 34–66 (120→60°), red 67–100 (60→0°)
-  const green = '#2e7d32';
-  const yellow = '#f9a825';
-  const red = '#c62828';
-  const trackColor = '#e5e7eb';
-
-  const gaugeColor = score <= 33 ? green : score <= 66 ? yellow : red;
-
-  return (
-    <svg width="200" height="110" viewBox="0 0 200 110" aria-hidden="true">
-      {/* Track */}
-      <path d={arcPath(180, 0)} fill="none" stroke={trackColor} strokeWidth="18" strokeLinecap="round" />
-      {/* Green zone */}
-      <path d={arcPath(180, 120)} fill="none" stroke={green} strokeWidth="18" strokeLinecap="butt" opacity="0.25" />
-      {/* Yellow zone */}
-      <path d={arcPath(120, 60)} fill="none" stroke={yellow} strokeWidth="18" strokeLinecap="butt" opacity="0.25" />
-      {/* Red zone */}
-      <path d={arcPath(60, 0)} fill="none" stroke={red} strokeWidth="18" strokeLinecap="butt" opacity="0.25" />
-
-      {/* Score arc up to needle */}
-      {score > 0 && (
-        <path
-          d={arcPath(180, needleAngleDeg)}
-          fill="none"
-          stroke={gaugeColor}
-          strokeWidth="18"
-          strokeLinecap="round"
-        />
-      )}
-
-      {/* Needle */}
-      <line
-        x1={cx}
-        y1={cy}
-        x2={needleTip.x}
-        y2={needleTip.y}
-        stroke="#1a1a1a"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <circle cx={cx} cy={cy} r="5" fill="#1a1a1a" />
-
-      {/* Score label */}
-      <text x={cx} y={cy + 22} textAnchor="middle" fontSize="20" fontWeight="700" fill={gaugeColor}>
-        {score}
-      </text>
-    </svg>
-  );
+function buildGaugeOptions(score: number): Options {
+  const color = gaugeColor(score);
+  return {
+    chart: {
+      type: 'solidgauge',
+      height: 160,
+      margin: [0, 0, 0, 0],
+      spacing: [0, 0, 0, 0],
+    },
+    pane: {
+      startAngle: -150,
+      endAngle: 150,
+      background: [{
+        backgroundColor: HC_COLORS.track,
+        innerRadius: '70%',
+        outerRadius: '100%',
+        borderWidth: 0,
+        shape: 'arc',
+      }],
+    },
+    yAxis: {
+      min: 0,
+      max: 100,
+      lineWidth: 0,
+      tickWidth: 0,
+      minorTickWidth: 0,
+      labels: { enabled: false },
+      stops: [
+        [0.33, HC_COLORS.green],
+        [0.66, HC_COLORS.yellow],
+        [1.0,  HC_COLORS.red],
+      ],
+    },
+    tooltip: { enabled: false },
+    series: [{
+      type: 'solidgauge',
+      data: [score],
+      rounded: true,
+      dataLabels: {
+        enabled: true,
+        y: -28,
+        borderWidth: 0,
+        style: {
+          fontSize: '22px',
+          fontWeight: '700',
+          color,
+          textOutline: 'none',
+        },
+        format: '{y}',
+      },
+    }],
+  };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -170,25 +159,27 @@ export default function PortfolioRiskGaugeCard() {
     return { score, needAttention, total, worstEntry };
   }, [data.account]);
 
-  const gaugeLabel =
-    score <= 33 ? 'Low Risk' : score <= 66 ? 'Moderate Risk' : 'High Risk';
+  const options = useMemo(() => buildGaugeOptions(score), [score]);
+  const label = gaugeLabel(score);
 
   return (
     <>
       <HubCardFrame title="Portfolio Risk Level" infoTooltip="Percentage of active projects that are At Risk or Critical.">
         <GaugeWrap>
-          <GaugeSvgWrap
-            onClick={() => worstEntry && setTearsheetEntry(worstEntry)}
-            aria-label={`Portfolio risk gauge: ${score} — ${gaugeLabel}`}
-          >
-            <GaugeSvg score={score} />
-          </GaugeSvgWrap>
+          {Highcharts && (
+            <HighchartsReact
+              highcharts={Highcharts}
+              options={options}
+              containerProps={{ style: { width: '100%', maxWidth: 220 } }}
+            />
+          )}
 
-          <GaugeLabel>
-            <Typography intent="h3" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block', textAlign: 'center' }}>
-              {gaugeLabel}
-            </Typography>
-          </GaugeLabel>
+          <Typography
+            intent="h3"
+            style={{ fontWeight: 700, color: gaugeColor(score), textAlign: 'center', display: 'block' }}
+          >
+            {label}
+          </Typography>
 
           <SummaryText onClick={() => worstEntry && setTearsheetEntry(worstEntry)}>
             {needAttention} of {total} project{total !== 1 ? 's' : ''} need{needAttention === 1 ? 's' : ''} attention

@@ -195,16 +195,13 @@ function ProgressRenderer(params: ICellRendererParams<ActionPlan>) {
     return <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>No items</span>;
   }
   return (
-    <div style={{ minWidth: 120 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
-          <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
-        </div>
-        <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
+    <div style={{ minWidth: 140, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", borderRadius: 4, background: barColor, transition: "width 0.2s ease" }} />
       </div>
-      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
-        {closed}/{total} items closed{overdue && <span style={{ color: "var(--color-text-error)", fontWeight: 600 }}> · overdue</span>}
-      </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color: barColor, whiteSpace: "nowrap" }}>
+        {closed}/{total} closed{overdue && <span style={{ color: "var(--color-text-error)", fontWeight: 600 }}> · overdue</span>}
+      </span>
     </div>
   );
 }

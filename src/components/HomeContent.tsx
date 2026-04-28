@@ -30,9 +30,9 @@ import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
 import TopRiskProjectsCard from "@/components/health/cards/TopRiskProjectsCard";
 import PortfolioRiskGaugeCard from "@/components/health/cards/PortfolioRiskGaugeCard";
 import HealthKPIGridCard from "@/components/health/cards/HealthKPIGridCard";
-import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
+import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTableCard";
 
-const tabs = ["My Work", "Portfolio Performance", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
+const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
 
 const HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
@@ -136,7 +136,7 @@ function makeEmptyHidden(): HiddenCards {
 }
 
 function HomeContentInner() {
-  const [activeTab, setActiveTab] = useState<TabName>("My Work");
+  const [activeTab, setActiveTab] = useState<TabName>("Portfolio Performance");
   useResetScrollOnTabChange(activeTab);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const { hasActiveFilters } = useHubFilters();
@@ -265,14 +265,14 @@ function HomeContentInner() {
             {activeTab === "Health & Risk" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row variant="table">
-                  <HealthSummaryCard scope="portfolio" />
+                  <RiskScorecardCard />
                 </HubsContentLayout.Row>
                 <HubsContentLayout.Row columnsTemplate="2fr 1fr">
                   <TopRiskProjectsCard />
                   <PortfolioRiskGaugeCard />
                 </HubsContentLayout.Row>
                 <HubsContentLayout.Row variant="table">
-                  <HealthKPIGridCard />
+                  <PortfolioRiskTableCard />
                 </HubsContentLayout.Row>
               </HubsContentLayout>
             )}
