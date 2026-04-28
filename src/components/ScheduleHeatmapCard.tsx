@@ -1,9 +1,10 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Button, Checkbox, MultiSelect, Pill, Search, Select, ToggleButton, Tooltip, Typography } from "@procore/core-react";
-import { Filter, Fire, Gantt, Info, List, Sliders } from "@procore/core-icons";
-import styled from "styled-components";
+import { Button, Card, Checkbox, Form, H2, MultiSelect, Pill, Search, Select, Tearsheet, TextInput, ToggleButton, Tooltip, Typography } from "@procore/core-react";
+import { Filter, Fire, Gantt, Info, List, Pencil, Sliders } from "@procore/core-icons";
+import styled, { createGlobalStyle } from "styled-components";
 import {
   sampleProjectMilestones,
+  sampleProjectRows,
   PROJECT_MILESTONES,
   PROJECT_STAGES,
   PROJECT_PRIORITIES_DISTINCT,
@@ -13,8 +14,9 @@ import {
   VARIANCE_AXIS_MAX,
   getStageOrder,
   type ProjectMilestoneName,
+  type ProjectRow,
 } from "@/data/projects";
-import { formatDateMMDDYYYY } from "@/utils/date";
+import { formatDateMMDDYYYY, formatDateMMDDYY } from "@/utils/date";
 import { useHubFilters } from "@/context/HubFilterContext";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -814,6 +816,48 @@ const LegendCurrentBox = styled.div`
   outline-offset: 1px;
 `;
 
+// Sticky-right edit column header
+const ThEdit = styled.th`
+  padding: 0 10px;
+  height: 48px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.25px;
+  white-space: nowrap;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-separator);
+  background: ${HEATMAP_HEADER_BG};
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  min-width: 44px;
+  width: 44px;
+  border-left: 1px solid var(--color-border-separator);
+`;
+
+// Sticky-right edit column body cell
+const TdEdit = styled.td`
+  padding: 3px 6px;
+  border-bottom: 1px solid #e8eaeb;
+  background: var(--color-surface-primary);
+  text-align: center;
+  vertical-align: middle;
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  min-width: 44px;
+  width: 44px;
+  border-left: 1px solid var(--color-border-separator);
+`;
+
+// Widen the tearsheet for the milestones editor
+const TearsheetMilestoneEdit = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .milestone-edit-tearsheet-root) {
+    flex: 0 0 60vw !important;
+  }
+`;
+
 const ToolbarRow = styled.div`
   display: flex;
   align-items: center;
@@ -849,6 +893,272 @@ const GanttPlaceholder = styled.div`
   margin-top: 4px;
 `;
 
+// ─── Milestone Edit Tearsheet ──────────────────────────────────────────────────
+
+interface MilestoneEditTearsheetProps {
+  projectId: number | null;
+  onClose: () => void;
+}
+
+function varianceBadgeTearsheet(v: number) {
+  const color = v > 7 ? "#b71c1c" : v > 3 ? "#e65100" : v > 0 ? "#ef6c00" : v < -7 ? "#1b5e20" : v < 0 ? "#2e7d32" : "#546e7a";
+  const bg = v > 7 ? "#ffebee" : v > 3 ? "#fff3e0" : v > 0 ? "#fff8e1" : v < -7 ? "#e8f5e9" : v < 0 ? "#f1f8e9" : "#eceff1";
+  const label = v > 0 ? `+${v}d` : v < 0 ? `${v}d` : "0d";
+  return (
+    <span style={{ display: "inline-block", padding: "1px 7px", borderRadius: 4, background: bg, color, fontWeight: 600, fontSize: 12 }}>
+      {label}
+    </span>
+  );
+}
+
+function MilestoneEditTearsheet({ projectId, onClose }: MilestoneEditTearsheetProps) {
+  const project = useMemo(
+    () => (projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null),
+    [projectId]
+  );
+  const milestones = useMemo(
+    () => (projectId !== null ? sampleProjectMilestones.get(projectId) ?? [] : []),
+    [projectId]
+  );
+
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [milestoneEdits, setMilestoneEdits] = useState<Map<string, { baseline: string; actual: string }>>(new Map());
+
+  // Reset local state when project changes
+  React.useEffect(() => {
+    if (project) {
+      setStartDate(project.startDate);
+      setEndDate(project.endDate);
+    }
+    setMilestoneEdits(new Map());
+  }, [project]);
+
+  const getMilestoneValue = useCallback((name: string, field: "baseline" | "actual"): string => {
+    const edit = milestoneEdits.get(name);
+    if (edit) return edit[field];
+    const m = milestones.find((ms) => ms.name === name);
+    if (!m) return "";
+    return field === "baseline" ? m.baselineDate : (m.actualDate ?? "");
+  }, [milestoneEdits, milestones]);
+
+  const setMilestoneField = useCallback((name: string, field: "baseline" | "actual", value: string) => {
+    setMilestoneEdits((prev) => {
+      const next = new Map(prev);
+      const current = next.get(name) ?? {
+        baseline: milestones.find((m) => m.name === name)?.baselineDate ?? "",
+        actual: milestones.find((m) => m.name === name)?.actualDate ?? "",
+      };
+      next.set(name, { ...current, [field]: value });
+      return next;
+    });
+  }, [milestones]);
+
+  const pastMilestones = useMemo(
+    () => milestones.filter((m) => m.actualDate !== null || m.varianceDays !== 0),
+    [milestones]
+  );
+  const upcomingMilestones = useMemo(
+    () => milestones.filter((m) => m.actualDate === null && m.varianceDays === 0),
+    [milestones]
+  );
+
+  return (
+    <>
+      <TearsheetMilestoneEdit />
+      <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Edit project milestones" placement="right">
+        <div className="milestone-edit-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {/* Header */}
+          <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+            {project ? (
+              <>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500, display: "block", marginBottom: 2 }}>
+                  {project.number}
+                </Typography>
+                <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
+                  {project.name}
+                </Typography>
+                <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block", marginTop: 4 }}>
+                  Edit schedule dates and project milestones
+                </Typography>
+              </>
+            ) : (
+              <Typography intent="h2" style={{ fontWeight: 700 }}>Edit Milestones</Typography>
+            )}
+          </div>
+
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+            {project && (
+              <>
+                {/* ── Section 1: Start & Completion Dates ── */}
+                <Card style={{ marginBottom: 16, padding: "16px 20px" }}>
+                  <H2 style={{ marginBottom: 12 }}>Start &amp; Completion Dates</H2>
+                  <Form>
+                    <Form.Form id="milestone-edit-dates-form">
+                      <Form.Row>
+                        <Form.Text
+                          label="Project Start Date"
+                          name="startDate"
+                          type="date"
+                          colStart={1}
+                          colWidth={6}
+                          value={startDate}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+                        />
+                        <Form.Text
+                          label="Project End Date (Baseline)"
+                          name="endDate"
+                          type="date"
+                          colStart={7}
+                          colWidth={6}
+                          value={endDate}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+                        />
+                      </Form.Row>
+                    </Form.Form>
+                  </Form>
+                </Card>
+
+                {/* ── Section 2: Project Milestones ── */}
+                <Card style={{ padding: "16px 20px" }}>
+                  <H2 style={{ marginBottom: 12 }}>Project Milestones</H2>
+                  <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 6, overflow: "hidden" }}>
+                    {/* Table header */}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 140px 140px 72px",
+                      padding: "0 12px",
+                      height: 36,
+                      alignItems: "center",
+                      background: "var(--color-surface-secondary)",
+                      borderBottom: "1px solid var(--color-border-separator)",
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.25px" }}>Milestone</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.25px" }}>Baseline Date</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.25px" }}>Actual Date</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.25px", textAlign: "right" }}>Variance</span>
+                    </div>
+                    {/* Past / completed milestones */}
+                    {pastMilestones.length > 0 && (
+                      <div>
+                        <div style={{ padding: "6px 12px", background: "var(--color-surface-secondary)", borderBottom: "1px solid var(--color-border-separator)" }}>
+                          <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
+                            Completed Milestones ({pastMilestones.length})
+                          </Typography>
+                        </div>
+                        {pastMilestones.map((m, i) => {
+                          const baselineVal = getMilestoneValue(m.name, "baseline");
+                          const actualVal = getMilestoneValue(m.name, "actual");
+                          return (
+                            <div
+                              key={m.name}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 140px 140px 72px",
+                                padding: "6px 12px",
+                                alignItems: "center",
+                                minHeight: 44,
+                                background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)",
+                                borderBottom: "1px solid var(--color-border-separator)",
+                              }}
+                            >
+                              <Typography intent="small" style={{ fontWeight: 500, color: "var(--color-text-primary)", paddingRight: 8 }}>
+                                {m.name}
+                              </Typography>
+                              <div>
+                                <TextInput
+                                  type="date"
+                                  value={baselineVal}
+                                  onChange={(e) => setMilestoneField(m.name, "baseline", e.target.value)}
+                                  style={{ fontSize: 12, width: 128 }}
+                                />
+                              </div>
+                              <div>
+                                <TextInput
+                                  type="date"
+                                  value={actualVal}
+                                  onChange={(e) => setMilestoneField(m.name, "actual", e.target.value)}
+                                  style={{ fontSize: 12, width: 128 }}
+                                />
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                {varianceBadgeTearsheet(m.varianceDays)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Upcoming milestones */}
+                    {upcomingMilestones.length > 0 && (
+                      <div>
+                        <div style={{ padding: "6px 12px", background: "var(--color-surface-secondary)", borderBottom: "1px solid var(--color-border-separator)" }}>
+                          <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
+                            Upcoming Milestones ({upcomingMilestones.length})
+                          </Typography>
+                        </div>
+                        {upcomingMilestones.map((m, i) => {
+                          const baselineVal = getMilestoneValue(m.name, "baseline");
+                          const actualVal = getMilestoneValue(m.name, "actual");
+                          return (
+                            <div
+                              key={m.name}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 140px 140px 72px",
+                                padding: "6px 12px",
+                                alignItems: "center",
+                                minHeight: 44,
+                                background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)",
+                                borderBottom: "1px solid var(--color-border-separator)",
+                              }}
+                            >
+                              <Typography intent="small" style={{ fontWeight: 500, color: "var(--color-text-secondary)", paddingRight: 8 }}>
+                                {m.name}
+                              </Typography>
+                              <div>
+                                <TextInput
+                                  type="date"
+                                  value={baselineVal}
+                                  onChange={(e) => setMilestoneField(m.name, "baseline", e.target.value)}
+                                  style={{ fontSize: 12, width: 128 }}
+                                />
+                              </div>
+                              <div>
+                                <TextInput
+                                  type="date"
+                                  value={actualVal}
+                                  placeholder="Not yet recorded"
+                                  onChange={(e) => setMilestoneField(m.name, "actual", e.target.value)}
+                                  style={{ fontSize: 12, width: 128 }}
+                                />
+                              </div>
+                              <div style={{ textAlign: "right", color: "var(--color-text-secondary)", fontSize: 12 }}>
+                                —
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, padding: "12px 20px", borderTop: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+            <Button variant="tertiary" className="b_tertiary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" className="b_primary" onClick={onClose}>Save Changes</Button>
+          </div>
+        </div>
+      </Tearsheet>
+    </>
+  );
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const GROUP_BY_OPTIONS = [
@@ -874,9 +1184,7 @@ export default function ScheduleHeatmapCard() {
   const [activeFilters, setActiveFilters] = useState<HeatmapFilterValues>(EMPTY_HEATMAP_FILTERS);
   // Milestone columns to show (null = all visible)
   const [visibleMilestones, setVisibleMilestones] = useState<Set<ProjectMilestoneName> | null>(null);
-  // Per-cell date overrides for Dates Table edit mode: Map<projectId, Map<milestoneName, newDate>>
-  const [dateOverrides, setDateOverrides] = useState<Map<number, Map<string, string>>>(new Map());
-  const [editingCell, setEditingCell] = useState<{ projectId: number; milestoneName: string } | null>(null);
+  const [editProjectId, setEditProjectId] = useState<number | null>(null);
 
   const handleFiltersToggle = useCallback(() => {
     setFiltersOpen((prev) => {
@@ -986,6 +1294,7 @@ export default function ScheduleHeatmapCard() {
             {MILESTONE_ABBR[m]}
           </ThMilestone>
         ))}
+        <ThEdit />
       </tr>
     </THead>
   );
@@ -1143,6 +1452,19 @@ export default function ScheduleHeatmapCard() {
                           );
 
                           if (!isPast || !m) {
+                            // Future milestone with a baseline date: show the date
+                            if (m?.baselineDate) {
+                              return (
+                                <TdMilestonePlain key={name}>
+                                  <Tooltip trigger="hover" placement="top" overlay={tooltipContent}>
+                                    <span style={{ display: "inline-block", fontSize: 10, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                                      {formatDateMMDDYY(m.baselineDate)}
+                                    </span>
+                                  </Tooltip>
+                                </TdMilestonePlain>
+                              );
+                            }
+                            // Future milestone with no baseline date: show dot
                             return (
                               <TdMilestonePlain key={name}>
                                 <Tooltip trigger="hover" placement="top" overlay={tooltipContent}>
@@ -1171,6 +1493,19 @@ export default function ScheduleHeatmapCard() {
                             </TdMilestoneHeat>
                           );
                         })}
+                        <TdEdit>
+                          <Button
+                            variant="tertiary"
+                            className="b_tertiary"
+                            size="sm"
+                            icon={<Pencil size="sm" />}
+                            aria-label={`Edit milestones for ${project.name}`}
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              setEditProjectId(project.id);
+                            }}
+                          />
+                        </TdEdit>
                       </Tr>
                     );
                   })}
@@ -1216,8 +1551,6 @@ export default function ScheduleHeatmapCard() {
                     if (MILESTONE_STAGE_MAP[name] <= stageOrder) currentIdx = i;
                   });
 
-                  const projectOverrides = dateOverrides.get(project.id) ?? new Map<string, string>();
-
                   return (
                     <Tr key={project.id}>
                       <Td $sticky>
@@ -1233,54 +1566,13 @@ export default function ScheduleHeatmapCard() {
                       </Td>
                       {activeMilestones.map((name) => {
                         const m = milestoneMap.get(name);
-                        const override = projectOverrides.get(name);
-                        const isEditing = editingCell?.projectId === project.id && editingCell?.milestoneName === name;
 
-                        // Display: override > actualDate > baselineDate
-                        const displayDate = override ?? m?.actualDate ?? m?.baselineDate ?? null;
-                        const hasActual = !!m?.actualDate && !override;
-                        const hasOverride = !!override;
-
-                        if (isEditing) {
-                          return (
-                            <TdMilestoneDates key={name}>
-                              <input
-                                type="date"
-                                defaultValue={displayDate ?? ""}
-                                autoFocus
-                                style={{ fontSize: 11, border: "1px solid var(--color-action-primary)", borderRadius: 3, padding: "2px 4px", width: 100 }}
-                                onBlur={(e) => {
-                                  const val = e.target.value;
-                                  if (val) {
-                                    setDateOverrides(prev => {
-                                      const next = new Map(prev);
-                                      const pMap = new Map(next.get(project.id) ?? []);
-                                      pMap.set(name, val);
-                                      next.set(project.id, pMap);
-                                      return next;
-                                    });
-                                  }
-                                  setEditingCell(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Escape") setEditingCell(null);
-                                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                                }}
-                              />
-                            </TdMilestoneDates>
-                          );
-                        }
+                        const displayDate = m?.actualDate ?? m?.baselineDate ?? null;
+                        const hasActual = !!m?.actualDate;
 
                         if (!displayDate) {
                           return (
-                            <TdMilestoneDates
-                              key={name}
-                              onClick={() => setEditingCell({ projectId: project.id, milestoneName: name })}
-                              style={{ cursor: "pointer" }}
-                              title="Click to set date"
-                            >
-                              —
-                            </TdMilestoneDates>
+                            <TdMilestoneDates key={name}>—</TdMilestoneDates>
                           );
                         }
 
@@ -1294,12 +1586,7 @@ export default function ScheduleHeatmapCard() {
                         ) : null;
 
                         return (
-                          <TdMilestoneDates
-                            key={name}
-                            onClick={() => setEditingCell({ projectId: project.id, milestoneName: name })}
-                            style={{ cursor: "pointer", background: hasOverride ? "var(--color-surface-hover)" : undefined }}
-                            title="Click to edit date"
-                          >
+                          <TdMilestoneDates key={name}>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 3, justifyContent: "center" }}>
                               {formatDateMMDDYYYY(displayDate)}
                               {hasActual && tooltipContent && (
@@ -1313,6 +1600,19 @@ export default function ScheduleHeatmapCard() {
                           </TdMilestoneDates>
                         );
                       })}
+                      <TdEdit>
+                        <Button
+                          variant="tertiary"
+                          className="b_tertiary"
+                          size="sm"
+                          icon={<Pencil size="sm" />}
+                          aria-label={`Edit milestones for ${project.name}`}
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            setEditProjectId(project.id);
+                          }}
+                        />
+                      </TdEdit>
                     </Tr>
                   );
                 })}
@@ -1327,6 +1627,10 @@ export default function ScheduleHeatmapCard() {
           />
         </TableArea>
       )}
+      <MilestoneEditTearsheet
+        projectId={editProjectId}
+        onClose={() => setEditProjectId(null)}
+      />
     </HubCardFrame>
   );
 }

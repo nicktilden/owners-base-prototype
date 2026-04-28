@@ -993,6 +993,11 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
             <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
               Configure Scorecard
             </Button>
+            <Link href="/settings/health-risk">
+              <Button variant="tertiary" size="sm" icon={<Cog size="sm" />}>
+                Account Settings
+              </Button>
+            </Link>
           </EmptyStateWrap>
         ) : (
           <ScorecardGrid>

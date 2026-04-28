@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { Avatar, Button, Card, H2, Link, Pill, Popover, Select, Table, Tearsheet, Typography } from "@procore/core-react";
-import { ChevronDown, ChevronRight, Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
+import { Avatar, Banner, Button, Card, H2, Link, Pill, Popover, Select, Table, Tearsheet, Typography } from "@procore/core-react";
+import { ChevronDown, ChevronRight, Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Info, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -115,25 +115,23 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
   const pastMilestones = milestones.filter(m => m.baselineDate < todayIso);
   const currentMilestones = milestones.filter(m => m.baselineDate >= todayIso);
 
-  // Combined bar timeline: baseline bar + actual overlay
+  // Timeline: gray bar = baseline full span, blue bar = progress (start → today clamped to end)
   const timeline = useMemo(() => {
     if (!project) return null;
     const bStart = new Date(project.startDate).getTime();
     const bEnd = new Date(project.endDate).getTime();
-    const aStart = actualStartDate ? new Date(actualStartDate).getTime() : bStart;
-    const aEnd = scheduleVariance !== 0 ? new Date(project.endDate).getTime() + scheduleVariance * 86400000 : bEnd;
-    const tMin = Math.min(bStart, aStart);
-    const tMax = Math.max(bEnd, aEnd);
-    const span = tMax - tMin || 1;
+    const today = Date.now();
+    const progressEnd = Math.min(today, bEnd);
+    const progressWidth = bStart < bEnd
+      ? Math.max(0, Math.min(100, ((progressEnd - bStart) / (bEnd - bStart)) * 100))
+      : 0;
     return {
-      baselineLeft: ((bStart - tMin) / span) * 100,
-      baselineWidth: ((bEnd - bStart) / span) * 100,
-      actualLeft: ((aStart - tMin) / span) * 100,
-      actualWidth: ((aEnd - aStart) / span) * 100,
-      startLabel: formatDate(actualStartDate ?? project.startDate),
-      endLabel: formatDate(scheduleVariance !== 0 ? addDaysLocal(project.endDate, scheduleVariance) : project.endDate),
+      progressWidth,
+      startLabel: formatDate(project.startDate),
+      endLabel: formatDate(project.endDate),
+      isComplete: today >= bEnd,
     };
-  }, [project, actualStartDate, scheduleVariance]);
+  }, [project]);
 
   return (
     <>
@@ -176,7 +174,33 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
               <>
                 {/* ── Schedule Duration ── */}
                 <Card style={{ margin: 16, padding: 16 }}>
-                  <H2 style={{ marginBottom: 16 }}>Schedule Duration</H2>
+                  <H2 style={{ marginBottom: 12 }}>Schedule Duration</H2>
+                  {/* Info Banner */}
+                  {scheduleVariance !== 0 && (
+                    <Banner variant={scheduleVariance > 0 ? "attention" : "info"} style={{ marginBottom: 14 }}>
+                      <Banner.Content>
+                        <Banner.Title>
+                          {scheduleVariance > 0
+                            ? `Project is running ${scheduleVariance} day${scheduleVariance !== 1 ? "s" : ""} behind baseline`
+                            : `Project is running ${Math.abs(scheduleVariance)} day${Math.abs(scheduleVariance) !== 1 ? "s" : ""} ahead of baseline`}
+                        </Banner.Title>
+                        <Banner.Body>
+                          {scheduleVariance > 0
+                            ? `The current schedule variance indicates this project may complete ${scheduleVariance} day${scheduleVariance !== 1 ? "s" : ""} later than the original baseline end date of ${formatDate(project!.endDate)}.`
+                            : `The current schedule variance indicates this project may complete ${Math.abs(scheduleVariance)} day${Math.abs(scheduleVariance) !== 1 ? "s" : ""} earlier than the original baseline end date of ${formatDate(project!.endDate)}.`}
+                        </Banner.Body>
+                      </Banner.Content>
+                    </Banner>
+                  )}
+                  {scheduleVariance === 0 && (
+                    <Banner variant="info" style={{ marginBottom: 14 }}>
+                      <Banner.Content>
+                        <Banner.Body>
+                          This project is tracking on schedule with no variance from the original baseline end date of {formatDate(project!.endDate)}.
+                        </Banner.Body>
+                      </Banner.Content>
+                    </Banner>
+                  )}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", marginBottom: 14 }}>
                     <div>
                       <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Baseline</Typography>
@@ -195,26 +219,28 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
                   </div>
                   {timeline && (
                     <div>
-                      {/* Combined bar: baseline (gray) with actual (primary) overlay */}
-                      <div style={{ position: "relative", width: "100%", height: 16, background: "#f0f1f3", borderRadius: 4, marginBottom: 6 }}>
-                        {/* Baseline bar */}
+                      {/* Bar legend */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "hsl(200, 8%, 82%)" }} />
+                          <Typography intent="small" color="gray45">Baseline duration</Typography>
+                        </span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "var(--color-action-primary)" }} />
+                          <Typography intent="small" color="gray45">Progress to date</Typography>
+                        </span>
+                      </div>
+                      {/* Bar: gray = baseline full span, blue on top = progress so far */}
+                      <div style={{ position: "relative", width: "100%", height: 16, background: "hsl(200, 8%, 82%)", borderRadius: 4, marginBottom: 6, overflow: "hidden" }}>
                         <div style={{
                           position: "absolute",
-                          left: `${timeline.baselineLeft}%`,
-                          width: `${timeline.baselineWidth}%`,
-                          height: "100%",
-                          background: "hsl(200, 8%, 90%)",
-                          borderRadius: 4,
-                        }} />
-                        {/* Actual bar */}
-                        <div style={{
-                          position: "absolute",
-                          left: `${timeline.actualLeft}%`,
-                          width: `${timeline.actualWidth}%`,
+                          left: 0,
+                          width: `${timeline.progressWidth}%`,
                           height: "100%",
                           background: "var(--color-action-primary)",
-                          borderRadius: 4,
+                          borderRadius: timeline.isComplete ? 4 : "4px 0 0 4px",
                           opacity: 0.9,
+                          transition: "width 0.3s ease",
                         }} />
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -925,11 +951,7 @@ export function ScheduleVariance2HubCard() {
     return filteredProjectRows
       .filter((row) => new Date(row.endDate).getTime() > today)
       .map((row) => {
-        const milestones = sampleProjectMilestones.get(row.id) ?? [];
-        const worstVariance = milestones.reduce(
-          (max, m) => Math.max(max, m.varianceDays),
-          0
-        );
+        const worstVariance = scheduleVarianceData.find((d) => d.project === row.name)?.variance ?? 0;
         const costDeltaMillions = Math.max(
           0.4,
           Math.round((worstVariance * 0.32 + row.id * 0.11) * 10) / 10
@@ -985,28 +1007,21 @@ export function ScheduleVariance2HubCard() {
       .sort((a, b) => b.varianceDays - a.varianceDays);
 
   // Build tearsheet rows for the selected KPI segment
+  // Use portfolioRows (same source as KPI counts) so tearsheet count matches the KPI tile
   const tearsheetRows = useMemo(() => {
     if (openSegment === null) return [];
-    let projectsForSegment = filteredProjectRows;
+    let projectsForSegment = portfolioRows;
     if (openSegment === "onSchedule") {
-      projectsForSegment = filteredProjectRows.filter((p) => {
-        const d = scheduleVarianceData.find((x) => x.project === p.name);
-        return (d?.variance ?? 0) <= 0;
-      });
+      projectsForSegment = portfolioRows.filter((r) => r.worstVariance <= 0);
     } else if (openSegment === "delays") {
-      projectsForSegment = filteredProjectRows.filter((p) => {
-        const d = scheduleVarianceData.find((x) => x.project === p.name);
-        const v = d?.variance ?? 0;
-        return v >= 7 && v <= 13;
-      });
+      projectsForSegment = portfolioRows.filter((r) => r.worstVariance >= 7 && r.worstVariance <= 13);
     } else if (openSegment === "critical") {
-      projectsForSegment = filteredProjectRows.filter((p) => {
-        const d = scheduleVarianceData.find((x) => x.project === p.name);
-        return (d?.variance ?? 0) >= 14;
-      });
+      projectsForSegment = portfolioRows.filter((r) => r.worstVariance >= 14);
     }
-    return buildTearsheetRows(projectsForSegment);
-  }, [openSegment, filteredProjectRows]);
+    // Map portfolioRows back to ProjectRow shape for buildTearsheetRows
+    const portfolioIds = new Set(projectsForSegment.map((r) => r.id));
+    return buildTearsheetRows(filteredProjectRows.filter((p) => portfolioIds.has(p.id)));
+  }, [openSegment, portfolioRows, filteredProjectRows]);
 
   // All-projects rows for "View all" tearsheet
   const allProjectsRows = useMemo(
@@ -1151,11 +1166,49 @@ export function ScheduleVariance2HubCard() {
         </div>
       </div>
 
-      <HubCardTable columns="1fr 100px 80px 80px">
+      <HubCardTable columns="1fr 120px 100px 80px">
         <HubCardTable.Header>
           <HubCardTable.HeaderCell>Project</HubCardTable.HeaderCell>
-          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Days Remaining</HubCardTable.HeaderCell>
-          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Variance</HubCardTable.HeaderCell>
+          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
+              Days Remaining
+              <Popover
+                overlay={
+                  <Popover.Content>
+                    <div style={{ padding: "8px 12px", maxWidth: 220, fontSize: 12, color: "var(--color-text-primary)", lineHeight: "1.5" }}>
+                      The number of calendar days remaining until the project&apos;s current planned end date. Does not account for schedule variance.
+                    </div>
+                  </Popover.Content>
+                }
+                trigger={["hover"]}
+                placement="top"
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", cursor: "default" }}>
+                  <Info size="sm" style={{ color: "var(--color-text-secondary)", width: 12, height: 12 }} />
+                </span>
+              </Popover>
+            </span>
+          </HubCardTable.HeaderCell>
+          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
+              Variance
+              <Popover
+                overlay={
+                  <Popover.Content>
+                    <div style={{ padding: "8px 12px", maxWidth: 220, fontSize: 12, color: "var(--color-text-primary)", lineHeight: "1.5" }}>
+                      The worst milestone schedule variance for this project, in days. Positive values mean the project is running behind the original baseline.
+                    </div>
+                  </Popover.Content>
+                }
+                trigger={["hover"]}
+                placement="top"
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", cursor: "default" }}>
+                  <Info size="sm" style={{ color: "var(--color-text-secondary)", width: 12, height: 12 }} />
+                </span>
+              </Popover>
+            </span>
+          </HubCardTable.HeaderCell>
           <HubCardTable.HeaderCell style={{ textAlign: "right" }}>Cost Delta</HubCardTable.HeaderCell>
         </HubCardTable.Header>
         <HubCardTable.Body>

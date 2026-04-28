@@ -5,7 +5,7 @@
 
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Button, Link, Pill, Typography } from "@procore/core-react";
+import { Button, Form, Link, Modal, Pill, TextArea, TextInput, Tooltip, Typography } from "@procore/core-react";
 import {
   ArrowRight,
   Building,
@@ -13,9 +13,11 @@ import {
   ChevronDown,
   CompassDirection,
   ExternalLink,
+  Info,
   Location,
   Person,
   Ruler,
+  Cog,
   ConcentricCircles,
 } from "@procore/core-icons";
 import styled from "styled-components";
@@ -473,6 +475,7 @@ interface MilestoneRow {
   baselineDate: Date;
   actualDate: Date | null;
   varianceDays: number;
+  note?: string;
 }
 
 const DATES_PAGE_SIZE = 4;
@@ -526,13 +529,38 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
       const varianceDays = actual
         ? Math.round((actual.getTime() - baseline.getTime()) / 86400000)
         : 0;
-      return { name: m.name, baselineDate: baseline, actualDate: actual, varianceDays };
+      return { name: m.name, baselineDate: baseline, actualDate: actual, varianceDays, note: m.note };
     });
   }, [seedId]);
 
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(milestones.length / DATES_PAGE_SIZE));
   const pageItems = milestones.slice(page * DATES_PAGE_SIZE, (page + 1) * DATES_PAGE_SIZE);
+
+  const [configureOpen, setConfigureOpen] = useState(false);
+  // Local edits: name → { actualDate: string; note: string }
+  const [milestoneEdits, setMilestoneEdits] = useState<Map<string, { actualDate: string; note: string }>>(new Map());
+
+  const getMilestoneEdit = (name: string, field: "actualDate" | "note"): string => {
+    const edit = milestoneEdits.get(name);
+    if (edit) return edit[field];
+    const m = milestones.find((ms) => ms.name === name);
+    if (!m) return "";
+    if (field === "actualDate") return m.actualDate ? m.actualDate.toISOString().slice(0, 10) : "";
+    return m.note ?? "";
+  };
+
+  const setMilestoneEdit = (name: string, field: "actualDate" | "note", value: string) => {
+    setMilestoneEdits((prev) => {
+      const next = new Map(prev);
+      const current = next.get(name) ?? {
+        actualDate: (() => { const m = milestones.find((ms) => ms.name === name); return m?.actualDate ? m.actualDate.toISOString().slice(0, 10) : ""; })(),
+        note: (() => { const m = milestones.find((ms) => ms.name === name); return m?.note ?? ""; })(),
+      };
+      next.set(name, { ...current, [field]: value });
+      return next;
+    });
+  };
 
   const project = sampleProjectRows.find((r) => r.id === projectRowId);
   const dateRange = project
@@ -548,8 +576,15 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
 
   const actions = (
     <HeaderActions>
-      <Button variant="tertiary" size="sm" className="b_tertiary" icon={<ChevronDown size="sm" />}>
-        More
+      <Button
+        variant="tertiary"
+        size="sm"
+        className="b_tertiary"
+        icon={<Cog size="sm" />}
+        onClick={() => setConfigureOpen(true)}
+        aria-label="Configure milestone dates"
+      >
+        Configure
       </Button>
     </HeaderActions>
   );
@@ -584,8 +619,28 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
             <HubCardTable.Body>
               {pageItems.map((m, idx) => (
                 <HubCardTable.Row key={m.name} index={idx}>
-                  <HubCardTable.Cell style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }} title={m.name}>
-                    {m.name}
+                  <HubCardTable.Cell style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, maxWidth: "100%", overflow: "hidden" }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={m.name}>{m.name}</span>
+                      {m.note && (
+                        <Tooltip
+                          trigger="hover"
+                          placement="top"
+                          overlay={
+                            <Tooltip.Content>
+                              <div style={{ maxWidth: 240, lineHeight: 1.45, whiteSpace: "normal" }}>
+                                <div style={{ fontWeight: 600, marginBottom: 2 }}>Note</div>
+                                <div>{m.note}</div>
+                              </div>
+                            </Tooltip.Content>
+                          }
+                        >
+                          <span style={{ display: "inline-flex", flexShrink: 0, cursor: "default" }}>
+                            <Info size="sm" style={{ width: 12, height: 12, color: "var(--color-text-secondary)" }} />
+                          </span>
+                        </Tooltip>
+                      )}
+                    </span>
                   </HubCardTable.Cell>
                   <HubCardTable.Cell style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
                     {formatDateMMDDYYYY(m.baselineDate.toISOString().slice(0, 10))}
@@ -634,6 +689,116 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
           )}
         </>
       )}
+      {/* Configure Modal */}
+      <Modal
+        open={configureOpen}
+        onClickOverlay={() => setConfigureOpen(false)}
+        aria-labelledby="configure-dates-modal-title"
+      >
+        <Modal.Header onClose={() => setConfigureOpen(false)}>
+          <span id="configure-dates-modal-title">Configure Milestone Dates</span>
+        </Modal.Header>
+        <Modal.Body>
+          <Typography intent="body" style={{ marginBottom: 16, color: "var(--color-text-secondary)" }}>
+            Update actual dates and add notes to explain any variance from the baseline.
+          </Typography>
+          {milestones.map((m) => {
+            const actualVal = getMilestoneEdit(m.name, "actualDate");
+            const noteVal = getMilestoneEdit(m.name, "note");
+            const hasActual = !!actualVal;
+            return (
+              <div
+                key={m.name}
+                style={{
+                  borderBottom: "1px solid var(--color-border-separator)",
+                  paddingBottom: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <Typography intent="h3" style={{ marginBottom: 10, fontSize: 13, fontWeight: 600 }}>
+                  {m.name}
+                </Typography>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+                  <div>
+                    <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                      Baseline Date
+                    </Typography>
+                    <TextInput
+                      type="date"
+                      value={m.baselineDate.toISOString().slice(0, 10)}
+                      disabled
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                      Actual Date
+                    </Typography>
+                    <TextInput
+                      type="date"
+                      value={actualVal}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setMilestoneEdit(m.name, "actualDate", e.target.value)
+                      }
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                    Notes{hasActual ? " (required)" : ""}
+                  </Typography>
+                  <TextArea
+                    value={noteVal}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setMilestoneEdit(m.name, "note", e.target.value)
+                    }
+                    placeholder={
+                      hasActual
+                        ? "Explain why the actual date differs from baseline…"
+                        : "Add a note about this milestone…"
+                    }
+                    style={{ width: "100%", minHeight: 64, resize: "vertical" }}
+                  />
+                  {hasActual && !noteVal && (
+                    <Typography intent="small" style={{ color: "var(--color-text-error)", marginTop: 2 }}>
+                      A note is required when an actual date is set.
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Modal.FooterButtons>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                setMilestoneEdits(new Map());
+                setConfigureOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                // Validate: all milestones with an actual date must have a note
+                const invalid = milestones.some((m) => {
+                  const actualVal = getMilestoneEdit(m.name, "actualDate");
+                  const noteVal = getMilestoneEdit(m.name, "note");
+                  return !!actualVal && !noteVal;
+                });
+                if (invalid) return; // prevent save if validation fails
+                setConfigureOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          </Modal.FooterButtons>
+        </Modal.Footer>
+      </Modal>
     </HubCardFrame>
   );
 }

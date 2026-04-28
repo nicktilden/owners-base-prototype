@@ -67,3 +67,19 @@
 
 ---
 
+## 9 — Health & Risk Hub View Cards
+
+- Row 1 should have the risk scorecard
+- Row 2 should have 2 cards, first is card with a list of the top 5 projects sorted by highest risk. Follow the hub card framework and use the HubCardTable (lightweight custom HTML table). Second should be a portfolio risk gauge, using a gauge visualization to measure the overall risk of the portfolio of active project. For each, find ways to open up drill-in views in a tearsheet, like the interactive pattern we have established.
+- Row 3 should be a AG Grid (SmartGridWrapper) card wrapped in a hub card component that focuses on showing all projects, but presenting all the KPI data in the columns. Make sure to add the action bar with search, filters, grouping, and configure columns, just like the Portfolio table card.
+
+---
+
+
+## Schedule Risk Fixes
+- Schedule Risk card - When clicking on the KPIs at the top to open the tearsheet, each tearsheet list should reflect the number of items. For example, On Schedule says 3 of 10, so the tearsheet should only show 3 project.
+- Schedule Risk card - Make sure the KPIs are calculated based on the entire portfolio of active projects, not just a subset.
+- Schedule Heatmap table card — Look at the tooltips for each cell and make sure the "actual" date is showing in the tooltip.
+- Schedule Heatmap tearsheet — Both Start & Completion Dates + Project Milestones are unique sections and should be wrapped in a card component. Use the /core-react input components for the editable date fields.
+- On the Project Dates card on the project overview, when you configure the dates in the configure modal, include a required notes input when users update the “actual date”. If already updated, show the notes in the modal. Also add the notes to the tooltip for any milestone that has them. Do this for every project and make sure the data matches the project.
+- Also, if you haven’t already done so, update he data model for project milestones to include the require notes field when an actual date is added.
