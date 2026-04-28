@@ -895,38 +895,20 @@ export default function CapitalPlanningContent({ pageVariant = "default" }: Capi
                     </div>
                   ) : null}
                   {pageVariant === "future" ? (
-                    <SegmentedController className="b_radiogroup" style={{ flexShrink: 0 }}>
-                      <SegmentedController.Segment
+                    <SegmentedControl>
+                      <SegmentedControl.Segment
                         selected={capitalPlanTablePlanView === "grid"}
                         onClick={() => setPlanView("grid")}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <ViewGrid size="sm" aria-hidden />
-                          Grid
-                        </span>
-                      </SegmentedController.Segment>
-                      <SegmentedController.Segment
+                        icon={<ViewGrid size="sm" />}
+                        label="Grid"
+                      />
+                      <SegmentedControl.Segment
                         selected={planView === "gantt"}
                         onClick={() => setPlanView("gantt")}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <Gantt size="sm" aria-hidden />
-                          Gantt
-                        </span>
-                      </SegmentedController.Segment>
-                    </SegmentedController>
+                        icon={<Gantt size="sm" />}
+                        label="Gantt"
+                      />
+                    </SegmentedControl>
                   ) : null}
                   <div style={{ width: 240, maxWidth: "100%", minWidth: 0 }}>
                     <Select

@@ -402,60 +402,11 @@ const ThingsToConsider = styled.ul`
 
 // ─── Health tab styled components ─────────────────────────────────────────────
 
-const HealthScoreBadge = styled.div<{ $score: "green" | "yellow" | "red" | "unavailable" }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 20px;
-  background: ${({ $score }) => {
-    if ($score === "green") return "#e6f4ea";
-    if ($score === "yellow") return "#fff8e1";
-    if ($score === "red") return "#fce8e6";
-    return "var(--color-surface-secondary)";
-  }};
-  color: ${({ $score }) => {
-    if ($score === "green") return "#1e6e3a";
-    if ($score === "yellow") return "#7a5c00";
-    if ($score === "red") return "#a50e0e";
-    return "var(--color-text-secondary)";
-  }};
-`;
-
-const HealthScoreDot = styled.span<{ $score: "green" | "yellow" | "red" | "unavailable" }>`
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: ${({ $score }) => {
-    if ($score === "green") return "#2e7d32";
-    if ($score === "yellow") return "#f9a825";
-    if ($score === "red") return "#c62828";
-    return "var(--color-border-default)";
-  }};
-`;
-
-const HealthSummaryRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
+const HealthBannerWrap = styled.div`
   margin-bottom: 24px;
-  flex-wrap: wrap;
-`;
-
-const HealthMetaBadge = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border-separator);
-  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const KPICategoryHeader = styled.div`
@@ -516,17 +467,6 @@ const KPIReason = styled.div`
   font-style: italic;
 `;
 
-const KPISourceTag = styled.span`
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border-separator);
-  border-radius: 4px;
-  padding: 1px 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-top: 2px;
-`;
 
 const HealthDataNote = styled.div`
   font-size: 12px;
@@ -591,11 +531,6 @@ const SCORE_LABELS: Record<"green" | "yellow" | "red", string> = {
   red: "Critical",
 };
 
-const TREND_LABELS: Record<string, string> = {
-  improving: "↑ Improving",
-  degrading: "↓ Degrading",
-  stable: "→ Stable",
-};
 
 const CATEGORY_ORDER = ["cost", "schedule", "risk", "delivery"] as const;
 const CATEGORY_LABELS: Record<string, string> = {
@@ -609,7 +544,7 @@ function HealthTabContent({ project, connection }: { project: ProjectRow; connec
   const adapted = rowToProjectForHealth(project, connection);
   const result = buildHealthResult(adapted, account.healthConfig, connection, []);
 
-  const { compositeScore, forecastScore, trend, kpis } = result;
+  const { compositeScore, forecastScore, kpis } = result;
 
   const scoredScore = compositeScore as "green" | "yellow" | "red" | "unavailable";
   const forecasted = forecastScore as "green" | "yellow" | "red" | "unavailable";
@@ -622,23 +557,38 @@ function HealthTabContent({ project, connection }: { project: ProjectRow; connec
     {}
   );
 
+  const bannerVariant =
+    scoredScore === "red" ? "error" :
+    scoredScore === "yellow" ? "attention" : "info";
+  const bannerTitle =
+    scoredScore === "red" ? "Critical" :
+    scoredScore === "yellow" ? "At Risk" :
+    scoredScore === "green" ? "Healthy" : "No Data";
+
+  const flaggedKPIs = kpis.filter((k) => k.status === "red" || k.status === "yellow");
+  const bannerBody =
+    flaggedKPIs.length > 0
+      ? `${flaggedKPIs.length} KPI${flaggedKPIs.length > 1 ? "s are" : " is"} flagging issues: ${flaggedKPIs.map((k) => k.label).join(", ")}.`
+      : "All KPIs are on track.";
+
+  const forecastBannerBody =
+    forecasted !== "unavailable" && forecastScore !== compositeScore
+      ? `Forecast: ${SCORE_LABELS[forecasted as "green" | "yellow" | "red"]} — unresolved risks may impact this project's trajectory.`
+      : null;
+
   return (
     <div>
-      <HealthSummaryRow>
-        <HealthScoreBadge $score={scoredScore}>
-          <HealthScoreDot $score={scoredScore} />
-          {scoredScore !== "unavailable" ? SCORE_LABELS[scoredScore] : "No Data"}
-        </HealthScoreBadge>
-
-        {forecastScore !== compositeScore && (
-          <HealthMetaBadge>
-            Forecast: {forecasted !== "unavailable" ? SCORE_LABELS[forecasted as "green" | "yellow" | "red"] : "—"}
-          </HealthMetaBadge>
+      <HealthBannerWrap>
+        <Banner variant={bannerVariant}>
+          <Banner.Title>{bannerTitle}</Banner.Title>
+          <Banner.Body>{bannerBody}</Banner.Body>
+        </Banner>
+        {forecastBannerBody && (
+          <Banner variant="attention">
+            <Banner.Body>{forecastBannerBody}</Banner.Body>
+          </Banner>
         )}
-        <HealthMetaBadge>
-          {TREND_LABELS[trend] ?? "→ Stable"}
-        </HealthMetaBadge>
-      </HealthSummaryRow>
+      </HealthBannerWrap>
 
       {CATEGORY_ORDER.map((cat) => {
         const items = kpisByCategory[cat];
@@ -656,7 +606,7 @@ function HealthTabContent({ project, connection }: { project: ProjectRow; connec
                     <KPIReason key={i}>{reason}</KPIReason>
                   ))}
                 </KPIInfo>
-                <KPISourceTag>{kpi.sourceLabel}</KPISourceTag>
+                <Pill color="gray" style={{ fontSize: 10 }}>{kpi.sourceLabel}</Pill>
               </KPIRow>
             ))}
           </div>

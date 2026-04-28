@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Banner, Button, Pill, Tearsheet, Typography } from '@procore/core-react';
+import { Banner, Button, Pill, Select, Tearsheet, Typography } from '@procore/core-react';
 import { Check } from '@procore/core-icons';
 import styled, { createGlobalStyle } from 'styled-components';
 import type { CalcType, CustomKPICard, KPIThreshold, VisualizationMode } from '@/types/health';
@@ -16,7 +16,7 @@ import { useData } from '@/context/DataContext';
 
 const KPITearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .kpi-creation-wizard-root) {
-    flex: 0 0 50vw !important;
+    flex: 0 0 60vw !important;
   }
 `;
 
@@ -34,45 +34,61 @@ const WizardHeader = styled.div`
   flex-shrink: 0;
 `;
 
-const StepIndicator = styled.div`
+// ── Stepper — matches ConnectStepper pattern from ProjectEditTearsheet ─────────
+
+const StepperRow = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 24px;
+  align-items: flex-start;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--color-border-separator);
   flex-shrink: 0;
 `;
 
-const StepDot = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
+const StepItem = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+`;
+
+const StepCircle = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
   background: ${({ $state }) =>
     $state === 'done' ? 'var(--color-action-primary)' :
-    $state === 'active' ? 'var(--color-action-primary)' :
+    $state === 'active' ? 'var(--color-surface-primary)' :
     'var(--color-surface-secondary)'};
   color: ${({ $state }) =>
-    $state === 'done' || $state === 'active' ? '#fff' : 'var(--color-text-secondary)'};
+    $state === 'done' ? '#fff' :
+    $state === 'active' ? 'var(--color-action-primary)' :
+    'var(--color-text-disabled)'};
   border: 2px solid ${({ $state }) =>
     $state === 'pending' ? 'var(--color-border-default)' : 'var(--color-action-primary)'};
+`;
+
+const StepLabel = styled.div<{ $active: boolean }>`
+  font-size: 10px;
+  font-weight: ${({ $active }) => ($active ? 700 : 400)};
+  color: ${({ $active }) => ($active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)')};
+  white-space: nowrap;
+  text-align: center;
 `;
 
 const StepConnector = styled.div<{ $done: boolean }>`
   flex: 1;
   height: 2px;
   background: ${({ $done }) => $done ? 'var(--color-action-primary)' : 'var(--color-border-default)'};
+  margin-top: 14px; /* vertically align with center of 28px circle */
 `;
 
-const StepLabel = styled.div`
-  padding: 8px 0;
-  margin-left: 4px;
-`;
+// ── Rest of styled components ─────────────────────────────────────────────────
 
 const WizardBody = styled.div`
   flex: 1;
@@ -124,8 +140,19 @@ const TextInput = styled.input`
   &:focus { outline: 2px solid var(--color-border-focus); }
 `;
 
-const NumberInput = styled.input`
-  width: 80px;
+const ThresholdRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--color-surface-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-separator);
+  margin-bottom: 12px;
+`;
+
+const ThresholdNumberInput = styled.input`
+  width: 72px;
   padding: 6px 10px;
   border: 1px solid var(--color-border-default);
   border-radius: 4px;
@@ -136,21 +163,8 @@ const NumberInput = styled.input`
   &:focus { outline: 2px solid var(--color-border-focus); }
 `;
 
-const SelectInput = styled.select`
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-default);
-  border-radius: 4px;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  background: var(--color-surface-primary);
-  &:focus { outline: 2px solid var(--color-border-focus); }
-`;
-
-const ThresholdRow = styled.div`
-  display: grid;
-  grid-template-columns: auto 90px 90px;
-  align-items: center;
-  gap: 16px;
+const ThresholdLabel = styled.div`
+  flex: 1;
 `;
 
 const PreviewCard = styled.div`
@@ -197,6 +211,30 @@ const VIZ_MODES: { key: VisualizationMode; label: string; description: string }[
 ];
 
 const STEP_LABELS = ['Data Source', 'Calculation', 'Filters', 'Thresholds', 'Visualization', 'Name & Save'];
+
+// ── Filter select options ──────────────────────────────────────────────────────
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'open', label: 'Open only' },
+  { value: 'pending', label: 'Pending only' },
+  { value: 'overdue', label: 'Overdue only' },
+];
+
+const DATE_RANGE_OPTIONS = [
+  { value: 'all', label: 'All time' },
+  { value: 'last_7', label: 'Last 7 days' },
+  { value: 'last_30', label: 'Last 30 days' },
+  { value: 'last_90', label: 'Last 90 days' },
+  { value: 'current_period', label: 'Current period' },
+];
+
+const PROJECT_TYPE_OPTIONS = [
+  { value: 'all', label: 'All project types' },
+  { value: 'capital', label: 'Capital' },
+  { value: 'renovation', label: 'Renovation' },
+  { value: 'new_construction', label: 'New Construction' },
+];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -301,30 +339,24 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
             </Typography>
           </WizardHeader>
 
-          {/* Step progress */}
-          <StepIndicator>
+          {/* Step progress — matches ConnectStepper layout */}
+          <StepperRow>
             {STEP_LABELS.map((label, i) => {
               const num = i + 1;
-              const state = num < step ? 'done' : num === step ? 'active' : 'pending';
+              const state: 'done' | 'active' | 'pending' = num < step ? 'done' : num === step ? 'active' : 'pending';
               return (
                 <React.Fragment key={label}>
                   {i > 0 && <StepConnector $done={num <= step} />}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0' }}>
-                    <StepDot $state={state}>
+                  <StepItem>
+                    <StepCircle $state={state}>
                       {state === 'done' ? <Check size="sm" /> : num}
-                    </StepDot>
-                    {step === num && (
-                      <StepLabel>
-                        <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', fontSize: 10 }}>
-                          {label}
-                        </Typography>
-                      </StepLabel>
-                    )}
-                  </div>
+                    </StepCircle>
+                    <StepLabel $active={state === 'active'}>{label}</StepLabel>
+                  </StepItem>
                 </React.Fragment>
               );
             })}
-          </StepIndicator>
+          </StepperRow>
 
           {/* Body */}
           <WizardBody>
@@ -396,44 +428,52 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                   </Typography>
                 </div>
                 <FormField>
-                  <FieldLabel htmlFor="kpi-status">Status</FieldLabel>
-                  <SelectInput
-                    id="kpi-status"
-                    value={form.filterStatus}
-                    onChange={e => setForm(f => ({ ...f, filterStatus: e.target.value }))}
+                  <FieldLabel>Status</FieldLabel>
+                  <Select
+                    label={STATUS_OPTIONS.find(o => o.value === form.filterStatus)?.label ?? 'All statuses'}
+                    onSelect={({ item }) => {
+                      const opt = item as typeof STATUS_OPTIONS[0];
+                      setForm(f => ({ ...f, filterStatus: opt.value }));
+                    }}
                   >
-                    <option value="all">All statuses</option>
-                    <option value="open">Open only</option>
-                    <option value="pending">Pending only</option>
-                    <option value="overdue">Overdue only</option>
-                  </SelectInput>
+                    {STATUS_OPTIONS.map(opt => (
+                      <Select.Option key={opt.value} value={opt} selected={form.filterStatus === opt.value}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </FormField>
                 <FormField>
-                  <FieldLabel htmlFor="kpi-date">Date Range</FieldLabel>
-                  <SelectInput
-                    id="kpi-date"
-                    value={form.filterDateRange}
-                    onChange={e => setForm(f => ({ ...f, filterDateRange: e.target.value }))}
+                  <FieldLabel>Date Range</FieldLabel>
+                  <Select
+                    label={DATE_RANGE_OPTIONS.find(o => o.value === form.filterDateRange)?.label ?? 'All time'}
+                    onSelect={({ item }) => {
+                      const opt = item as typeof DATE_RANGE_OPTIONS[0];
+                      setForm(f => ({ ...f, filterDateRange: opt.value }));
+                    }}
                   >
-                    <option value="all">All time</option>
-                    <option value="last_7">Last 7 days</option>
-                    <option value="last_30">Last 30 days</option>
-                    <option value="last_90">Last 90 days</option>
-                    <option value="current_period">Current period</option>
-                  </SelectInput>
+                    {DATE_RANGE_OPTIONS.map(opt => (
+                      <Select.Option key={opt.value} value={opt} selected={form.filterDateRange === opt.value}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </FormField>
                 <FormField>
-                  <FieldLabel htmlFor="kpi-project-type">Project Type</FieldLabel>
-                  <SelectInput
-                    id="kpi-project-type"
-                    value={form.filterProjectType}
-                    onChange={e => setForm(f => ({ ...f, filterProjectType: e.target.value }))}
+                  <FieldLabel>Project Type</FieldLabel>
+                  <Select
+                    label={PROJECT_TYPE_OPTIONS.find(o => o.value === form.filterProjectType)?.label ?? 'All project types'}
+                    onSelect={({ item }) => {
+                      const opt = item as typeof PROJECT_TYPE_OPTIONS[0];
+                      setForm(f => ({ ...f, filterProjectType: opt.value }));
+                    }}
                   >
-                    <option value="all">All project types</option>
-                    <option value="capital">Capital</option>
-                    <option value="renovation">Renovation</option>
-                    <option value="new_construction">New Construction</option>
-                  </SelectInput>
+                    {PROJECT_TYPE_OPTIONS.map(opt => (
+                      <Select.Option key={opt.value} value={opt} selected={form.filterProjectType === opt.value}>
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </FormField>
               </>
             )}
@@ -454,10 +494,17 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                     </Banner.Body>
                   </Banner.Content>
                 </Banner>
-                <FormField>
+                <div>
                   <ThresholdRow>
-                    <FieldLabel style={{ marginBottom: 0 }}>Yellow (At Risk)</FieldLabel>
-                    <NumberInput
+                    <ThresholdLabel>
+                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>
+                        Yellow at
+                      </Typography>
+                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                        KPI turns At Risk
+                      </Typography>
+                    </ThresholdLabel>
+                    <ThresholdNumberInput
                       type="number"
                       min={0}
                       value={form.thresholdYellow}
@@ -466,11 +513,16 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                     />
                     <Pill color="yellow">At Risk</Pill>
                   </ThresholdRow>
-                </FormField>
-                <FormField>
                   <ThresholdRow>
-                    <FieldLabel style={{ marginBottom: 0 }}>Red (Critical)</FieldLabel>
-                    <NumberInput
+                    <ThresholdLabel>
+                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>
+                        Red at
+                      </Typography>
+                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                        KPI turns Critical
+                      </Typography>
+                    </ThresholdLabel>
+                    <ThresholdNumberInput
                       type="number"
                       min={0}
                       value={form.thresholdRed}
@@ -479,7 +531,7 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                     />
                     <Pill color="red">Critical</Pill>
                   </ThresholdRow>
-                </FormField>
+                </div>
               </>
             )}
 

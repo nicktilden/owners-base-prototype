@@ -14,16 +14,19 @@ import {
   Button,
   DetailPage,
   H1,
+  Modal,
   Pill,
+  Select,
   Switch,
   Table,
   Tabs,
   Title,
   Toast,
   ToolLandingPage,
+  Tooltip,
   Typography,
 } from '@procore/core-react';
-import { Pencil, Plus, Trash, Warning } from '@procore/core-icons';
+import { Info, Pencil, Plus, Trash, Warning } from '@procore/core-icons';
 import styled from 'styled-components';
 import { KPI_LABELS, KPI_CATEGORY_MAP, DEFAULT_THRESHOLDS } from '@/types/health';
 import type { KPIKey, KPIThreshold, AccountHealthConfig, RiskType, RiskTypeCategory } from '@/types/health';
@@ -113,6 +116,175 @@ const KPIStatusDot = styled.span<{ $active: boolean }>`
   flex-shrink: 0;
 `;
 
+// ── Linked KPI text-link ───────────────────────────────────────────────────────
+
+const KPILinkButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-action-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover { color: var(--color-action-primary-hover, var(--color-action-primary)); }
+`;
+
+// ── Column header with tooltip ─────────────────────────────────────────────────
+
+const HeaderWithTooltip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+`;
+
+// ── Onboarding modal ──────────────────────────────────────────────────────────
+
+const OnboardingStep = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const OnboardingStepNav = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+`;
+
+const OnboardingDot = styled.span<{ $active: boolean }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${({ $active }) => $active ? 'var(--color-action-primary)' : 'var(--color-border-separator)'};
+  transition: background 0.15s;
+`;
+
+const ONBOARDING_STEPS = [
+  {
+    title: 'What is Health & Risk?',
+    body: (
+      <OnboardingStep>
+        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+          Health &amp; Risk gives you a real-time view of project and portfolio health by automatically scoring each project across key dimensions — cost, schedule, delivery, and risk.
+        </Typography>
+        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+          Each project receives a composite health score (Green, Yellow, or Red) based on how its KPIs compare to the thresholds you configure. You can see these scores on the Portfolio Hub, the Portfolio Health page, and each project's detail view.
+        </Typography>
+        <Banner variant="info">
+          <Banner.Content>
+            <Banner.Title>Designed for owners</Banner.Title>
+            <Banner.Body>The Health &amp; Risk framework is built around the metrics that matter most to project owners — financial exposure, milestone delivery, and unmitigated risk.</Banner.Body>
+          </Banner.Content>
+        </Banner>
+      </OnboardingStep>
+    ),
+  },
+  {
+    title: 'Risk Types & KPIs',
+    body: (
+      <OnboardingStep>
+        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+          <strong style={{ color: 'var(--color-text-primary)' }}>Risk Types</strong> define the categories of risk on your projects — financial, schedule, safety, regulatory, and more. Each risk type can be linked to specific data sources (e.g. Budget, RFIs) and to KPIs that measure that risk.
+        </Typography>
+        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+          <strong style={{ color: 'var(--color-text-primary)' }}>KPIs (Key Performance Indicators)</strong> are the specific metrics used to calculate health scores. Examples include Budget Variance %, Schedule Days Behind, and Open Risk Count. You can configure thresholds and weights to reflect your organization's priorities.
+        </Typography>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
+          <div style={{ padding: 12, background: 'var(--color-surface-secondary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
+            <Typography intent="small" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block', marginBottom: 4 }}>Risk Types</Typography>
+            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>Categorize project risks and link them to data sources &amp; KPIs</Typography>
+          </div>
+          <div style={{ padding: 12, background: 'var(--color-surface-secondary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
+            <Typography intent="small" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block', marginBottom: 4 }}>KPIs</Typography>
+            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>Measurable indicators with yellow/red thresholds that drive health scores</Typography>
+          </div>
+        </div>
+      </OnboardingStep>
+    ),
+  },
+  {
+    title: 'Getting Started',
+    body: (
+      <OnboardingStep>
+        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+          Follow these steps to set up Health &amp; Risk for your organization:
+        </Typography>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[
+            { num: '1', label: 'Review Risk Types', desc: 'Check the default risk types and edit or create new ones to match your business.' },
+            { num: '2', label: 'Configure KPIs', desc: 'Toggle KPIs on/off, set yellow and red thresholds, and assign weights that reflect your priorities.' },
+            { num: '3', label: 'Set Portfolio Scope', desc: 'Choose which projects are included in the portfolio health score.' },
+            { num: '4', label: 'Review on the Hub', desc: 'Visit the Portfolio Hub → Health & Risk tab to see health scores across all your projects.' },
+          ].map(step => (
+            <div key={step.num} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--color-action-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                {step.num}
+              </div>
+              <div>
+                <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>{step.label}</Typography>
+                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>{step.desc}</Typography>
+              </div>
+            </div>
+          ))}
+        </div>
+      </OnboardingStep>
+    ),
+  },
+] as const;
+
+function HealthRiskOnboardingModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [step, setStep] = useState(0);
+  const total = ONBOARDING_STEPS.length;
+  const current = ONBOARDING_STEPS[step];
+
+  function handleClose() {
+    setStep(0);
+    onClose();
+  }
+
+  return (
+    <Modal open={open} onClose={handleClose} aria-label="Health & Risk framework overview" style={{ width: 600 }}>
+      <Modal.Header onClose={handleClose}>
+        {current.title}
+      </Modal.Header>
+      <Modal.Body>
+        <OnboardingStepNav>
+          {ONBOARDING_STEPS.map((_, i) => (
+            <OnboardingDot key={i} $active={i === step} />
+          ))}
+          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
+            Step {step + 1} of {total}
+          </Typography>
+        </OnboardingStepNav>
+        {current.body}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="tertiary" className="b_tertiary" onClick={handleClose}>
+          Close
+        </Button>
+        {step > 0 && (
+          <Button variant="secondary" className="b_secondary" onClick={() => setStep(s => s - 1)}>
+            Back
+          </Button>
+        )}
+        {step < total - 1 ? (
+          <Button variant="primary" className="b_primary" onClick={() => setStep(s => s + 1)}>
+            Next
+          </Button>
+        ) : (
+          <Button variant="primary" className="b_primary" onClick={handleClose}>
+            Get Started
+          </Button>
+        )}
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
 // ─── Category pill color maps ──────────────────────────────────────────────────
 // Only use pill colors already established in this project: blue, gray, green, red, yellow, cyan, magenta
 
@@ -189,6 +361,31 @@ const KPI_CALC_LABELS: Record<KPIKey, string> = {
   openRiskCount:        'Count',
 };
 
+// Available calc type options per KPI (simplified — use single option per KPI for now)
+const CALC_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Variance %',        label: 'Variance %' },
+  { value: 'Remaining %',       label: 'Remaining %' },
+  { value: 'Count',             label: 'Count' },
+  { value: 'Days Behind',       label: 'Days Behind' },
+  { value: 'On-Time %',         label: 'On-Time %' },
+  { value: 'Count (High-Prob)', label: 'Count (High-Prob)' },
+  { value: 'Overdue Count',     label: 'Overdue Count' },
+  { value: 'Overdue Days',      label: 'Overdue Days' },
+  { value: 'Average (1–5)',     label: 'Average (1–5)' },
+  { value: 'Sum ($M)',          label: 'Sum ($M)' },
+];
+
+const KPI_COLUMN_TOOLTIPS: { header: string; tooltip: string }[] = [
+  { header: 'KPI',               tooltip: 'Name of the key performance indicator' },
+  { header: 'Category',          tooltip: 'Health category this KPI belongs to' },
+  { header: 'Calc Type',         tooltip: 'How the KPI value is derived from source data' },
+  { header: 'Active',            tooltip: 'Toggle to include or exclude from portfolio health scoring' },
+  { header: 'Yellow at',         tooltip: 'Threshold value that turns the KPI yellow (At Risk)' },
+  { header: 'Red at',            tooltip: 'Threshold value that turns the KPI red (Critical)' },
+  { header: 'Weight',            tooltip: 'Relative importance of this KPI in the composite health score (higher = more impact)' },
+  { header: 'Linked Risk Types', tooltip: 'Risk types that use this KPI as a contributing factor' },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildInitialThresholds(config: AccountHealthConfig): Record<KPIKey, KPIThreshold> {
@@ -212,6 +409,7 @@ export default function HealthRiskSettingsContent() {
   const config = data.account?.healthConfig;
   const [activeTab, setActiveTab] = useState<SettingsTab>('Risk Types');
   const [showToast, setShowToast] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   // ── KPIs tab state
   const [activeKPIs, setActiveKPIs] = useState<Set<KPIKey>>(
@@ -222,6 +420,13 @@ export default function HealthRiskSettingsContent() {
   );
   const [kpiWeights, setKpiWeights] = useState<Partial<Record<KPIKey, number>>>(
     () => config ? buildInitialWeights(config) : {}
+  );
+  const [calcTypes, setCalcTypes] = useState<Partial<Record<KPIKey, string>>>(
+    () => {
+      const init: Partial<Record<KPIKey, string>> = {};
+      (Object.keys(KPI_CALC_LABELS) as KPIKey[]).forEach(k => { init[k] = KPI_CALC_LABELS[k]; });
+      return init;
+    }
   );
 
   // ── Risk Types state
@@ -322,6 +527,18 @@ export default function HealthRiskSettingsContent() {
                     </H1>
                   </Title.Text>
                   <Title.Actions>
+                    {/* Onboarding guide — always visible */}
+                    <Tooltip trigger="hover" placement="bottom" overlay={<Tooltip.Content>Learn how Health &amp; Risk works</Tooltip.Content>}>
+                      <Button
+                        variant="tertiary"
+                        className="b_tertiary"
+                        icon={<Info size="sm" />}
+                        aria-label="Learn how Health & Risk works"
+                        onClick={() => setOnboardingOpen(true)}
+                      >
+                        How it works
+                      </Button>
+                    </Tooltip>
                     {activeTab === 'Risk Types' && (
                       <Button
                         variant="primary"
@@ -389,6 +606,7 @@ export default function HealthRiskSettingsContent() {
                                 ? sources.join(', ')
                                 : `${sources.slice(0, 2).join(', ')} +${sources.length - 2}`;
                               const kpiCount = rt.linkedKpiKeys.length;
+                              const linkedKPINames = rt.linkedKpiKeys.map(k => KPI_LABELS[k]).filter(Boolean);
 
                               return (
                                 <Table.BodyRow key={rt.id}>
@@ -411,9 +629,32 @@ export default function HealthRiskSettingsContent() {
                                     </span>
                                   </Table.BodyCell>
                                   <Table.BodyCell>
-                                    <span style={{ color: kpiCount === 0 ? 'var(--color-text-disabled)' : 'var(--color-text-secondary)', fontSize: 13 }}>
-                                      {kpiCount === 0 ? '—' : `${kpiCount} KPI${kpiCount !== 1 ? 's' : ''}`}
-                                    </span>
+                                    {kpiCount === 0 ? (
+                                      <span style={{ color: 'var(--color-text-disabled)', fontSize: 13 }}>—</span>
+                                    ) : (
+                                      <Tooltip
+                                        trigger="hover"
+                                        placement="top"
+                                        overlay={
+                                          <Tooltip.Content>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+                                              <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: 4 }}>
+                                                Linked KPIs
+                                              </Typography>
+                                              {linkedKPINames.map((name, i) => (
+                                                <Typography key={i} intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                                                  • {name}
+                                                </Typography>
+                                              ))}
+                                            </div>
+                                          </Tooltip.Content>
+                                        }
+                                      >
+                                        <KPILinkButton type="button" aria-label={`View ${kpiCount} linked KPI${kpiCount !== 1 ? 's' : ''}`}>
+                                          {kpiCount} KPI{kpiCount !== 1 ? 's' : ''}
+                                        </KPILinkButton>
+                                      </Tooltip>
+                                    )}
                                   </Table.BodyCell>
                                   <Table.BodyCell>
                                     <Switch
@@ -423,7 +664,7 @@ export default function HealthRiskSettingsContent() {
                                     />
                                   </Table.BodyCell>
                                   <Table.BodyCell>
-                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 13, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 13, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', maxWidth: 300 }}>
                                       {rt.description || '—'}
                                     </span>
                                   </Table.BodyCell>
@@ -472,14 +713,22 @@ export default function HealthRiskSettingsContent() {
                           <Table>
                             <Table.Header>
                               <Table.HeaderRow>
-                                <Table.HeaderCell>KPI</Table.HeaderCell>
-                                <Table.HeaderCell>Category</Table.HeaderCell>
-                                <Table.HeaderCell>Calc Type</Table.HeaderCell>
-                                <Table.HeaderCell>Active</Table.HeaderCell>
-                                <Table.HeaderCell>Yellow at</Table.HeaderCell>
-                                <Table.HeaderCell>Red at</Table.HeaderCell>
-                                <Table.HeaderCell>Weight</Table.HeaderCell>
-                                <Table.HeaderCell>Linked Risk Types</Table.HeaderCell>
+                                {KPI_COLUMN_TOOLTIPS.map(({ header, tooltip }) => (
+                                  <Table.HeaderCell key={header}>
+                                    <HeaderWithTooltip>
+                                      {header}
+                                      <Tooltip
+                                        trigger="hover"
+                                        placement="top"
+                                        overlay={<Tooltip.Content><div style={{ maxWidth: 200, whiteSpace: 'normal' }}>{tooltip}</div></Tooltip.Content>}
+                                      >
+                                        <span style={{ display: 'inline-flex', color: 'var(--color-text-secondary)', cursor: 'help' }}>
+                                          <Info size="sm" />
+                                        </span>
+                                      </Tooltip>
+                                    </HeaderWithTooltip>
+                                  </Table.HeaderCell>
+                                ))}
                               </Table.HeaderRow>
                             </Table.Header>
                             <Table.Body>
@@ -490,6 +739,8 @@ export default function HealthRiskSettingsContent() {
                                 const linked = riskTypes
                                   .filter(rt => rt.linkedKpiKeys.includes(key))
                                   .map(rt => rt.label);
+                                const currentCalcType = calcTypes[key] ?? KPI_CALC_LABELS[key];
+                                const calcOption = CALC_TYPE_OPTIONS.find(o => o.value === currentCalcType) ?? CALC_TYPE_OPTIONS[0];
 
                                 return (
                                   <Table.BodyRow key={key} style={{ opacity: isActive ? 1 : 0.5 }}>
@@ -505,9 +756,25 @@ export default function HealthRiskSettingsContent() {
                                       </Pill>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
-                                      <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                                        {KPI_CALC_LABELS[key]}
-                                      </span>
+                                      <div style={{ minWidth: 140 }}>
+                                        <Select
+                                          label={calcOption.label}
+                                          onSelect={({ item }) => {
+                                            const opt = item as typeof CALC_TYPE_OPTIONS[0];
+                                            setCalcTypes(prev => ({ ...prev, [key]: opt.value }));
+                                          }}
+                                        >
+                                          {CALC_TYPE_OPTIONS.map(opt => (
+                                            <Select.Option
+                                              key={opt.value}
+                                              value={opt}
+                                              selected={currentCalcType === opt.value}
+                                            >
+                                              {opt.label}
+                                            </Select.Option>
+                                          ))}
+                                        </Select>
+                                      </div>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
                                       <Switch
@@ -531,7 +798,6 @@ export default function HealthRiskSettingsContent() {
                                           [key]: { ...prev[key], yellow: Number(e.target.value) },
                                         }))}
                                         aria-label={`Yellow threshold for ${KPI_LABELS[key]}`}
-                                        style={{ borderColor: 'var(--color-yellow-400, #facc15)' }}
                                       />
                                     </Table.BodyCell>
                                     <Table.BodyCell>
@@ -543,7 +809,6 @@ export default function HealthRiskSettingsContent() {
                                           [key]: { ...prev[key], red: Number(e.target.value) },
                                         }))}
                                         aria-label={`Red threshold for ${KPI_LABELS[key]}`}
-                                        style={{ borderColor: 'var(--color-red-400, #f87171)' }}
                                       />
                                     </Table.BodyCell>
                                     <Table.BodyCell>
@@ -575,6 +840,9 @@ export default function HealthRiskSettingsContent() {
                               setThresholds(buildInitialThresholds(config));
                               setKpiWeights(buildInitialWeights(config));
                               setActiveKPIs(new Set(config.activeKPIs));
+                              const init: Partial<Record<KPIKey, string>> = {};
+                              (Object.keys(KPI_CALC_LABELS) as KPIKey[]).forEach(k => { init[k] = KPI_CALC_LABELS[k]; });
+                              setCalcTypes(init);
                             }
                           }}>
                             Reset
@@ -593,16 +861,24 @@ export default function HealthRiskSettingsContent() {
                   <TabBody>
                     <DetailPage.Card>
                       <DetailPage.Section heading="Portfolio Scope">
-                        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 20, display: 'block' }}>
+                        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
                           Choose which projects are included in the portfolio health score. By default, all active projects are included.
                         </Typography>
+                        <Banner variant="info" style={{ marginBottom: 20 }}>
+                          <Banner.Content>
+                            <Banner.Title>Project-level and user-level scoping</Banner.Title>
+                            <Banner.Body>
+                              Project managers can configure health scoring preferences per project. Individual users can also choose which health cards to display on their home hub. These controls are coming soon.
+                            </Banner.Body>
+                          </Banner.Content>
+                        </Banner>
                         <FormRow>
                           <FormLabel>
                             <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
                               Include all active projects
                             </Typography>
                             <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-                              Automatically includes all projects with status "Active" in the portfolio health score.
+                              Automatically includes all projects with status &ldquo;Active&rdquo; in the portfolio health score.
                             </Typography>
                           </FormLabel>
                           <Switch checked aria-label="Include all active projects" onChange={() => {}} />
@@ -610,13 +886,13 @@ export default function HealthRiskSettingsContent() {
                         <FormRow>
                           <FormLabel>
                             <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                              Include on-hold projects
+                              Exclude completed projects
                             </Typography>
                             <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-                              On-hold projects are included in the score but flagged with a hold indicator.
+                              Projects marked as complete are excluded from the portfolio health score.
                             </Typography>
                           </FormLabel>
-                          <Switch checked={false} aria-label="Include on-hold projects" onChange={() => {}} />
+                          <Switch checked aria-label="Exclude completed projects" onChange={() => {}} />
                         </FormRow>
                         <FormRow>
                           <FormLabel>
@@ -629,14 +905,28 @@ export default function HealthRiskSettingsContent() {
                           </FormLabel>
                           <Switch checked={false} aria-label="Allow project-level overrides" onChange={() => {}} />
                         </FormRow>
-                        <Banner variant="info" style={{ marginTop: 16 }}>
-                          <Banner.Content>
-                            <Banner.Title>Project-level and user-level scoping</Banner.Title>
-                            <Banner.Body>
-                              Project managers can configure health scoring preferences per project. Individual users can also choose which health cards to display on their home hub. These controls are coming soon.
-                            </Banner.Body>
-                          </Banner.Content>
-                        </Banner>
+                        <FormRow>
+                          <FormLabel>
+                            <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                              Minimum project value threshold
+                            </Typography>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                              Only include projects above a minimum contract value in the portfolio score.
+                            </Typography>
+                          </FormLabel>
+                          <Switch checked={false} aria-label="Minimum project value threshold" onChange={() => {}} />
+                        </FormRow>
+                        <FormRow>
+                          <FormLabel>
+                            <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                              Limit by region
+                            </Typography>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                              Limit portfolio health score to projects within specific regions. When enabled, configure included regions in the filter below.
+                            </Typography>
+                          </FormLabel>
+                          <Switch checked={false} aria-label="Limit portfolio health by region" onChange={() => {}} />
+                        </FormRow>
                         <SaveBar>
                           <Button variant="primary" className="b_primary">Save Changes</Button>
                         </SaveBar>
@@ -661,6 +951,9 @@ export default function HealthRiskSettingsContent() {
           </Toast>
         </ToastContainer>
       )}
+
+      {/* ── Onboarding modal ── */}
+      <HealthRiskOnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
 
       {/* ── Risk Type Tearsheet ── */}
       <RiskTypeTearsheet

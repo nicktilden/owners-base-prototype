@@ -27,9 +27,9 @@ import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
 import HubFilterBar from "@/components/HubFilterBar";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
-import CostHealthCard from "@/components/health/cards/CostHealthCard";
-import ScheduleHealthCard from "@/components/health/cards/ScheduleHealthCard";
-import DeliveryRiskCard from "@/components/health/cards/DeliveryRiskCard";
+import TopRiskProjectsCard from "@/components/health/cards/TopRiskProjectsCard";
+import PortfolioRiskGaugeCard from "@/components/health/cards/PortfolioRiskGaugeCard";
+import HealthKPIGridCard from "@/components/health/cards/HealthKPIGridCard";
 import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
 
 const tabs = ["My Work", "Portfolio Performance", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
@@ -264,19 +264,16 @@ function HomeContentInner() {
             )}
             {activeTab === "Health & Risk" && (
               <HubsContentLayout>
-                {isCardVisible("Health & Risk", "Portfolio Health") || isCardVisible("Health & Risk", "Risk Register") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Health & Risk", "Portfolio Health") && <HealthSummaryCard scope="portfolio" />}
-                    {isCardVisible("Health & Risk", "Risk Register") && <RiskRegisterCard scope="portfolio" />}
-                  </HubsContentLayout.Row>
-                ) : null}
-                {isCardVisible("Health & Risk", "Cost Health") || isCardVisible("Health & Risk", "Schedule Health") || isCardVisible("Health & Risk", "Delivery Risk") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Health & Risk", "Cost Health") && <CostHealthCard scope="portfolio" />}
-                    {isCardVisible("Health & Risk", "Schedule Health") && <ScheduleHealthCard scope="portfolio" />}
-                    {isCardVisible("Health & Risk", "Delivery Risk") && <DeliveryRiskCard scope="portfolio" />}
-                  </HubsContentLayout.Row>
-                ) : null}
+                <HubsContentLayout.Row variant="table">
+                  <HealthSummaryCard scope="portfolio" />
+                </HubsContentLayout.Row>
+                <HubsContentLayout.Row columnsTemplate="2fr 1fr">
+                  <TopRiskProjectsCard />
+                  <PortfolioRiskGaugeCard />
+                </HubsContentLayout.Row>
+                <HubsContentLayout.Row variant="table">
+                  <HealthKPIGridCard />
+                </HubsContentLayout.Row>
               </HubsContentLayout>
             )}
             {activeTab === "Portfolio Performance" && (

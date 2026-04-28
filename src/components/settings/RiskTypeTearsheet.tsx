@@ -28,8 +28,15 @@ const SectionCard = styled(Card)`
 
 const CheckboxGrid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+  align-items: start;
+
+  /* Normalize left spacing so both columns flush-align */
+  & > * {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
 `;
 
 const FieldLabel = styled.label`
