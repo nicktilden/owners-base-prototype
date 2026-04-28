@@ -13,6 +13,7 @@ import { DataProvider, useData } from '@/context/DataContext';
 import { AiPanelProvider } from '@/context/AiPanelContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { HubLoadingProvider } from '@/context/HubLoadingContext';
+import { HeaderActionsProvider } from '@/context/HeaderActionsContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
@@ -93,6 +94,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
           <LevelProvider>
             <ConnectionProvider>
               <AiPanelProvider>
+                <HeaderActionsProvider>
                 <HubLoadingProvider>
                   <TearsheetAnimationOverride />
                   <SeedLoader>
@@ -101,6 +103,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
                     <DevResetButton />
                   </SeedLoader>
                 </HubLoadingProvider>
+                </HeaderActionsProvider>
               </AiPanelProvider>
             </ConnectionProvider>
           </LevelProvider>

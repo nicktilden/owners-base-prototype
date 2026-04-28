@@ -18,10 +18,8 @@ const Row = styled.div<{ $clickable?: boolean }>`
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--color-border-separator);
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
   &:hover { background: ${({ $clickable }) => ($clickable ? 'var(--color-surface-hover)' : 'transparent')}; }
-  &:last-child { border-bottom: none; }
 `;
 
 const StatusCol = styled.div`

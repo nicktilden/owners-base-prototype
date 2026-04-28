@@ -454,9 +454,16 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
               title="There Are No KPIs to Display Right Now"
               body="The Risk Scorecard tool helps your team monitor project health. Once you select KPIs to track, you can access them here."
               actions={
-                <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
-                  Configure Scorecard
-                </Button>
+                <>
+                  <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
+                    Configure Scorecard
+                  </Button>
+                  <Link href="/settings/health-risk">
+                    <Button variant="tertiary" size="sm">
+                      Account Settings
+                    </Button>
+                  </Link>
+                </>
               }
             />
           : <KPICenterWrap>

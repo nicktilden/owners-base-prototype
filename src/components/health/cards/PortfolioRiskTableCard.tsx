@@ -232,7 +232,6 @@ export default function PortfolioRiskTableCard() {
       event.api.applyColumnState({
         state: [
           { colId: 'program', rowGroup: true, rowGroupIndex: 0, hide: true },
-          { colId: 'stage', width: 420 },
           { colId: 'name', width: 300 },
         ],
       });

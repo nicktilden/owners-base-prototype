@@ -231,22 +231,22 @@ export default function HealthDetailTearsheet({
                         </Typography>
                       </div>
                     </SectionHeading>
-                    <Box style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
                       {(['cost', 'schedule', 'delivery', 'risk'] as KPICategory[]).map(cat => {
                         const catKPIs = result.kpis.filter(k => k.category === cat);
                         const worstStatus = catKPIs.some(k => k.status === 'red') ? 'red' : catKPIs.some(k => k.status === 'yellow') ? 'yellow' : 'green';
                         return (
-                          <Box key={cat} style={{ flex: 1, minWidth: 100, padding: 12, background: 'var(--color-surface-secondary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
-                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+                          <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, background: 'var(--color-surface-secondary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
                               {CATEGORY_LABELS[cat]}
                             </Typography>
                             <Pill color={worstStatus === 'red' ? 'red' : worstStatus === 'yellow' ? 'yellow' : 'green'}>
                               {worstStatus === 'red' ? 'Critical' : worstStatus === 'yellow' ? 'At Risk' : 'Good'}
                             </Pill>
-                          </Box>
+                          </div>
                         );
                       })}
-                    </Box>
+                    </div>
                   </Section>
 
                   <Section>
@@ -283,16 +283,14 @@ export default function HealthDetailTearsheet({
                     if (catKPIs.length === 0) return null;
                     return (
                       <Section key={cat}>
-                        <CategoryLabel>
-                          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-                            {CATEGORY_LABELS[cat]}
-                          </Typography>
-                        </CategoryLabel>
+                        <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
+                          {CATEGORY_LABELS[cat]}
+                        </Typography>
                         {catKPIs.map(kpi => (
-                          <Box key={kpi.key}>
+                          <div key={kpi.key} style={{ borderBottom: '1px solid var(--color-border-separator)' }}>
                             <KPIRow kpi={kpi} showReasons showSource />
                             {kpi.status !== 'green' && kpi.status !== 'unavailable' && (
-                              <Box style={{ display: 'flex', gap: 8, paddingBottom: 8 }}>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 10 }}>
                                 <Button
                                   size="sm"
                                   variant="secondary"
@@ -302,9 +300,9 @@ export default function HealthDetailTearsheet({
                                 >
                                   {acknowledgedKPIs.has(kpi.key) ? 'Acknowledged' : 'Acknowledge'}
                                 </Button>
-                              </Box>
+                              </div>
                             )}
-                          </Box>
+                          </div>
                         ))}
                       </Section>
                     );
@@ -342,13 +340,9 @@ export default function HealthDetailTearsheet({
                                   {risk.status.charAt(0).toUpperCase() + risk.status.slice(1)}
                                 </Pill>
                                 {risk.origin === 'promoted' ? (
-                                  <Pill color="green" style={{ fontSize: 10 }}>
-                                    <Connect size="sm" /> Auto
-                                  </Pill>
+                                  <Pill color="green" style={{ fontSize: 10 }}>Auto</Pill>
                                 ) : (
-                                  <Pill color="blue" style={{ fontSize: 10 }}>
-                                    <Person size="sm" /> Manual
-                                  </Pill>
+                                  <Pill color="blue" style={{ fontSize: 10 }}>Manual</Pill>
                                 )}
                               </Box>
                               <Typography intent="small" style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>

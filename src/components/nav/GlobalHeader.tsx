@@ -207,25 +207,17 @@ const AiButton = styled.button`
   align-items: center;
   gap: 6px;
   background: var(--color-nav-surface);
-  border: none;
+  border: 2px solid #FF5100;
   color: var(--color-nav-text);
   cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
   flex-shrink: 0;
-  transition: background 0.15s;
-  position: relative;
-  isolation: isolate;
+  transition: background 0.15s, border-color 0.15s;
 
-  &:hover { background: var(--color-nav-surface-hover); }
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #FF5100, #FF7433);
-    z-index: -1;
+  &:hover {
+    background: var(--color-nav-surface-hover);
+    border-color: #FF7433;
   }
 `;
 

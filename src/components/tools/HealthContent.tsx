@@ -14,8 +14,8 @@
 
 import React, { useMemo, useCallback, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Button, Card, Modal, Page, Pill, Search, Select, Tabs, TextArea, TextInput, ToggleButton, Tooltip, Tearsheet, Typography } from '@procore/core-react';
-import { Clear, Cog, Filter, Grip, Info, Plus, Sliders } from '@procore/core-icons';
+import { Button, Card, Modal, Page, Pill, Search, Select, Tabs, TextArea, TextInput, ToggleButton, Tooltip, Tearsheet, Typography, colors } from '@procore/core-react';
+import { Clear, Cog, Copilot, Filter, Grip, Info, Plus, Sliders } from '@procore/core-icons';
 import styled, { createGlobalStyle } from 'styled-components';
 import type { GridApi } from 'ag-grid-community';
 import ToolPageLayout from './ToolPageLayout';
@@ -26,10 +26,17 @@ import CostHealthCard from '@/components/health/cards/CostHealthCard';
 import ScheduleHealthCard from '@/components/health/cards/ScheduleHealthCard';
 import DeliveryRiskCard from '@/components/health/cards/DeliveryRiskCard';
 import RiskRegisterCard from '@/components/health/cards/RiskRegisterCard';
+import RiskTrendCard from '@/components/health/cards/RiskTrendCard';
+import HubCardFrame, { HubCardEmptyState } from '@/components/hubs/HubCardFrame';
 import KPIPill from '@/components/KPIPill';
 import { SmartGridWrapper } from '@/components/SmartGrid';
-import type { RiskGridRow } from '@/components/SmartGrid/riskColumnDefs';
+import type { RiskGridRow, RiskGridContext } from '@/components/SmartGrid/riskColumnDefs';
 import { riskColumnDefs } from '@/components/SmartGrid/riskColumnDefs';
+import RiskTitleCellRenderer from '@/components/SmartGrid/RiskTitleCellRenderer';
+import RiskStatusCellRenderer from '@/components/SmartGrid/RiskStatusCellRenderer';
+import RiskScoreCellRenderer from '@/components/SmartGrid/RiskScoreCellRenderer';
+import RiskRatingCellRenderer from '@/components/SmartGrid/RiskRatingCellRenderer';
+import { users } from '@/data/seed/users';
 import { buildHealthResult, resolveKPIs } from '@/utils/healthEngine';
 import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
@@ -118,10 +125,17 @@ const HeaderCell = styled(Typography)`
 
 // ── Project KPI Scorecard ──────────────────────────────────────────────────────
 
+const KPICenterWrap = styled.div`
+  height: 100%;
+  display: flex;
+  align-items: center;
+`;
+
 const ScorecardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+  width: 100%;
 `;
 
 const KPITile = styled.button`
@@ -129,42 +143,75 @@ const KPITile = styled.button`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--color-border-separator);
   border-radius: 8px;
   background: var(--color-surface-card);
   text-align: left;
-  cursor: default;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  &:hover { border-color: var(--color-action-primary); }
+  &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 `;
 
-const KPITileLabel = styled.div`
+const KPITitleRow = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+`;
+
+const MetricValue = styled.div`
+  font-size: 24px;
   font-weight: 500;
-  color: var(--color-text-secondary);
-  line-height: 1.3;
-`;
-
-const KPITileValue = styled.div`
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   color: var(--color-text-primary);
-  letter-spacing: 0.1px;
+  letter-spacing: 0.15px;
 `;
 
-const ScorecardCard = styled(Card)`
-  padding: 20px;
-  background: var(--color-surface-primary);
-`;
-
-const ScorecardHeader = styled.div`
+const TrendRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+  gap: 6px;
+`;
+
+const ScorecardTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .project-scorecard-tearsheet-root) {
+    flex: 0 0 480px !important;
+  }
+`;
+
+const RiskDetailTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .risk-detail-tearsheet-root) {
+    flex: 0 0 60vw !important;
+  }
+`;
+
+const TearsheetHeader = styled.div`
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--color-border-separator);
+`;
+
+const TearsheetBody = styled.div`
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+`;
+
+const SectionTitle = styled.div`
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  margin-top: 24px;
+  &:first-child { margin-top: 0; }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const GridCard = styled(Card)`
@@ -284,15 +331,6 @@ const SettingsBannerText = styled.div`
   min-width: 0;
 `;
 
-const EmptyStateWrap = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px;
-  gap: 12px;
-  text-align: center;
-`;
 
 const GridCardHeader = styled.div`
   display: flex;
@@ -717,7 +755,7 @@ function CreateRiskRecordTearsheet({ open, projectId, onClose, onSave }: CreateR
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function toRiskGridRow(r: Risk): RiskGridRow {
+function toRiskGridRow(r: Risk, assignedTo = ''): RiskGridRow {
   return {
     id:               r.id,
     title:            r.title,
@@ -732,6 +770,7 @@ function toRiskGridRow(r: Risk): RiskGridRow {
     origin:           r.origin,
     dueDate:          r.dueDate ?? '',
     description:      r.description,
+    assignedTo,
   };
 }
 
@@ -744,9 +783,10 @@ interface RiskGridProps {
   searchPlaceholder: string;
   emptyLabel: string;
   title: string;
+  onOpenRisk?: (id: string) => void;
 }
 
-function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel, title }: RiskGridProps) {
+function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel, title, onOpenRisk }: RiskGridProps) {
   const gridApiRef = useRef<GridApi<RiskGridRow> | null>(null);
   const [searchText, setSearchText] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -860,6 +900,16 @@ function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel
           rowData={rows}
           columnDefs={riskColumnDefs}
           getRowId={(p) => p.data.id}
+          components={{
+            riskTitleCellRenderer: RiskTitleCellRenderer,
+            riskStatusCellRenderer: RiskStatusCellRenderer,
+            riskScoreCellRenderer: RiskScoreCellRenderer,
+            riskProbabilityCellRenderer: (p: Parameters<typeof RiskRatingCellRenderer>[0]) =>
+              RiskRatingCellRenderer({ ...p, prefix: 'P' }),
+            riskImpactCellRenderer: (p: Parameters<typeof RiskRatingCellRenderer>[0]) =>
+              RiskRatingCellRenderer({ ...p, prefix: 'I' }),
+          }}
+          context={{ onOpenRisk } as RiskGridContext}
           groupDisplayType="groupRows"
           autoGroupColumnDef={{ headerName: 'Risk Title', minWidth: 220 }}
           sideBar={filtersOpen ? {
@@ -896,9 +946,10 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
   const { data } = useData();
   const config = data.account?.healthConfig;
 
-  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>([]);
+  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>(['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']);
   const [configOpen, setConfigOpen] = useState(false);
   const [draftIds, setDraftIds] = useState<KPIKey[]>([]);
+  const [selectedKPIKey, setSelectedKPIKey] = useState<KPIKey | null>(null);
   const dragIndexRef = useRef<number | null>(null);
 
   // Resolve all KPIs for this project
@@ -964,74 +1015,105 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
     dragIndexRef.current = null;
   }
 
+  const activeKPI = selectedKPIKey ? allProjectKPIs.find(k => k.key === selectedKPIKey) ?? null : null;
+
+  function toneFromStatus(status: KPIResult['status']): 'positive' | 'negative' | 'neutral' {
+    if (status === 'green') return 'positive';
+    if (status === 'red') return 'negative';
+    return 'neutral';
+  }
+
   return (
     <>
-      <ScorecardCard>
-        <ScorecardHeader>
-          <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            Risk Scorecard
-          </Typography>
-          <Tooltip trigger="hover" placement="top" overlay={<Tooltip.Content>Configure scorecard</Tooltip.Content>}>
-            <Button
-              variant="tertiary"
-              size="sm"
-              icon={<Cog size="sm" />}
-              aria-label="Configure scorecard"
-              onClick={openConfig}
-            />
-          </Tooltip>
-        </ScorecardHeader>
-
-        {displayedKPIs.length === 0 ? (
-          <EmptyStateWrap>
-            <Typography intent="h3" style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-              No KPIs Selected
-            </Typography>
-            <Typography intent="body" style={{ color: 'var(--color-text-secondary)', maxWidth: 360, display: 'block' }}>
-              Select up to 4 KPIs from your active Health &amp; Risk settings to track on this project.
-            </Typography>
-            <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
-              Configure Scorecard
-            </Button>
-            <Link href="/settings/health-risk">
-              <Button variant="tertiary" size="sm" icon={<Cog size="sm" />}>
-                Account Settings
+      <HubCardFrame
+        title="Risk Signals"
+        actions={
+          <HeaderActions>
+            {displayedKPIs.length > 0 && (
+              <Button
+                className="b_secondary"
+                variant="secondary"
+                size="sm"
+                icon={<Copilot size="sm" style={{ color: colors.orange50 }} />}
+                aria-label="Summarize with AI"
+                style={{
+                  background: colors.orange98,
+                  border: `1px solid ${colors.orange50}`,
+                  borderRadius: 4,
+                  color: colors.gray15,
+                }}
+              >
+                Summarize
               </Button>
-            </Link>
-          </EmptyStateWrap>
-        ) : (
-          <ScorecardGrid>
-            {displayedKPIs.map(kpi => (
-              <KPITile key={kpi.key} as="div">
-                <KPITileLabel>
-                  {kpi.label}
-                  <Tooltip
-                    trigger="hover"
-                    placement="top"
-                    overlay={<Tooltip.Content><div style={{ maxWidth: 220, whiteSpace: 'normal' }}>{KPI_DESCRIPTIONS[kpi.key]}</div></Tooltip.Content>}
+            )}
+            <Tooltip trigger="hover" placement="top" overlay={<Tooltip.Content>Configure scorecard</Tooltip.Content>}>
+              <Button
+                variant="tertiary"
+                size="sm"
+                icon={<Cog size="sm" />}
+                aria-label="Configure scorecard"
+                onClick={openConfig}
+              />
+            </Tooltip>
+          </HeaderActions>
+        }
+      >
+        {displayedKPIs.length === 0
+          ? <HubCardEmptyState
+              title="There Are No KPIs to Display Right Now"
+              body="Select up to 4 KPIs from your active Health &amp; Risk settings to track on this project."
+              actions={
+                <>
+                  <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
+                    Configure Scorecard
+                  </Button>
+                  <Link href="/settings/health-risk">
+                    <Button variant="tertiary" size="sm">
+                      Account Settings
+                    </Button>
+                  </Link>
+                </>
+              }
+            />
+          : <KPICenterWrap>
+              <ScorecardGrid>
+                {displayedKPIs.map(kpi => (
+                  <KPITile
+                    key={kpi.key}
+                    onClick={() => setSelectedKPIKey(kpi.key)}
+                    aria-label={`${kpi.label}: ${kpi.displayValue}. Click to view details.`}
                   >
-                    <span style={{ display: 'inline-flex', color: 'var(--color-text-secondary)', cursor: 'help' }}>
-                      <Info size="sm" />
-                    </span>
-                  </Tooltip>
-                </KPITileLabel>
-                <KPITileValue>{kpi.displayValue}</KPITileValue>
-                <div style={{ marginTop: 2 }}>
-                  <KPIPill
-                    tone={kpi.status === 'green' ? 'positive' : kpi.status === 'red' ? 'negative' : 'neutral'}
-                    trendValue={0}
-                    value={
-                      kpi.status === 'green' ? 'On Track' :
-                      kpi.status === 'yellow' ? 'At Risk' :
-                      kpi.status === 'red' ? 'Critical' : 'No Data'
-                    }
-                  />
-                </div>
-              </KPITile>
-            ))}
-          </ScorecardGrid>
-        )}
-      </ScorecardCard>
+                    <KPITitleRow>
+                      <Typography
+                        intent="body"
+                        style={{ color: 'var(--color-text-primary)', fontWeight: 400, fontSize: 14, lineHeight: '20px', letterSpacing: '0.15px' }}
+                      >
+                        {kpi.label}
+                      </Typography>
+                      <Tooltip
+                        trigger="hover"
+                        placement="top"
+                        overlay={<Tooltip.Content><div style={{ maxWidth: 220, whiteSpace: 'normal' }}>{KPI_DESCRIPTIONS[kpi.key]}</div></Tooltip.Content>}
+                      >
+                        <span style={{ display: 'inline-flex', color: 'var(--color-text-primary)', cursor: 'help' }}>
+                          <Info size="sm" />
+                        </span>
+                      </Tooltip>
+                    </KPITitleRow>
+                    <MetricValue>{kpi.displayValue}</MetricValue>
+                    <TrendRow>
+                      <KPIPill
+                        tone={toneFromStatus(kpi.status)}
+                        trendValue={0}
+                        value={kpi.status === 'unavailable' ? 'No data' : kpi.status === 'green' ? 'On Track' : kpi.status === 'yellow' ? 'At Risk' : 'Critical'}
+                      />
+                    </TrendRow>
+                  </KPITile>
+                ))}
+              </ScorecardGrid>
+            </KPICenterWrap>
+        }
+      </HubCardFrame>
 
       {/* ── Configure Scorecard Modal ── */}
       <Modal
@@ -1163,6 +1245,47 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* ── KPI Detail Tearsheet ── */}
+      <ScorecardTearsheetWidth />
+      <Tearsheet
+        open={selectedKPIKey !== null}
+        onClose={() => setSelectedKPIKey(null)}
+        placement="right"
+        block
+        aria-label={activeKPI ? `${activeKPI.label} details` : 'KPI details'}
+      >
+        <div className="project-scorecard-tearsheet-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {activeKPI && (
+            <>
+              <TearsheetHeader>
+                <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block' }}>
+                  {activeKPI.label}
+                </Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                  <span style={{ fontSize: 28, fontWeight: 600, color: 'var(--color-text-primary)', letterSpacing: '0.15px' }}>
+                    {activeKPI.displayValue}
+                  </span>
+                  <KPIPill
+                    tone={activeKPI.status === 'green' ? 'positive' : activeKPI.status === 'red' ? 'negative' : 'neutral'}
+                    trendValue={0}
+                    value={activeKPI.status === 'green' ? 'On Track' : activeKPI.status === 'yellow' ? 'At Risk' : activeKPI.status === 'red' ? 'Critical' : 'No Data'}
+                  />
+                </div>
+                <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block', marginTop: 4 }}>
+                  {KPI_DESCRIPTIONS[activeKPI.key]}
+                </Typography>
+              </TearsheetHeader>
+              <TearsheetBody>
+                <SectionTitle>Definition</SectionTitle>
+                <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                  {KPI_DESCRIPTIONS[activeKPI.key]}
+                </Typography>
+              </TearsheetBody>
+            </>
+          )}
+        </div>
+      </Tearsheet>
     </>
   );
 }
@@ -1181,6 +1304,10 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
   const [tearsheet, setTearsheet] = useState<{ project: Project; result: HealthResult } | null>(null);
   const [createRiskOpen, setCreateRiskOpen] = useState(false);
   const [extraRisks, setExtraRisks] = useState<Risk[]>([]);
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
+  const [assignedUsers, setAssignedUsers] = useState<Record<string, string>>({});
+  const [openRiskId, setOpenRiskId] = useState<string | null>(null);
+
 
   const projectResults = useMemo(() => {
     if (!config) return [];
@@ -1215,15 +1342,23 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
 
   const activeRiskRows = useMemo<RiskGridRow[]>(() =>
     allProjectRisks
-      .filter(r => r.status !== 'closed' && r.status !== 'mitigated')
-      .map(toRiskGridRow),
-  [allProjectRisks]);
+      .filter(r => r.status !== 'closed' && r.status !== 'mitigated' && !resolvedIds.has(r.id))
+      .map(r => {
+        const uid = assignedUsers[r.id];
+        const u = users.find(u => u.id === uid);
+        return toRiskGridRow(r, u ? `${u.firstName} ${u.lastName}` : '');
+      }),
+  [allProjectRisks, resolvedIds, assignedUsers, users]);
 
   const resolvedRiskRows = useMemo<RiskGridRow[]>(() =>
     allProjectRisks
-      .filter(r => r.status === 'closed' || r.status === 'mitigated')
-      .map(toRiskGridRow),
-  [allProjectRisks]);
+      .filter(r => r.status === 'closed' || r.status === 'mitigated' || resolvedIds.has(r.id))
+      .map(r => {
+        const uid = assignedUsers[r.id];
+        const u = users.find(u => u.id === uid);
+        return toRiskGridRow(r, u ? `${u.firstName} ${u.lastName}` : '');
+      }),
+  [allProjectRisks, resolvedIds, assignedUsers, users]);
 
   // ── Project-scope KPI scorecard ───────────────────────────────────────────
   // (computed inside ProjectRiskScorecard sub-component)
@@ -1246,8 +1381,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
           <Button
             variant="primary"
             className="b_primary"
-            size="sm"
-            icon={<Plus size="sm" />}
+            icon={<Plus />}
             onClick={() => setCreateRiskOpen(true)}
           >
             Create Risk Record
@@ -1357,8 +1491,15 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
         {scope === 'project' && singleResult && currentTab === 'Overview' && projectId && (
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Risk KPI Scorecard — configurable, max 4 KPIs, with empty state */}
-            <ProjectRiskScorecard projectId={projectId} />
+            {/* Row 1: Risk Signals scorecard + Risk Trend chart */}
+            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+                <ProjectRiskScorecard projectId={projectId} />
+              </div>
+              <div style={{ flexShrink: 0, width: 440, display: 'flex' }}>
+                <RiskTrendCard risks={allProjectRisks} resolvedIds={resolvedIds} />
+              </div>
+            </div>
 
             {/* Active risk records grid */}
             <RiskGrid
@@ -1368,6 +1509,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
               localStorageKey="owner-prototype-risk-records-active-grid"
               searchPlaceholder="Search active risks"
               emptyLabel="No active risk records for this project."
+              onOpenRisk={setOpenRiskId}
             />
           </div>
         )}
@@ -1382,6 +1524,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
               localStorageKey="owner-prototype-risk-records-resolved-grid"
               searchPlaceholder="Search resolved risks"
               emptyLabel="No resolved risk records for this project."
+              onOpenRisk={setOpenRiskId}
             />
           </div>
         )}
@@ -1409,6 +1552,197 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
           }}
         />
       )}
+
+      {/* ── Risk Detail Tearsheet ── */}
+      {openRiskId && (() => {
+        const risk = allProjectRisks.find(r => r.id === openRiskId);
+        const isResolved = resolvedIds.has(openRiskId) || risk?.status === 'closed' || risk?.status === 'mitigated';
+        const assignedUserId = assignedUsers[openRiskId] ?? '';
+        const assignedUser = users.find(u => u.id === assignedUserId);
+
+        const TOOL_LINKS: { label: string; href: string }[] = projectId ? [
+          { label: 'Budget', href: `/project/${projectId}/budget` },
+          { label: 'RFIs', href: `/project/${projectId}/rfis` },
+          { label: 'Schedule', href: `/project/${projectId}/schedule` },
+          { label: 'Change Events', href: `/project/${projectId}/change_events` },
+          { label: 'Submittals', href: `/project/${projectId}/submittals` },
+        ] : [];
+
+        const CATEGORY_LINKS: Record<string, string[]> = {
+          financial:    ['Budget', 'Change Events'],
+          schedule:     ['Schedule', 'RFIs'],
+          contractual:  ['Change Events', 'RFIs', 'Submittals'],
+          regulatory:   ['Submittals'],
+          safety:       ['RFIs'],
+          environmental:['RFIs'],
+        };
+        const relevantLinks = TOOL_LINKS.filter(l =>
+          (CATEGORY_LINKS[risk?.category ?? ''] ?? []).includes(l.label)
+        );
+
+        return (
+          <>
+          <RiskDetailTearsheetWidth />
+          <Tearsheet
+            open
+            onClose={() => setOpenRiskId(null)}
+            placement="right"
+            block
+            aria-label={risk?.title ?? 'Risk details'}
+          >
+            <div className="risk-detail-tearsheet-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {risk && (
+                <>
+                  {/* Header */}
+                  <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--color-border-separator)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)', flex: 1 }}>
+                        {risk.title}
+                      </Typography>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Pill color={risk.status === 'assessed' ? 'yellow' : risk.status === 'mitigated' ? 'green' : 'gray'}>
+                        {risk.status.charAt(0).toUpperCase() + risk.status.slice(1)}
+                      </Pill>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '2px 8px', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                        background: risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 20 ? 'var(--color-pill-bg-red)' : risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 12 ? 'var(--color-pill-bg-yellow)' : 'var(--color-pill-bg-green)',
+                        color: risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 20 ? 'var(--color-pill-text-red)' : risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 12 ? 'var(--color-pill-text-yellow)' : 'var(--color-pill-text-green)',
+                      }}>
+                        Score: {risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety)}
+                      </span>
+                      <Pill color="gray">{risk.category.charAt(0).toUpperCase() + risk.category.slice(1)}</Pill>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+                    {/* Description */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Description</div>
+                      <Typography intent="body" style={{ color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+                        {risk.description}
+                      </Typography>
+                    </div>
+
+                    {/* Scores */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Risk Scoring</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        {[
+                          { label: 'Probability', prefix: 'P' as const, num: risk.probability },
+                          { label: 'Cost Impact',     prefix: 'I' as const, num: risk.impactCost },
+                          { label: 'Schedule Impact', prefix: 'I' as const, num: risk.impactSchedule },
+                          { label: 'Safety Impact',   prefix: 'I' as const, num: risk.impactSafety },
+                        ].map(({ label, prefix, num }) => {
+                          const score = num ?? 0;
+                          const isHigh = score >= 5;
+                          const isMedHigh = score >= 4;
+                          const isMed = score >= 3;
+                          const bg = isHigh ? 'var(--color-pill-bg-red)' : isMedHigh ? '#fff3cd' : isMed ? 'var(--color-pill-bg-yellow)' : 'var(--color-pill-bg-green)';
+                          const text = isHigh ? 'var(--color-pill-text-red)' : isMedHigh ? '#856404' : isMed ? 'var(--color-pill-text-yellow)' : 'var(--color-pill-text-green)';
+                          return (
+                            <div key={label} style={{ background: bg, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
+                              <div style={{ fontSize: 11, color: text, opacity: 0.8, marginBottom: 4 }}>{label}</div>
+                              <div style={{ fontWeight: 700, fontSize: 16, color: text }}>{prefix}:{num}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Assign */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Assigned To</div>
+                      <Select
+                        label={assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : undefined}
+                        placeholder="Select a team member"
+                        onSelect={({ item }) => setAssignedUsers(prev => ({ ...prev, [openRiskId]: item as string }))}
+                        onClear={assignedUserId ? () => setAssignedUsers(prev => { const next = { ...prev }; delete next[openRiskId]; return next; }) : undefined}
+                        block
+                      >
+                        {users.map(u => (
+                          <Select.Option key={u.id} value={u.id} selected={u.id === assignedUserId}>
+                            {u.firstName} {u.lastName} — {u.jobTitle}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    {/* Related tools */}
+                    {relevantLinks.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Related Tools</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {relevantLinks.map(({ label, href }) => (
+                            <Link key={label} href={href} onClick={() => setOpenRiskId(null)}>
+                              <Button variant="secondary" className="b_secondary" size="sm">
+                                {label} →
+                              </Button>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Details */}
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Details</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {[
+                          { label: 'Response Strategy', value: risk.responseStrategy.charAt(0).toUpperCase() + risk.responseStrategy.slice(1) },
+                          { label: 'Origin', value: risk.origin.charAt(0).toUpperCase() + risk.origin.slice(1) },
+                          { label: 'Due Date', value: risk.dueDate ?? '—' },
+                        ].map(({ label, value }) => (
+                          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0', borderBottom: '1px solid var(--color-border-separator)' }}>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+                            <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
+                  {/* Footer */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 8,
+                    padding: '16px 24px',
+                    borderTop: '1px solid var(--color-border-separator)',
+                    flexShrink: 0,
+                  }}>
+                    <Button
+                      variant="primary"
+                      className="b_primary"
+                      onClick={() => setOpenRiskId(null)}
+                    >
+                      Save
+                    </Button>
+                    {!isResolved && (
+                      <Button
+                        variant="secondary"
+                        className="b_secondary"
+                        onClick={() => {
+                          setResolvedIds(prev => new Set([...prev, openRiskId]));
+                          setOpenRiskId(null);
+                          setActiveTab('Resolved' as any);
+                        }}
+                      >
+                        Resolve
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </Tearsheet>
+          </>
+        );
+      })()}
     </>
   );
 }
