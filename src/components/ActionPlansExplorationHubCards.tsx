@@ -145,20 +145,21 @@ function ProgressMiniBar({ cell }: { cell: MatrixCell }) {
     );
   }
   return (
-    <div style={{ width: "100%", minWidth: 72 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: completionBg(cell.percent, cell.overdue), marginBottom: 3 }}>
-        {cell.percent}%
-      </div>
-      <div style={{ height: 8, borderRadius: 4, background: "var(--color-surface-active)", overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 80 }}>
+      <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-active)", overflow: "hidden" }}>
         <div
           style={{
             width: `${cell.percent}%`,
             height: "100%",
+            borderRadius: 4,
             background: barColor(cell),
             transition: "width 0.2s ease",
           }}
         />
       </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color: barColor(cell), whiteSpace: "nowrap" }}>
+        {cell.percent}%
+      </span>
     </div>
   );
 }

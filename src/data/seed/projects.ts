@@ -1135,6 +1135,20 @@ export const projects: Project[] = [
     endDate: new Date('2026-08-31'),
     description:
       'Dedicated heart and vascular institute with hybrid ORs, advanced imaging, and structured parking podium below clinical levels.',
+    // ── Health signals: AT RISK (schedule pressure, moderate cost overrun) ──
+    budgetVariancePct: 4.8,
+    contingencyPct: 5.2,
+    scheduleVarianceDays: 14,
+    overdueRFICount: 6,
+    overdueSubmittalCount: 4,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 5,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 78,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
   },
   {
     id: 'proj-032',
@@ -1163,6 +1177,20 @@ export const projects: Project[] = [
     endDate: new Date('2027-02-28'),
     description:
       'Outpatient diagnostics hub consolidating MRI, PET-CT, and cardiovascular testing with retail pharmacy frontage.',
+    // ── Health signals: ON TRACK (early stage, clean signals) ──
+    budgetVariancePct: 1.1,
+    contingencyPct: 14.3,
+    scheduleVarianceDays: 3,
+    overdueRFICount: 1,
+    overdueSubmittalCount: 2,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 1,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 92,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-033',
@@ -1191,6 +1219,20 @@ export const projects: Project[] = [
     endDate: new Date('2025-09-30'),
     description:
       'Steel-and-glass specialty pavilion anchoring the Navy Yard life sciences district with orthopedics and neurosciences clinics.',
+    // ── Health signals: CRITICAL (significant overrun, high overdue counts) ──
+    budgetVariancePct: 9.7,
+    contingencyPct: 1.4,
+    scheduleVarianceDays: 29,
+    overdueRFICount: 14,
+    overdueSubmittalCount: 18,
+    openIncidentCount: 1,
+    incidentSeverity: 'low',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 11,
+    invoiceOverdueDays: 22,
+    milestoneCompletionRate: 63,
+    healthHistory: makeHistory(90, ['green', 'yellow', 'yellow', 'red', 'red', 'red', 'red', 'red', 'red']),
   },
   {
     id: 'proj-034',
@@ -1219,6 +1261,20 @@ export const projects: Project[] = [
     endDate: new Date('2025-06-30'),
     description:
       'Phased sterile processing department upgrade with temporary SPD trailer operations and new instrument automation line.',
+    // ── Health signals: ON TRACK (renovation nearing completion) ──
+    budgetVariancePct: 2.3,
+    contingencyPct: 11.8,
+    scheduleVarianceDays: 7,
+    overdueRFICount: 2,
+    overdueSubmittalCount: 1,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 22,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 2,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 88,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green']),
   },
   {
     id: 'proj-035',
@@ -1247,5 +1303,19 @@ export const projects: Project[] = [
     endDate: new Date('2026-12-15'),
     description:
       'Regional MOB development RFP covering shell, core, and tenant improvement allowances for ambulatory cardiology tenants.',
+    // ── Health signals: ON TRACK (bidding phase, minimal activity) ──
+    budgetVariancePct: 0.0,
+    contingencyPct: 18.5,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
 ];

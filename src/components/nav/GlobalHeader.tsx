@@ -222,21 +222,10 @@ const AiButton = styled.button`
   &::before {
     content: '';
     position: absolute;
-    inset: -1px;
-    border-radius: 7px;
-    background: linear-gradient(var(--angle), #FF5100, #FF7433);
+    inset: -2px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #FF5100, #FF7433);
     z-index: -1;
-    animation: 10s ai-border-rotate linear infinite;
-  }
-
-  @property --angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-  }
-
-  @keyframes ai-border-rotate {
-    to { --angle: 360deg; }
   }
 `;
 
