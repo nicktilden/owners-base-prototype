@@ -22,6 +22,10 @@ jobs:
           printf 'registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
           printf '@procore:registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
           printf '//artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken=%s\n' "$ARTIFACTORY_NPM_TOKEN" >> ~/.npmrc
+          echo "Token length: ${#ARTIFACTORY_NPM_TOKEN}"
+          echo "Token prefix: ${ARTIFACTORY_NPM_TOKEN:0:10}..."
+          echo "npmrc contents (redacted):"
+          cat ~/.npmrc | sed 's/_authToken=.*/_authToken=REDACTED/'
         env:
           ARTIFACTORY_NPM_TOKEN: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
 
