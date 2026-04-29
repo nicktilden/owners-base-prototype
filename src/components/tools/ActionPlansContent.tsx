@@ -407,6 +407,35 @@ const planColumnDefs: ColDef<ActionPlan>[] = [
   },
 ];
 
+// Seed usage counts per template (projects actively using each template out of 20 total)
+const TEMPLATE_USAGE: Record<string, { used: number; total: number }> = {
+  "tpl-001": { used: 5,  total: 20 },
+  "tpl-002": { used: 8,  total: 20 },
+  "tpl-003": { used: 12, total: 20 },
+  "tpl-004": { used: 10, total: 20 },
+  "tpl-005": { used: 4,  total: 20 },
+  "tpl-006": { used: 3,  total: 20 },
+};
+
+function TemplateUsageCellRenderer(params: ICellRendererParams) {
+  const usage = TEMPLATE_USAGE[params.data?.id] ?? { used: 0, total: 20 };
+  const pct = Math.round((usage.used / usage.total) * 100);
+  const isLow = pct < 40;
+  const barColor = isLow ? "#c62828" : pct < 70 ? "var(--color-action-primary)" : "#2e7d32";
+  const textColor = isLow ? "#c62828" : pct < 70 ? "var(--color-action-primary)" : "#2e7d32";
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, height: "100%", padding: "0 4px" }}>
+      <div style={{ flex: 1, height: 8, background: "#e0e0e0", borderRadius: 4, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 4, transition: "width 0.3s ease" }} />
+      </div>
+      <span style={{ minWidth: 36, textAlign: "right", fontWeight: 600, fontSize: 13, color: textColor }}>
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
 const templateColumnDefs: ColDef[] = [
   {
     field: "name",
@@ -435,6 +464,19 @@ const templateColumnDefs: ColDef[] = [
     filter: "agNumberColumnFilter",
     valueGetter: (params) =>
       params.data?.sections?.reduce((sum: number, s: { items: unknown[] }) => sum + s.items.length, 0) ?? 0,
+  },
+  {
+    colId: "usage",
+    headerName: "Usage",
+    width: 180,
+    minWidth: 140,
+    sortable: true,
+    filter: false,
+    valueGetter: (params) => {
+      const u = TEMPLATE_USAGE[params.data?.id] ?? { used: 0, total: 20 };
+      return Math.round((u.used / u.total) * 100);
+    },
+    cellRenderer: TemplateUsageCellRenderer,
   },
   {
     field: "description",

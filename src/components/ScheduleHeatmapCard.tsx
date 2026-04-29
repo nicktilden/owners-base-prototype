@@ -881,17 +881,461 @@ const ToolbarRight = styled.div`
   flex-shrink: 0;
 `;
 
-const GanttPlaceholder = styled.div`
+// ─── Gantt view styled components ─────────────────────────────────────────────
+
+const GanttRoot = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 0;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  border: 1px dashed var(--color-border-separator);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-separator);
   border-radius: 4px;
-  margin-top: 4px;
 `;
+
+const GanttScrollArea = styled.div`
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 520px;
+`;
+
+const GanttTable = styled.table`
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 100%;
+`;
+
+const GANTT_LABEL_W = 220;
+const GANTT_COL_W   = 80;
+
+const GanttLabelTh = styled.th`
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: ${GANTT_LABEL_W}px;
+  min-width: ${GANTT_LABEL_W}px;
+  background: ${HEATMAP_HEADER_BG};
+  border-bottom: 1px solid var(--color-border-separator);
+  border-right: 1px solid var(--color-border-separator);
+  padding: 0 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  height: 36px;
+  vertical-align: middle;
+  white-space: nowrap;
+`;
+
+const GanttPeriodTh = styled.th<{ $today?: boolean }>`
+  width: ${GANTT_COL_W}px;
+  min-width: ${GANTT_COL_W}px;
+  background: ${HEATMAP_HEADER_BG};
+  border-bottom: 1px solid var(--color-border-separator);
+  border-right: 1px solid ${({ $today }) => ($today ? "var(--color-action-primary)" : "transparent")};
+  font-size: 11px;
+  font-weight: ${({ $today }) => ($today ? 700 : 500)};
+  color: ${({ $today }) => ($today ? "var(--color-action-primary)" : "var(--color-text-secondary)")};
+  text-align: center;
+  padding: 0 2px;
+  height: 36px;
+  vertical-align: middle;
+  white-space: nowrap;
+`;
+
+const GanttLabelTd = styled.td`
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: ${GANTT_LABEL_W}px;
+  min-width: ${GANTT_LABEL_W}px;
+  background: var(--color-surface-primary);
+  border-bottom: 1px solid #e8eaeb;
+  border-right: 1px solid var(--color-border-separator);
+  padding: 0 12px;
+  vertical-align: middle;
+  height: 36px;
+`;
+
+const GanttCellTd = styled.td<{ $today?: boolean; $isFirst?: boolean }>`
+  width: ${GANTT_COL_W}px;
+  min-width: ${GANTT_COL_W}px;
+  border-bottom: 1px solid #e8eaeb;
+  border-right: 1px solid ${({ $today }) => ($today ? "var(--color-action-primary)" : "transparent")};
+  background: ${({ $isFirst }) => ($isFirst ? "transparent" : "transparent")};
+  padding: 0;
+  vertical-align: middle;
+  height: 36px;
+  position: relative;
+`;
+
+const GanttGroupRow = styled.tr`
+  background: ${HEATMAP_HEADER_BG};
+`;
+
+const GanttGroupTd = styled.td`
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: ${HEATMAP_HEADER_BG};
+  border-bottom: 1px solid var(--color-border-separator);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const GanttGroupSpanTd = styled.td`
+  background: ${HEATMAP_HEADER_BG};
+  border-bottom: 1px solid var(--color-border-separator);
+`;
+
+// ─── Gantt view component ──────────────────────────────────────────────────────
+
+/** ISO month string → Date at start of that month */
+function monthStart(iso: string): Date {
+  return new Date(iso + "-01T00:00:00");
+}
+
+/** Generate array of YYYY-MM strings spanning [startIso, endIso] */
+function monthRange(startIso: string, endIso: string): string[] {
+  const result: string[] = [];
+  const s = new Date(startIso + "-01T00:00:00");
+  const e = new Date(endIso + "-01T00:00:00");
+  const cur = new Date(s);
+  while (cur <= e) {
+    result.push(cur.toISOString().slice(0, 7));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return result;
+}
+
+/** Fraction of [monthStart, monthEnd) where `dateIso` falls (0–1) */
+function monthFraction(dateIso: string, monthIso: string): number {
+  const d = new Date(dateIso + "T00:00:00");
+  const start = monthStart(monthIso);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+  const span = end.getTime() - start.getTime();
+  return Math.max(0, Math.min(1, (d.getTime() - start.getTime()) / span));
+}
+
+/** Which months does this bar overlap? Returns overlap [0–1] for each month. */
+function barOverlapForMonth(
+  startIso: string,
+  endIso: string,
+  monthIso: string
+): { leftPct: number; widthPct: number } | null {
+  const mStart = monthStart(monthIso);
+  const mEnd = new Date(mStart);
+  mEnd.setMonth(mEnd.getMonth() + 1);
+  const barStart = new Date(startIso + "T00:00:00");
+  const barEnd = new Date(endIso + "T00:00:00");
+  if (barEnd < mStart || barStart >= mEnd) return null;
+  const clampedStart = barStart < mStart ? mStart : barStart;
+  const clampedEnd = barEnd > mEnd ? mEnd : barEnd;
+  const span = mEnd.getTime() - mStart.getTime();
+  const leftPct = ((clampedStart.getTime() - mStart.getTime()) / span) * 100;
+  const widthPct = ((clampedEnd.getTime() - clampedStart.getTime()) / span) * 100;
+  return { leftPct, widthPct };
+}
+
+/** Milestone falls in this month → return fraction (0–1), or null. */
+function milestoneInMonth(dateIso: string, monthIso: string): number | null {
+  if (!dateIso) return null;
+  const d = dateIso.slice(0, 7);
+  if (d !== monthIso) return null;
+  return monthFraction(dateIso, monthIso);
+}
+
+function formatMonthLabel(iso: string): string {
+  const [y, m] = iso.split("-");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[parseInt(m, 10) - 1]} '${y.slice(2)}`;
+}
+
+/** Status → bar color mapping (uses CSS var for semantic colors) */
+function ganttBarColor(project: ProjectRow): string {
+  switch (project.stage) {
+    case "Course of Construction": return "var(--color-action-primary)";
+    case "Pre-Construction":       return "#5c6bc0";
+    case "Bidding":                return "#8d6e63";
+    case "Post-Construction":
+    case "Handover":
+    case "Closeout":               return "#43a047";
+    default:                       return "#90a4ae";
+  }
+}
+
+interface GanttMilestoneDiamondProps {
+  leftFrac: number;
+  isActual: boolean;
+  label: string;
+  dateLabel: string;
+  isLate: boolean;
+}
+
+function GanttMilestoneDiamond({ leftFrac, isActual, label, dateLabel, isLate }: GanttMilestoneDiamondProps) {
+  const color = isLate ? "#d32f2f" : isActual ? "#43a047" : "var(--color-action-primary)";
+  return (
+    <Tooltip
+      trigger="hover"
+      placement="top"
+      overlay={
+        <Tooltip.Content>
+          <div style={{ lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 600 }}>{label}</div>
+            <div>{isActual ? "Actual" : "Baseline"}: {dateLabel}</div>
+            {isLate && <div style={{ color: "#ffcdd2" }}>Behind schedule</div>}
+          </div>
+        </Tooltip.Content>
+      }
+    >
+      <div
+        style={{
+          position: "absolute",
+          left: `${leftFrac * 100}%`,
+          top: "50%",
+          transform: "translate(-50%, -50%) rotate(45deg)",
+          width: 10,
+          height: 10,
+          background: color,
+          border: isActual ? "2px solid #1b5e20" : `2px solid ${color}`,
+          borderRadius: 2,
+          zIndex: 3,
+          cursor: "default",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+        }}
+      />
+    </Tooltip>
+  );
+}
+
+const GROUP_BY_OPTIONS_GANTT = [
+  { id: "stage",          label: "Stage"           },
+  { id: "region",         label: "Region"          },
+  { id: "projectManager", label: "Project Manager" },
+] as const;
+
+type GroupById = typeof GROUP_BY_OPTIONS_GANTT[number]["id"];
+
+interface ScheduleGanttViewProps {
+  rows: ProjectRow[];
+  groupBy: GroupById | null;
+}
+
+function ScheduleGanttView({ rows, groupBy }: ScheduleGanttViewProps) {
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMonth = today.slice(0, 7);
+
+  // Build overall timeline: earliest project start → latest project end, +/- 2 months padding
+  const allStart = rows.reduce((min, r) => (r.startDate && r.startDate < min ? r.startDate : min), today);
+  const allEnd   = rows.reduce((max, r) => (r.endDate && r.endDate > max ? r.endDate : max), today);
+  const padStart = new Date(allStart + "T00:00:00");
+  padStart.setMonth(padStart.getMonth() - 1);
+  const padEnd   = new Date(allEnd + "T00:00:00");
+  padEnd.setMonth(padEnd.getMonth() + 1);
+  const months = monthRange(
+    padStart.toISOString().slice(0, 7),
+    padEnd.toISOString().slice(0, 7)
+  );
+
+  // Group rows if needed
+  type Group = { label: string; rows: ProjectRow[] };
+  const groups: Group[] = useMemo(() => {
+    if (!groupBy) return [{ label: "", rows }];
+    const map = new Map<string, ProjectRow[]>();
+    rows.forEach((r) => {
+      const key =
+        groupBy === "stage" ? r.stage :
+        groupBy === "region" ? (r.region ?? "Unknown") :
+        (r.projectManager ?? "Unknown");
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    });
+    return [...map.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([label, rows]) => ({ label, rows }));
+  }, [rows, groupBy]);
+
+  return (
+    <GanttRoot>
+      <GanttScrollArea>
+        <GanttTable>
+          <colgroup>
+            <col style={{ width: GANTT_LABEL_W }} />
+            {months.map((m) => <col key={m} style={{ width: GANTT_COL_W }} />)}
+          </colgroup>
+          <thead>
+            <tr>
+              <GanttLabelTh>Project</GanttLabelTh>
+              {months.map((m) => (
+                <GanttPeriodTh key={m} $today={m === todayMonth}>
+                  {formatMonthLabel(m)}
+                </GanttPeriodTh>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map(({ label: groupLabel, rows: groupRows }) => (
+              <React.Fragment key={groupLabel || "__all__"}>
+                {groupBy && (
+                  <GanttGroupRow>
+                    <GanttGroupTd>{groupLabel}</GanttGroupTd>
+                    {months.map((m) => <GanttGroupSpanTd key={m} />)}
+                  </GanttGroupRow>
+                )}
+                {groupRows.map((project) => {
+                  const milestones = sampleProjectMilestones.get(project.id) ?? [];
+                  const barColor = ganttBarColor(project);
+
+                  return (
+                    <tr key={project.id}>
+                      <GanttLabelTd>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <span style={{ fontSize: 11, color: "var(--color-text-secondary)", lineHeight: "14px" }}>
+                            {project.number}
+                          </span>
+                          <span
+                            title={project.name}
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 500,
+                              color: "var(--color-text-primary)",
+                              lineHeight: "16px",
+                              overflow: "hidden",
+                              whiteSpace: "nowrap",
+                              textOverflow: "ellipsis",
+                              maxWidth: GANTT_LABEL_W - 24,
+                            }}
+                          >
+                            {project.name}
+                          </span>
+                        </div>
+                      </GanttLabelTd>
+                      {months.map((m, mi) => {
+                        const overlap = project.startDate && project.endDate
+                          ? barOverlapForMonth(project.startDate, project.endDate, m)
+                          : null;
+
+                        // Milestones that fall in this month
+                        const monthMilestones = milestones.flatMap((ms) => {
+                          const baselineInMonth = ms.baselineDate
+                            ? milestoneInMonth(ms.baselineDate, m)
+                            : null;
+                          const actualInMonth = ms.actualDate
+                            ? milestoneInMonth(ms.actualDate, m)
+                            : null;
+                          const results: { frac: number; isActual: boolean; name: string; date: string; isLate: boolean }[] = [];
+                          if (actualInMonth !== null) {
+                            const isLate = !!(ms.baselineDate && ms.actualDate && ms.actualDate > ms.baselineDate);
+                            results.push({ frac: actualInMonth, isActual: true, name: ms.name, date: formatDateMMDDYYYY(ms.actualDate!), isLate });
+                          } else if (baselineInMonth !== null) {
+                            results.push({ frac: baselineInMonth, isActual: false, name: ms.name, date: formatDateMMDDYYYY(ms.baselineDate!), isLate: false });
+                          }
+                          return results;
+                        });
+
+                        return (
+                          <GanttCellTd key={m} $today={m === todayMonth} $isFirst={mi === 0}>
+                            {overlap && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: `${overlap.leftPct}%`,
+                                  width: `${Math.max(overlap.widthPct, 4)}%`,
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  height: 10,
+                                  background: barColor,
+                                  borderRadius:
+                                    overlap.leftPct < 1 && overlap.leftPct + overlap.widthPct > 99
+                                      ? 4
+                                      : overlap.leftPct < 1
+                                        ? "4px 0 0 4px"
+                                        : overlap.leftPct + overlap.widthPct > 99
+                                          ? "0 4px 4px 0"
+                                          : 0,
+                                  opacity: 0.85,
+                                  zIndex: 1,
+                                }}
+                              />
+                            )}
+                            {monthMilestones.map((ms, i) => (
+                              <GanttMilestoneDiamond
+                                key={ms.name + i}
+                                leftFrac={ms.frac}
+                                isActual={ms.isActual}
+                                label={ms.name}
+                                dateLabel={ms.date}
+                                isLate={ms.isLate}
+                              />
+                            ))}
+                            {/* today line */}
+                            {m === todayMonth && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  left: `${monthFraction(today, m) * 100}%`,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: 2,
+                                  background: "var(--color-action-primary)",
+                                  opacity: 0.5,
+                                  zIndex: 2,
+                                  pointerEvents: "none",
+                                }}
+                              />
+                            )}
+                          </GanttCellTd>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </GanttTable>
+      </GanttScrollArea>
+      {/* Legend */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        padding: "8px 12px",
+        borderTop: "1px solid var(--color-border-separator)",
+        flexWrap: "wrap",
+      }}>
+        {[
+          { color: "var(--color-action-primary)", label: "Course of Construction" },
+          { color: "#5c6bc0", label: "Pre-Construction" },
+          { color: "#43a047", label: "Post-Construction / Closeout" },
+          { color: "#90a4ae", label: "Other stages" },
+        ].map(({ color, label }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)" }}>
+            <div style={{ width: 16, height: 6, background: color, borderRadius: 3 }} />
+            {label}
+          </div>
+        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)", marginLeft: 8 }}>
+          <div style={{ width: 10, height: 10, background: "var(--color-action-primary)", transform: "rotate(45deg)", borderRadius: 2 }} />
+          Baseline milestone
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)" }}>
+          <div style={{ width: 10, height: 10, background: "#43a047", transform: "rotate(45deg)", borderRadius: 2, border: "2px solid #1b5e20" }} />
+          Actual milestone
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary)" }}>
+          <div style={{ width: 10, height: 10, background: "#d32f2f", transform: "rotate(45deg)", borderRadius: 2 }} />
+          Late milestone
+        </div>
+      </div>
+    </GanttRoot>
+  );
+}
 
 // ─── Milestone Edit Tearsheet ──────────────────────────────────────────────────
 
@@ -1161,13 +1605,7 @@ function MilestoneEditTearsheet({ projectId, onClose }: MilestoneEditTearsheetPr
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-const GROUP_BY_OPTIONS = [
-  { id: "stage",          label: "Stage"           },
-  { id: "region",         label: "Region"          },
-  { id: "projectManager", label: "Project Manager" },
-] as const;
-
-type GroupById = typeof GROUP_BY_OPTIONS[number]["id"];
+const GROUP_BY_OPTIONS = GROUP_BY_OPTIONS_GANTT;
 
 const LEGEND_COLORS = [
   "#b71c1c", "#d32f2f", "#e53935", "#ff7043", "#ffab91",
@@ -1523,11 +1961,7 @@ export default function ScheduleHeatmapCard() {
       )}
 
       {viewMode === "gantt" && (
-        <GanttPlaceholder>
-          <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>
-            Gantt view — design reference from Jacob coming soon.
-          </Typography>
-        </GanttPlaceholder>
+        <ScheduleGanttView rows={displayedRows} groupBy={groupBy} />
       )}
 
       {viewMode === "dates" && (

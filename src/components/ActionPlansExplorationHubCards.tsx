@@ -824,18 +824,19 @@ function makeTemplateCellRenderer(templateName: string) {
     );
     return (
       <Tooltip trigger="hover" placement="top" overlay={<Tooltip.Content>{tooltipContent}</Tooltip.Content>}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", minWidth: 0, cursor: "default" }}>
-          <div style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 3, background: "var(--color-surface-active)", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minWidth: 0, cursor: "default", padding: "0 4px" }}>
+          <div style={{ flex: 1, minWidth: 0, height: 10, borderRadius: 5, background: "#e0e0e0", overflow: "hidden" }}>
             <div
               style={{
                 width: `${cell.percent}%`,
                 height: "100%",
-                borderRadius: 3,
+                borderRadius: 5,
                 background: fillColor,
+                transition: "width 0.3s ease",
               }}
             />
           </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: fillColor, minWidth: 30, flexShrink: 0, textAlign: "right", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: fillColor, minWidth: 36, flexShrink: 0, textAlign: "right", whiteSpace: "nowrap" }}>
             {cell.percent}%
           </span>
         </div>
