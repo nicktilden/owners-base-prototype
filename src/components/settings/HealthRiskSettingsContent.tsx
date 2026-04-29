@@ -5,7 +5,7 @@
  */
 
 import Head from 'next/head';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import {
@@ -148,20 +148,70 @@ const OnboardingStep = styled.div`
   gap: 16px;
 `;
 
-const OnboardingStepNav = styled.div`
+const StepperRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 `;
 
-const OnboardingDot = styled.span<{ $active: boolean }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: ${({ $active }) => $active ? 'var(--color-action-primary)' : 'var(--color-border-separator)'};
-  transition: background 0.15s;
+const StepItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: none;
 `;
+
+const StepCircle = styled.div<{ $active: boolean; $completed: boolean }>`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: ${(p) => (p.$completed ? 'var(--color-action-primary)' : p.$active ? '#fff' : 'var(--color-surface-secondary)')};
+  border: 2px solid ${(p) => (p.$active || p.$completed ? 'var(--color-action-primary)' : 'var(--color-border-default)')};
+  color: ${(p) => (p.$completed ? '#fff' : p.$active ? 'var(--color-action-primary)' : 'var(--color-text-secondary)')};
+  flex-shrink: 0;
+`;
+
+const StepLabel = styled.div<{ $active: boolean }>`
+  font-size: 11px;
+  font-weight: ${(p) => (p.$active ? 700 : 500)};
+  color: ${(p) => (p.$active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)')};
+  white-space: nowrap;
+  text-align: center;
+`;
+
+const StepConnector = styled.div<{ $completed: boolean }>`
+  flex: 1;
+  height: 2px;
+  background: ${(p) => (p.$completed ? 'var(--color-action-primary)' : 'var(--color-border-separator)')};
+  margin: 0 4px;
+  margin-bottom: 18px;
+`;
+
+const STEP_LABELS = ['What is H&R?', 'Risk Types & KPIs', 'Getting Started'];
+
+function OnboardingStepNav({ step }: { step: number }) {
+  return (
+    <StepperRow>
+      {STEP_LABELS.map((label, i) => (
+        <React.Fragment key={i}>
+          <StepItem>
+            <StepCircle $active={step === i} $completed={step > i}>
+              {step > i ? '✓' : i + 1}
+            </StepCircle>
+            <StepLabel $active={step === i}>{label}</StepLabel>
+          </StepItem>
+          {i < STEP_LABELS.length - 1 && <StepConnector $completed={step > i} />}
+        </React.Fragment>
+      ))}
+    </StepperRow>
+  );
+}
 
 const ONBOARDING_STEPS = [
   {
@@ -252,34 +302,29 @@ function HealthRiskOnboardingModal({ open, onClose }: { open: boolean; onClose: 
         {current.title}
       </Modal.Header>
       <Modal.Body>
-        <OnboardingStepNav>
-          {ONBOARDING_STEPS.map((_, i) => (
-            <OnboardingDot key={i} $active={i === step} />
-          ))}
-          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', marginLeft: 4 }}>
-            Step {step + 1} of {total}
-          </Typography>
-        </OnboardingStepNav>
+        <OnboardingStepNav step={step} />
         {current.body}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="tertiary" className="b_tertiary" onClick={handleClose}>
           Close
         </Button>
-        {step > 0 && (
-          <Button variant="secondary" className="b_secondary" onClick={() => setStep(s => s - 1)}>
-            Back
-          </Button>
-        )}
-        {step < total - 1 ? (
-          <Button variant="primary" className="b_primary" onClick={() => setStep(s => s + 1)}>
-            Next
-          </Button>
-        ) : (
-          <Button variant="primary" className="b_primary" onClick={handleClose}>
-            Get Started
-          </Button>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {step > 0 && (
+            <Button variant="secondary" className="b_secondary" onClick={() => setStep(s => s - 1)}>
+              Back
+            </Button>
+          )}
+          {step < total - 1 ? (
+            <Button variant="primary" className="b_primary" onClick={() => setStep(s => s + 1)}>
+              Next
+            </Button>
+          ) : (
+            <Button variant="primary" className="b_primary" onClick={handleClose}>
+              Get Started
+            </Button>
+          )}
+        </div>
       </Modal.Footer>
     </Modal>
   );

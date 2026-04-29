@@ -251,9 +251,9 @@ const StepCircle = styled.div<{ $active: boolean; $completed: boolean }>`
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  background: ${(p) => (p.$completed ? "#ff5200" : p.$active ? "#fff" : "var(--color-surface-secondary)")};
-  border: 2px solid ${(p) => (p.$active || p.$completed ? "#ff5200" : "#c4cacc")};
-  color: ${(p) => (p.$completed ? "#fff" : p.$active ? "#ff5200" : "#6a767c")};
+  background: ${(p) => (p.$completed ? "var(--color-action-primary)" : p.$active ? "#fff" : "var(--color-surface-secondary)")};
+  border: 2px solid ${(p) => (p.$active || p.$completed ? "var(--color-action-primary)" : "#c4cacc")};
+  color: ${(p) => (p.$completed ? "#fff" : p.$active ? "var(--color-action-primary)" : "#6a767c")};
   flex-shrink: 0;
 `;
 
@@ -268,7 +268,7 @@ const StepLabel = styled.div<{ $active: boolean }>`
 const StepConnector = styled.div<{ $completed: boolean }>`
   flex: 1;
   height: 2px;
-  background: ${(p) => (p.$completed ? "#ff5200" : "#eef0f1")};
+  background: ${(p) => (p.$completed ? "var(--color-action-primary)" : "#eef0f1")};
   margin: 13px 8px 0;
 `;
 
