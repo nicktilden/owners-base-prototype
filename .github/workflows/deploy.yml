@@ -23,6 +23,10 @@ jobs:
           echo "@procore:registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/" >> ~/.npmrc
           echo "//artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken=${{ secrets.ARTIFACTORY_NPM_TOKEN }}" >> ~/.npmrc
 
+      - name: Verify registry access
+        run: |
+          npm ping --registry https://artifacts.procoretech.com/artifactory/api/npm/npm/
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
