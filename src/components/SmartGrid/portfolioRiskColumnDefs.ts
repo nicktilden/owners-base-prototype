@@ -70,7 +70,8 @@ export const portfolioRiskFixedCols: ColDef<PortfolioRiskRow>[] = [
   {
     field: 'stage',
     headerName: 'Stage',
-    width: 420,
+    minWidth: 140,
+    width: 180,
     filter: 'agSetColumnFilter',
     enableRowGroup: true,
     valueFormatter: (p) => (p.value ? (STAGE_LABELS[p.value as string] ?? p.value) : '—'),

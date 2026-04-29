@@ -22,6 +22,11 @@ export interface RiskGridRow {
   origin: string;
   dueDate: string;
   description: string;
+  assignedTo: string; // user display name or empty string
+}
+
+export interface RiskGridContext {
+  onOpenRisk?: (id: string) => void;
 }
 
 // ─── Category display order ────────────────────────────────────────────────────
@@ -45,6 +50,25 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     flex: 2,
     filter: 'agTextColumnFilter',
     pinned: 'left',
+    cellRenderer: 'riskTitleCellRenderer',
+  },
+  {
+    field: 'status',
+    headerName: 'Status',
+    width: 130,
+    filter: 'agSetColumnFilter',
+    enableRowGroup: true,
+    comparator: (a, b) => (STATUS_ORDER[a] ?? 99) - (STATUS_ORDER[b] ?? 99),
+    cellRenderer: 'riskStatusCellRenderer',
+  },
+  {
+    field: 'riskScore',
+    headerName: 'Risk Score',
+    width: 120,
+    filter: 'agNumberColumnFilter',
+    sortable: true,
+    sort: 'desc',
+    cellRenderer: 'riskScoreCellRenderer',
   },
   {
     field: 'category',
@@ -60,34 +84,12 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     },
   },
   {
-    field: 'status',
-    headerName: 'Status',
-    width: 120,
-    filter: 'agSetColumnFilter',
-    enableRowGroup: true,
-    comparator: (a, b) => (STATUS_ORDER[a] ?? 99) - (STATUS_ORDER[b] ?? 99),
-    valueFormatter: (p) => {
-      if (!p.value) return '';
-      const v = p.value as string;
-      return v.charAt(0).toUpperCase() + v.slice(1);
-    },
-  },
-  {
-    field: 'riskScore',
-    headerName: 'Risk Score',
-    width: 110,
-    filter: 'agNumberColumnFilter',
-    sortable: true,
-    sort: 'desc',
-    valueFormatter: (p) => (p.value != null ? String(p.value) : '—'),
-  },
-  {
     field: 'probability',
     headerName: 'Probability',
-    width: 110,
+    width: 120,
     filter: 'agNumberColumnFilter',
     sortable: true,
-    valueFormatter: (p) => (p.value != null ? `P${p.value}` : '—'),
+    cellRenderer: 'riskProbabilityCellRenderer',
   },
   {
     field: 'impactCost',
@@ -95,7 +97,7 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     width: 120,
     filter: 'agNumberColumnFilter',
     sortable: true,
-    valueFormatter: (p) => (p.value != null ? `I${p.value}` : '—'),
+    cellRenderer: 'riskImpactCellRenderer',
   },
   {
     field: 'impactSchedule',
@@ -103,7 +105,7 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     width: 140,
     filter: 'agNumberColumnFilter',
     sortable: true,
-    valueFormatter: (p) => (p.value != null ? `I${p.value}` : '—'),
+    cellRenderer: 'riskImpactCellRenderer',
   },
   {
     field: 'impactSafety',
@@ -111,7 +113,14 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     width: 130,
     filter: 'agNumberColumnFilter',
     sortable: true,
-    valueFormatter: (p) => (p.value != null ? `I${p.value}` : '—'),
+    cellRenderer: 'riskImpactCellRenderer',
+  },
+  {
+    field: 'assignedTo',
+    headerName: 'Assigned To',
+    width: 160,
+    filter: 'agTextColumnFilter',
+    valueFormatter: (p) => (p.value as string) || '—',
   },
   {
     field: 'responseStrategy',

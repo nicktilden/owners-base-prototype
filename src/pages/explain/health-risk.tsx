@@ -18,7 +18,6 @@ const NAV_SECTIONS: Section[] = [
   { id: 'system', label: 'The System' },
   { id: 'objects', label: 'Object Model' },
   { id: 'architecture', label: 'Architecture' },
-  { id: 'demo', label: 'See It Live' },
 ];
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -164,7 +163,7 @@ function LayerRow({
         height: 28,
         borderRadius: 6,
         background: '#2a333f',
-        color: '#8a97a7',
+        color: '#fff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -429,15 +428,8 @@ export default function HealthRiskExplain() {
 
             <p style={{ fontSize: 16, color: '#566578', lineHeight: 1.7, marginBottom: 32, maxWidth: 700 }}>
               As a result, Owners don&apos;t know where to focus their attention and struggle to clearly
-              identify risk and understand root cause. The research found five distinct workaround
-              patterns in production across customers today.
+              identify risk and understand root cause.
             </p>
-
-            <Quote
-              text="The majority of risk management happens in Excel documents. We haven't found a good way to document risk. Like, I don't think there's... a form in Procore for early development, that says, hey, these are potential risks that you've seen that your company has seen in the past... Please select them."
-              speaker="Victor"
-              topic="On the absence of a native risk register"
-            />
 
             <div style={{
               marginTop: 32,
@@ -470,9 +462,9 @@ export default function HealthRiskExplain() {
 
             <div className="highlight-quote" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <Quote
-                text="Owners are very high level and so they want to know how are we doing against budget, how are we doing on schedule and how are we doing on risks? Are we running a lot of risks? Is it high right now or are we low on risks?"
-                speaker="Jennifer"
-                topic="The executive view of portfolio health"
+                text="The majority of risk management happens in Excel documents. We haven't found a good way to document risk. Like, I don't think there's... a form in Procore for early development, that says, hey, these are potential risks that you've seen that your company has seen in the past... Please select them."
+                speaker="Victor"
+                topic="On the absence of a native risk register"
               />
               <Quote
                 text="The idea here is for us to... identify quickly, you know, the 20/80 rule — what 20 percent of the issues are going to occupy 80 percent of our time. Where should we focus? What's green is green. What's red is red. And then that yellow state in between are things that are of concern that we need to be watchful of."
@@ -485,19 +477,9 @@ export default function HealthRiskExplain() {
                 topic="Filtering noise — surfacing only what matters to leadership"
               />
               <Quote
-                text="A lot of firms use like a 3 by 3 or a 5 by 5 risk matrix, which is based on potential probability... and the impact of that risk if it occurred. And then they score it on this five by five matrix."
-                speaker="Nicolas"
-                topic="How owners score risk today"
-              />
-              <Quote
                 text="There's a pre-mitigation risk, there's a post-mitigation risk. So risk, you say if it happens, you know, it's four and a half out of five. But then we have mitigation measures and then we track those and then post-mitigation it is, you know, three out of five..."
                 speaker="Nicolas"
                 topic="Tracking mitigation over the risk lifecycle"
-              />
-              <Quote
-                text="We are linking our risks to specific schedule events. So what we want to know is if you're 50% done with that event, you should be 50% done with your risk... The flip side, too, is have they moved the risk? You need the visibility into that. So, where's the risk going? What's the movement on it?"
-                speaker="Mike C"
-                topic="Linking risk directly to schedule progress"
               />
             </div>
 
@@ -522,7 +504,7 @@ export default function HealthRiskExplain() {
                     <span style={{
                       fontWeight: 600,
                       color: '#3c4856',
-                      minWidth: 180,
+                      width: 180,
                       flexShrink: 0,
                     }}>
                       {theme}
@@ -532,7 +514,10 @@ export default function HealthRiskExplain() {
                 ))}
               </div>
             </div>
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+            <p style={{ fontSize: 16, color: '#566578', lineHeight: 1.7, marginBottom: 16, maxWidth: 700 }}>
+              The research found five distinct workaround patterns in production across customers today.
+            </p>
+            <div style={{ marginTop: 0, display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
               <WorkaroundCard
                 rank={1}
                 company="Dragados UK, Related Companies"
@@ -769,7 +754,7 @@ export default function HealthRiskExplain() {
 
             <div style={{ background: '#fff', border: '1px solid #e8ebef', borderRadius: 10, overflow: 'hidden', marginBottom: 32 }}>
               <div style={{ background: '#2a333f', padding: '10px 20px' }}>
-                <div style={{ color: '#8a97a7', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <div style={{ color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   System pipeline
                 </div>
               </div>
@@ -821,14 +806,14 @@ export default function HealthRiskExplain() {
 
             <div style={{ background: '#fff', border: '1px solid #e8ebef', borderRadius: 10, padding: '20px 24px' }}>
               <div style={{ fontWeight: 700, color: '#1e2836', marginBottom: 12 }}>Trust, Transparency & Action — the design principle</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '10px 12px', alignItems: 'start' }}>
                 {[
                   { step: 'Signal', desc: 'Shows what\'s being measured. Current AND forecast together. Always interactive.' },
                   { step: 'Evidence (popover)', desc: 'Why is this flagged? Value vs. threshold. Which rule triggered it.' },
                   { step: 'Evidence (tearsheet)', desc: 'Per-dimension breakdown · open Risk Records · probability · expected exposure · trend sparkline · source labels (automated vs. manual) on every data point.' },
                   { step: 'Action', desc: 'Navigate to source · adjust threshold inline · acknowledge with note · risk response on Risk Records (Mitigate / Transfer / Accept / Close).' },
                 ].map(({ step, desc }) => (
-                  <div key={step} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: 14 }}>
+                  <React.Fragment key={step}>
                     <span style={{
                       background: '#f2f4f6',
                       border: '1px solid #e8ebef',
@@ -838,81 +823,17 @@ export default function HealthRiskExplain() {
                       fontWeight: 600,
                       color: '#566578',
                       whiteSpace: 'nowrap',
-                      flexShrink: 0,
+                      justifySelf: 'start',
                     }}>
                       {step}
                     </span>
-                    <span style={{ color: '#566578', lineHeight: 1.6 }}>{desc}</span>
-                  </div>
+                    <span style={{ color: '#566578', lineHeight: 1.6, fontSize: 14 }}>{desc}</span>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* DEMO CTA */}
-          <SectionAnchor id="demo" />
-          <section>
-            <div style={{
-              background: 'linear-gradient(135deg, #1e2836 0%, #3c4856 100%)',
-              borderRadius: 16,
-              padding: '48px 40px',
-              textAlign: 'center',
-            }}>
-              <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 700, marginBottom: 12 }}>
-                See it in the prototype
-              </h2>
-              <p style={{ color: '#8a97a7', fontSize: 16, maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.65 }}>
-                The prototype shows the portfolio health dashboard, per-project risk cards
-                with current + forecast status, and the configurable Health & Risk settings page.
-              </p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Link
-                  href="/portfolio/health"
-                  style={{
-                    background: '#566578',
-                    color: '#fff',
-                    borderRadius: 8,
-                    padding: '12px 28px',
-                    fontSize: 15,
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Portfolio Health →
-                </Link>
-                <Link
-                  href="/portfolio"
-                  style={{
-                    background: 'transparent',
-                    color: '#8a97a7',
-                    border: '1px solid #3c4856',
-                    borderRadius: 8,
-                    padding: '12px 28px',
-                    fontSize: 15,
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Full Portfolio Hub
-                </Link>
-                <Link
-                  href="/settings/health-risk"
-                  style={{
-                    background: 'transparent',
-                    color: '#8a97a7',
-                    border: '1px solid #3c4856',
-                    borderRadius: 8,
-                    padding: '12px 28px',
-                    fontSize: 15,
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  H&amp;R Settings
-                </Link>
-              </div>
-            </div>
-          </section>
 
         </div>
       </div>
