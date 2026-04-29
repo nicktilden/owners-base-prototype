@@ -19,10 +19,9 @@ jobs:
 
       - name: Configure Artifactory registry auth
         run: |
-          npm config set registry https://artifacts.procoretech.com/artifactory/api/npm/npm/
-          npm config set always-auth true
-          npm config set @procore:registry https://artifacts.procoretech.com/artifactory/api/npm/npm/
-          npm config set //artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+          echo "registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/" >> ~/.npmrc
+          echo "@procore:registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/" >> ~/.npmrc
+          echo "//artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken=${{ secrets.ARTIFACTORY_NPM_TOKEN }}" >> ~/.npmrc
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
