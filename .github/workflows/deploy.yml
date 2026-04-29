@@ -17,17 +17,19 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Configure Artifactory registry auth
+        run: |
+          printf 'registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
+          printf '@procore:registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
+          printf '//artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken=%s\n' "$ARTIFACTORY_NPM_TOKEN" >> ~/.npmrc
+        env:
+          ARTIFACTORY_NPM_TOKEN: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+
       - name: Verify registry access
         run: npm ping --registry https://artifacts.procoretech.com/artifactory/api/npm/npm/
-        env:
-          NPM_CONFIG_REGISTRY: https://artifacts.procoretech.com/artifactory/api/npm/npm/
-          NPM_CONFIG__AUTH: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-        env:
-          NPM_CONFIG_REGISTRY: https://artifacts.procoretech.com/artifactory/api/npm/npm/
-          NPM_CONFIG__AUTH: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
 
       - name: Build
         run: npm run build
