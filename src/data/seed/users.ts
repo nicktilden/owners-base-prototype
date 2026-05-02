@@ -464,6 +464,35 @@ export const users: User[] = [
     updatedAt: new Date('2024-09-05'),
     lastActiveAt: new Date('2025-03-25'),
   },
+  // user-018: Riley Park — VP of Capital Projects (primary demo persona for Health & Risk v7)
+  {
+    id: 'user-018',
+    accountId: 'acc-001',
+    firstName: 'Riley',
+    lastName: 'Park',
+    companyName: 'Trinity Health',
+    email: 'riley.park@trinityhealth.com',
+    avatar: null,
+    role: 'Executive Strategy',
+    jobTitle: 'VP of Capital Projects',
+    projectIds: ALL_PROJECT_IDS,
+    permissions: {
+      toolDefaults: EXECUTIVE_TOOL_PERMISSIONS,
+      toolGranted: {},
+      toolDenied: [],
+      keyDefaults: [
+        ...EXECUTIVE_STRATEGY_KEY_DEFAULTS,
+        'risk:accept',
+        'risk:trigger_workflow',
+      ] as User['permissions']['keyDefaults'],
+      keyGranted: [],
+      keyDenied: [],
+    },
+    favorites: { projectIds: ['proj-001','proj-003','proj-007','proj-011'], toolKeys: ['health'] },
+    createdAt: new Date('2024-02-01'),
+    updatedAt: new Date('2026-04-01'),
+    lastActiveAt: new Date('2026-05-01'),
+  },
   // user-017: Sam Thornton — IT Admin
   {
     id: 'user-017',

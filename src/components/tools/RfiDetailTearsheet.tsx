@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Button, Card, H2, Page, Pill, Tabs, Tearsheet, Typography } from "@procore/core-react";
 import { Pencil, Paperclip, Connect } from "@procore/core-icons";
+import TagPanel from "@/components/risk/TagPanel";
 import styled, { createGlobalStyle } from "styled-components";
 import type { Rfi, RfiStatus } from "@/types/rfis";
 import { formatDateMMDDYYYY } from "@/utils/date";
@@ -339,6 +340,17 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
                         <Button variant="secondary" className="b_secondary">Add Response</Button>
                       </EmptyState>
                     )}
+                  </SectionCard>
+
+                  {/* ── Risk section ── */}
+                  <SectionCard>
+                    <H2 style={{ marginBottom: 16 }}>Risk</H2>
+                    <TagPanel
+                      sourceType="rfi"
+                      sourceId={rfi.id}
+                      projectId={rfi.projectId}
+                      prefillImpact={rfi.costImpact.hasImpact ? (rfi.costImpact.amount ?? 0) : 0}
+                    />
                   </SectionCard>
 
                   {/* ── General Information section ── */}

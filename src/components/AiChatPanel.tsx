@@ -989,7 +989,7 @@ function buildRiskScorecardResponse(aiSummary: string): string {
     response += `3. Increase monitoring frequency on at-risk projects\n`;
   } else {
     response += `1. Portfolio health is tracking well — continue standard monitoring cadence\n`;
-    response += `2. Review KPI thresholds in Health & Risk Settings to ensure they reflect current standards\n`;
+    response += `2. Review KPI thresholds in Risk Register Settings to ensure they reflect current standards\n`;
   }
 
   response += `\nWould you like me to drill into a specific KPI, draft an executive summary, or identify which projects are driving the at-risk signals?`;

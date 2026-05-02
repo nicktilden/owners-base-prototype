@@ -225,6 +225,8 @@ export const projects: Project[] = [
     invoiceOverdueDays: 0,
     milestoneCompletionRate: 77,
     healthHistory: makeHistory(90, ['green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
+    isConnected: true,
+    connectShareLevel: 'summary',
   },
   {
     id: 'proj-006',
@@ -307,6 +309,8 @@ export const projects: Project[] = [
     invoiceOverdueDays: 0,
     milestoneCompletionRate: 86,
     healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green']),
+    isConnected: true,
+    connectShareLevel: 'detail',
   },
   {
     id: 'proj-008',

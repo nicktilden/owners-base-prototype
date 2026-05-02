@@ -1,5 +1,26 @@
-import type { Account } from '@/types/account';
+import type { Account, ConnectedAccount } from '@/types/account';
 import { riskTypes } from './riskTypes';
+
+export const connectedAccounts: ConnectedAccount[] = [
+  {
+    id: 'ca-001',
+    companyName: 'Meridian Construction Group',
+    contactEmail: 'health-share@meridiancg.com',
+    shareLevel: 'detail',
+    connectedAt: new Date('2025-09-15'),
+    lastSyncedAt: new Date('2026-04-30T14:22:00'),
+    status: 'active',
+  },
+  {
+    id: 'ca-002',
+    companyName: 'Apex Building Partners',
+    contactEmail: 'procore-connect@apexbp.com',
+    shareLevel: 'summary',
+    connectedAt: new Date('2025-11-03'),
+    lastSyncedAt: new Date('2026-04-30T09:05:00'),
+    status: 'active',
+  },
+];
 
 export const account: Account = {
   id: 'acc-001',
@@ -65,4 +86,5 @@ export const account: Account = {
     scopedProjectIds: [],
   },
   riskTypes,
+  connectedAccounts,
 };

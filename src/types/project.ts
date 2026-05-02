@@ -181,6 +181,10 @@ export interface Project {
   description: string;
   /** Procore Connect — populated when this project is linked to an upstream GC project. */
   procoreConnect?: ProjectConnection;
+  /** True when health data is sourced from a connected GC Procore account via Procore Connect. */
+  isConnected?: boolean;
+  /** Share level agreed with GC for this connected project. */
+  connectShareLevel?: 'summary' | 'detail';
 
   // ── Health signal inputs (read by healthEngine; preferred from connected data) ──
   /** Budget variance as % of budget (positive = over budget). Seed fallback when not connected. */

@@ -32,7 +32,7 @@ import PortfolioRiskGaugeCard from "@/components/health/cards/PortfolioRiskGauge
 import HealthKPIGridCard from "@/components/health/cards/HealthKPIGridCard";
 import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTableCard";
 
-const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
+const tabs = ["Portfolio Performance", "My Work", "Risk Register", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
 
 const HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
@@ -109,7 +109,7 @@ const EllipsisBtn = styled.button`
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
   "My Work": ["My Open Items", "Projects by Stage", "Projects Table"],
-  "Health & Risk": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Risk Register"],
+  "Risk Register": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Risk Register"],
   "Portfolio Performance": ["Risk Signals", "Financial Scorecard", "Schedule Variance", "Action Plans Portfolio Matrix"],
   "Schedule & Milestones": ["Schedule Risk", "Action Plans Template", "Schedule Heatmap"],
   "Ideas Hub": [
@@ -128,7 +128,7 @@ type HiddenCards = Record<TabName, Set<string>>;
 function makeEmptyHidden(): HiddenCards {
   return {
     "My Work": new Set(),
-    "Health & Risk": new Set(),
+    "Risk Register": new Set(),
     "Portfolio Performance": new Set(),
     "Schedule & Milestones": new Set(),
     "Ideas Hub": new Set(),
@@ -262,7 +262,7 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Health & Risk" && (
+            {activeTab === "Risk Register" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row variant="table">
                   <RiskScorecardCard defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />

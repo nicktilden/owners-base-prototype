@@ -6,7 +6,7 @@ const HealthContent = dynamic(() => import('@/components/tools/HealthContent'), 
 export default function PortfolioHealthPage() {
   return (
     <>
-      <Head><title>Health &amp; Risk — Owner Prototype</title></Head>
+      <Head><title>Risk Register — Owner Prototype</title></Head>
       <HealthContent scope="portfolio" />
     </>
   );

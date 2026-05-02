@@ -33,3 +33,12 @@ export { correspondence } from './correspondence';
 export { commitments } from './commitments';
 export { capitalPlanning } from './capital_planning';
 export { fundingSource } from './funding_source';
+
+// v7 Health & Risk
+export { riskTags } from './riskTags';
+export { manualRiskItems } from './manualRiskItems';
+export { connectedProjects } from './connectedProjects';
+export { riskTypeRules } from './riskTypeRules';
+export { approvalTriggers } from './approvalTriggers';
+export { healthSnapshotsByProject } from './healthSnapshots';
+export { connectedAccounts } from './account';

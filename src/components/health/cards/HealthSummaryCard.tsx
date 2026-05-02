@@ -1,26 +1,34 @@
 /**
- * HEALTH SUMMARY CARD
- * Portfolio or project health overview — traffic-light grid with composite score.
- * Scope: portfolio (shows all projects) or project (shows one project detail).
+ * HEALTH SUMMARY CARD (v7)
+ * Portfolio health hub card. Delta-led 3-tab layout:
+ *   Tab 1 "What changed" — projects degraded/improved since last snapshot
+ *   Tab 2 "What's coming" — forecast tensions (current green but forecast yellow/red)
+ *   Tab 3 "All projects" — full leaderboard sortable by current or forecast
+ * Connected projects appear in all tabs alongside owner-managed projects.
+ * Uses DualStatusBadge (current|forecast split pill) throughout.
  */
 
-import React, { useMemo, useState, useRef, useCallback } from 'react';
-import { Button, Typography } from '@procore/core-react';
+import React, { useMemo, useState } from 'react';
+import { Button, Tabs, Typography } from '@procore/core-react';
 import { ArrowRight, EllipsisVertical } from '@procore/core-icons';
 import styled from 'styled-components';
 import { useRouter } from 'next/router';
 import HubCardFrame, { HubCardEmptyState } from '@/components/hubs/HubCardFrame';
-import HealthScoreBadge from '../HealthScoreBadge';
+import DualStatusBadge from '../DualStatusBadge';
+import OriginIndicator from '../OriginIndicator';
 import HealthDetailTearsheet from '../HealthDetailTearsheet';
 import HealthSummaryPopover from '../HealthSummaryPopover';
 import { buildHealthResult } from '@/utils/healthEngine';
 import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
+import { useRiskTags } from '@/context/RiskTagsContext';
+import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
+import { useConnectData } from '@/context/ConnectDataContext';
 import type { HealthResult, HealthScore } from '@/types/health';
 import type { Project } from '@/types/project';
 
-// ─── Styled ───────────────────────────────────────────────────────────────────
+// ─── Styled components ────────────────────────────────────────────────────────
 
 const Grid = styled.div`
   display: flex;
@@ -30,7 +38,7 @@ const Grid = styled.div`
 
 const ProjectRow = styled.button`
   display: grid;
-  grid-template-columns: 1fr 80px 80px;
+  grid-template-columns: 1fr 80px 24px;
   align-items: center;
   gap: 8px;
   padding: 8px 0;
@@ -44,25 +52,45 @@ const ProjectRow = styled.button`
   &:last-child { border-bottom: none; }
 `;
 
-const SummaryBar = styled.div`
-  display: flex;
-  gap: 12px;
-  padding: 10px 0 8px;
-  border-bottom: 1px solid var(--color-border-separator);
-  margin-bottom: 8px;
+const DeltaChip = styled.span<{ $direction: 'degraded' | 'improved' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: ${({ $direction }) => $direction === 'degraded'
+    ? 'var(--color-pill-bg-red)'
+    : 'var(--color-pill-bg-green)'};
+  color: ${({ $direction }) => $direction === 'degraded'
+    ? 'var(--color-pill-text-red)'
+    : 'var(--color-pill-text-green)'};
 `;
 
-const SummaryItem = styled.div`
+const SectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--color-border-separator);
+  margin-bottom: 4px;
 `;
 
-const CountBadge = styled.span<{ $color: string }>`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ $color }) => $color};
+const EmptyTabMsg = styled.div`
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 13px;
 `;
+
+type TabKey = 'changed' | 'coming' | 'all';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function scoreOrder(s: HealthScore): number {
+  return s === 'red' ? 0 : s === 'yellow' ? 1 : 2;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -74,10 +102,14 @@ interface Props {
 export default function HealthSummaryCard({ scope = 'portfolio', projectId }: Props) {
   const router = useRouter();
   const { data } = useData();
+  const { riskTags } = useRiskTags();
+  const { manualRiskItems } = useManualRiskItems();
+  const { getConnectDataForProject } = useConnectData();
   const config = data.account?.healthConfig;
+  const snapshots = data.healthSnapshotsByProject;
+
+  const [activeTab, setActiveTab] = useState<TabKey>('changed');
   const [tearsheetProject, setTearsheetProject] = useState<{ project: Project; result: HealthResult } | null>(null);
-  const [popover, setPopover] = useState<{ project: Project; result: HealthResult; rect: DOMRect } | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const projectResults = useMemo(() => {
     if (!config) return [];
@@ -87,29 +119,89 @@ export default function HealthSummaryCard({ scope = 'portfolio', projectId }: Pr
 
     return source.map(p => {
       const risks = getRisksForProject(p.id);
-      const result = buildHealthResult(p, config, undefined, risks);
-      return { project: p, result };
+      const tags = riskTags.filter(t => t.projectId === p.id);
+      const manuals = manualRiskItems.filter(m => m.projectId === p.id);
+      const connectData = p.isConnected ? getConnectDataForProject(p.id) : undefined;
+      const result = buildHealthResult(p, config, undefined, risks, tags, manuals, connectData);
+      const projectSnaps = snapshots[p.id] ?? [];
+      const previousScore = projectSnaps.length >= 2
+        ? projectSnaps[projectSnaps.length - 2]!.score
+        : null;
+      return { project: p, result, previousScore };
     });
-  }, [config, scope, projectId]);
+  }, [config, scope, projectId, riskTags, manualRiskItems, getConnectDataForProject, snapshots]);
 
   if (!config) return null;
 
-  const activeOnly = projectResults.filter(r => r.project.status === 'active');
-  const counts: Record<HealthScore, number> = { green: 0, yellow: 0, red: 0 };
-  activeOnly.forEach(r => { counts[r.result.compositeScore]++; });
+  // Tab 1: "What changed" — degraded or improved in last snapshot
+  const changed = projectResults
+    .filter(r => r.previousScore && r.previousScore !== r.result.compositeScore)
+    .sort((a, b) => scoreOrder(a.result.compositeScore) - scoreOrder(b.result.compositeScore));
 
-  const displayed = scope === 'project'
-    ? projectResults
-    : activeOnly.sort((a, b) => {
-        const order = { red: 0, yellow: 1, green: 2 };
-        return order[a.result.compositeScore] - order[b.result.compositeScore];
-      }).slice(0, 8);
+  const degraded = changed.filter(r => r.previousScore && scoreOrder(r.result.compositeScore) < scoreOrder(r.previousScore));
+  const improved = changed.filter(r => r.previousScore && scoreOrder(r.result.compositeScore) > scoreOrder(r.previousScore));
+
+  // Tab 2: "What's coming" — green now but forecast is yellow/red
+  const tensions = projectResults
+    .filter(r => r.result.compositeScore === 'green' && r.result.forecastScore !== 'green')
+    .sort((a, b) => scoreOrder(a.result.forecastScore) - scoreOrder(b.result.forecastScore));
+
+  // Tab 3: "All projects" — full leaderboard
+  const allSorted = [...projectResults].sort((a, b) =>
+    scoreOrder(a.result.compositeScore) - scoreOrder(b.result.compositeScore)
+  );
+
+  function getOriginState(p: Project) {
+    if (p.isConnected) return 'connected_partner' as const;
+    return 'automated' as const;
+  }
+
+  function renderRow({ project, result, previousScore }: typeof projectResults[number], showDelta = false) {
+    return (
+      <ProjectRow
+        key={project.id}
+        onClick={() => setTearsheetProject({ project, result })}
+        aria-label={`Health detail for ${project.name}`}
+      >
+        <div style={{ minWidth: 0 }}>
+          <Typography intent="small" style={{ color: 'var(--color-text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+            {project.name}
+          </Typography>
+          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+            {project.region} · {project.stage.replace(/_/g, ' ')}
+          </Typography>
+          {showDelta && previousScore && previousScore !== result.compositeScore && (
+            <DeltaChip $direction={scoreOrder(result.compositeScore) < scoreOrder(previousScore) ? 'degraded' : 'improved'}>
+              {scoreOrder(result.compositeScore) < scoreOrder(previousScore) ? '↓ Degraded' : '↑ Improved'}
+            </DeltaChip>
+          )}
+        </div>
+        <DualStatusBadge currentScore={result.compositeScore} forecastScore={result.forecastScore} />
+        <OriginIndicator origin={getOriginState(project)} />
+      </ProjectRow>
+    );
+  }
+
+  const tabBar = scope === 'portfolio' ? (
+    <Tabs>
+      <Tabs.Tab role="button" selected={activeTab === 'changed'} onPress={() => setActiveTab('changed')}>
+        What changed {changed.length > 0 ? `(${changed.length})` : ''}
+      </Tabs.Tab>
+      <Tabs.Tab role="button" selected={activeTab === 'coming'} onPress={() => setActiveTab('coming')}>
+        What&apos;s coming {tensions.length > 0 ? `(${tensions.length})` : ''}
+      </Tabs.Tab>
+      <Tabs.Tab role="button" selected={activeTab === 'all'} onPress={() => setActiveTab('all')}>
+        All projects
+      </Tabs.Tab>
+    </Tabs>
+  ) : undefined;
 
   return (
     <>
       <HubCardFrame
         title={scope === 'project' ? 'Project Health' : 'Portfolio Health'}
-        infoTooltip="Composite health score calculated from active KPIs. Click a row to see detail."
+        infoTooltip="v7: Delta-led health overview. Current|Forecast badges show where each project is now and where it's headed."
+        controls={tabBar}
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Button
@@ -125,68 +217,68 @@ export default function HealthSummaryCard({ scope = 'portfolio', projectId }: Pr
           </div>
         }
       >
+        {/* Portfolio 3-tab layout */}
         {scope === 'portfolio' && (
-          <SummaryBar>
-            {counts.red > 0 && (
-              <SummaryItem>
-                <CountBadge $color="var(--color-pill-text-red)">{counts.red}</CountBadge>
-                <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>Critical</Typography>
-              </SummaryItem>
+          <>
+            {activeTab === 'changed' && (
+              <>
+                {changed.length === 0
+                  ? <EmptyTabMsg>No status changes since last snapshot.</EmptyTabMsg>
+                  : <Grid>
+                    {degraded.length > 0 && (
+                      <>
+                        <SectionHeader>
+                          <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                            Degraded ({degraded.length})
+                          </Typography>
+                        </SectionHeader>
+                        {degraded.map(r => renderRow(r, true))}
+                      </>
+                    )}
+                    {improved.length > 0 && (
+                      <>
+                        <SectionHeader style={{ marginTop: degraded.length > 0 ? 8 : 0 }}>
+                          <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                            Improved ({improved.length})
+                          </Typography>
+                        </SectionHeader>
+                        {improved.map(r => renderRow(r, true))}
+                      </>
+                    )}
+                  </Grid>
+                }
+              </>
             )}
-            {counts.yellow > 0 && (
-              <SummaryItem>
-                <CountBadge $color="var(--color-pill-text-yellow)">{counts.yellow}</CountBadge>
-                <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>At Risk</Typography>
-              </SummaryItem>
+
+            {activeTab === 'coming' && (
+              <>
+                {tensions.length === 0
+                  ? <EmptyTabMsg>No projects forecast to degrade. Looking good!</EmptyTabMsg>
+                  : <Grid>{tensions.map(r => renderRow(r, false))}</Grid>
+                }
+              </>
             )}
-            <SummaryItem>
-              <CountBadge $color="var(--color-pill-text-green)">{counts.green}</CountBadge>
-              <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>Healthy</Typography>
-            </SummaryItem>
-          </SummaryBar>
+
+            {activeTab === 'all' && (
+              <>
+                {allSorted.length === 0
+                  ? <HubCardEmptyState title="No Health Data" body="No active projects with health data found." />
+                  : <Grid>{allSorted.slice(0, 10).map(r => renderRow(r, false))}</Grid>
+                }
+              </>
+            )}
+          </>
         )}
 
-        {displayed.length === 0
-          ? <HubCardEmptyState title="No Health Data to Display" body="No active projects with health data found. Ensure projects are active and KPIs are configured in Account Settings." />
-          : <Grid>{displayed.map(({ project, result }) => (
-            <ProjectRow
-              key={project.id}
-              onClick={() => setTearsheetProject({ project, result })}
-              aria-label={`Health detail for ${project.name}`}
-            >
-              <div style={{ minWidth: 0 }}>
-                <Typography intent="small" style={{ color: 'var(--color-text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                  {project.name}
-                </Typography>
-                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-                  {project.region} · {project.stage.replace(/_/g, ' ')}
-                </Typography>
-              </div>
-              <div
-                onMouseEnter={e => {
-                  e.stopPropagation();
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                  hoverTimerRef.current = setTimeout(() => {
-                    setPopover({ project, result, rect });
-                  }, 300);
-                }}
-                onMouseLeave={() => {
-                  if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-                }}
-                onClick={e => {
-                  e.stopPropagation();
-                  setPopover(null);
-                  setTearsheetProject({ project, result });
-                }}
-              >
-                <HealthScoreBadge score={result.compositeScore} forecastScore={result.forecastScore} />
-              </div>
-              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', textAlign: 'right' }}>
-                {result.trend === 'degrading' ? '↓' : result.trend === 'improving' ? '↑' : '—'}
-              </Typography>
-            </ProjectRow>
-          ))}</Grid>}
+        {/* Project scope — simple single view */}
+        {scope === 'project' && (
+          <>
+            {projectResults.length === 0
+              ? <HubCardEmptyState title="No Health Data to Display" body="No active projects with health data found." />
+              : <Grid>{projectResults.map(r => renderRow(r, false))}</Grid>
+            }
+          </>
+        )}
       </HubCardFrame>
 
       {tearsheetProject && (
@@ -196,15 +288,8 @@ export default function HealthSummaryCard({ scope = 'portfolio', projectId }: Pr
           result={tearsheetProject.result}
           projectName={tearsheetProject.project.name}
           projectId={tearsheetProject.project.id}
-        />
-      )}
-
-      {popover && (
-        <HealthSummaryPopover
-          result={popover.result}
-          projectName={popover.project.name}
-          anchorRect={popover.rect}
-          onClose={() => setPopover(null)}
+          isConnected={tearsheetProject.project.isConnected}
+          connectData={tearsheetProject.project.isConnected ? getConnectDataForProject(tearsheetProject.project.id) : undefined}
         />
       )}
     </>

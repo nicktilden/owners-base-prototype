@@ -1,21 +1,27 @@
 /**
- * HEALTH DETAIL TEARSHEET
+ * HEALTH DETAIL TEARSHEET (v7)
  * Full slide-over panel for project health detail.
- * Sections: Composite score + forecast + trend, KPI breakdown by category,
- * Sparkline, Risk exposure bar + open risk list, action affordances, integrity warning.
+ * v7 anatomy: DualStatusBadge header → Sparkline trend → "Why this score?" EvidenceCards
+ * → Actions → "Go to project" CTA.
+ * Connected projects: aggregate-only view, no drill-in, trust language, no edit actions.
  */
 
 import React, { useState } from 'react';
 import { Banner, Box, Button, Card, Page, Pill, Tabs, Tearsheet, Typography } from '@procore/core-react';
-import { ArrowRight, Link as LinkIcon, Check, Connect, Person } from '@procore/core-icons';
+import { ArrowRight, Check } from '@procore/core-icons';
 import styled, { createGlobalStyle } from 'styled-components';
-import HealthScoreBadge from './HealthScoreBadge';
-import KPIRow from './KPIRow';
 import HealthSparkline from './HealthSparkline';
+import DualStatusBadge from './DualStatusBadge';
+import OriginIndicator from './OriginIndicator';
+import EvidenceCard from './EvidenceCard';
+import KPIRow from './KPIRow';
 import RiskExposureBar from './RiskExposureBar';
-import type { HealthResult, KPICategory, Risk } from '@/types/health';
+import type { HealthResult, KPICategory, Risk, ConnectedProjectHealth } from '@/types/health';
+import { useRiskTags } from '@/context/RiskTagsContext';
+import { useData } from '@/context/DataContext';
+import PendingApprovalState from '@/components/risk/PendingApprovalState';
 
-// ─── Width override (50vw) ────────────────────────────────────────────────────
+// ─── Width override (60%) ─────────────────────────────────────────────────────
 
 const HealthTearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .health-detail-tearsheet-root) {
@@ -33,17 +39,13 @@ const SectionHeading = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 `;
 
-const CategoryLabel = styled.div`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border-separator);
-  margin-bottom: 4px;
+const EvidenceStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const RiskItem = styled.div`
@@ -63,14 +65,26 @@ const ProbBar = styled.div<{ $prob: number }>`
   background: ${({ $prob }) => $prob >= 4 ? 'var(--color-pill-border-red)' : $prob >= 3 ? 'var(--color-pill-border-yellow)' : 'var(--color-pill-border-green)'};
 `;
 
-const ActionBar = styled.div`
+const ConnectedBanner = styled.div`
+  padding: 12px 16px;
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-separator);
+  border-radius: 6px;
+  margin-bottom: 16px;
   display: flex;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
-  padding-top: 8px;
 `;
 
-const TABS = ['Overview', 'KPIs', 'Risks', 'Trend'] as const;
+const FooterLink = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--color-border-separator);
+`;
+
+const TABS = ['Evidence', 'KPIs', 'Risks', 'Trend'] as const;
 type TearsheetTab = typeof TABS[number];
 
 const CATEGORY_LABELS: Record<KPICategory, string> = {
@@ -79,8 +93,6 @@ const CATEGORY_LABELS: Record<KPICategory, string> = {
   delivery: 'Delivery',
   risk: 'Risk',
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function riskProbLabel(p: number): string {
   return ['', 'Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'][p] ?? String(p);
@@ -101,6 +113,8 @@ interface HealthDetailTearsheetProps {
   result: HealthResult | null;
   projectName: string;
   projectId?: string;
+  isConnected?: boolean;
+  connectData?: ConnectedProjectHealth;
 }
 
 export default function HealthDetailTearsheet({
@@ -109,14 +123,28 @@ export default function HealthDetailTearsheet({
   result,
   projectName,
   projectId,
+  isConnected = false,
+  connectData,
 }: HealthDetailTearsheetProps) {
-  const [activeTab, setActiveTab] = useState<TearsheetTab>('Overview');
+  const [activeTab, setActiveTab] = useState<TearsheetTab>('Evidence');
   const [acknowledgedKPIs, setAcknowledgedKPIs] = useState<Set<string>>(new Set());
+  const { getRiskTagsForProject } = useRiskTags();
+  const { data } = useData();
 
   if (!result) return null;
 
+  const v7Tags = projectId ? getRiskTagsForProject(projectId).filter(t => t.status !== 'closed') : [];
+  const riskTypes = data.account?.riskTypes ?? [];
+  function getRiskTypeName(id: string) { return riskTypes.find(rt => rt.id === id)?.label ?? id; }
+
   const openRisks = result.risks.filter(r => r.status !== 'closed' && r.status !== 'mitigated');
   const categories: KPICategory[] = ['cost', 'schedule', 'delivery', 'risk'];
+
+  // Sort KPIs by impact: red → yellow → unavailable → green
+  const orderedKPIs = [...result.kpis].sort((a, b) => {
+    const rank = { red: 0, yellow: 1, unavailable: 2, green: 3 };
+    return (rank[a.status] ?? 3) - (rank[b.status] ?? 3);
+  });
 
   const toggleAck = (key: string) => {
     setAcknowledgedKPIs(prev => {
@@ -125,6 +153,8 @@ export default function HealthDetailTearsheet({
       return next;
     });
   };
+
+  const showForecastWarning = result.forecastScore !== result.compositeScore;
 
   return (
     <>
@@ -138,20 +168,16 @@ export default function HealthDetailTearsheet({
             <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
               <Page.Title>
                 <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <DualStatusBadge
+                      currentScore={result.compositeScore}
+                      forecastScore={result.forecastScore}
+                    />
                     <Typography intent="h2" style={{ color: 'var(--color-text-primary)' }}>
                       {projectName}
                     </Typography>
-                    <HealthScoreBadge
-                      score={result.compositeScore}
-                      forecastScore={result.forecastScore}
-                      trend={result.trend}
-                      showTrend
-                    />
-                    {result.forecastScore !== result.compositeScore && (
-                      <Pill color="yellow" style={{ fontSize: 11 }}>
-                        Forecast: {result.forecastScore === 'red' ? 'Critical' : 'At Risk'}
-                      </Pill>
+                    {isConnected && (
+                      <OriginIndicator origin="connected_partner" />
                     )}
                   </Box>
                   {projectId && (
@@ -162,7 +188,7 @@ export default function HealthDetailTearsheet({
                       icon={<ArrowRight size="sm" />}
                       onClick={() => { window.location.href = `/project/${projectId}/health`; }}
                     >
-                      Go to Health
+                      Go to Project
                     </Button>
                   )}
                 </Box>
@@ -186,8 +212,20 @@ export default function HealthDetailTearsheet({
             {/* ── Body ── */}
             <Page.Body style={{ padding: 20, overflowY: 'auto', background: 'var(--color-surface-secondary)' }}>
 
+              {/* Connected project — trust language */}
+              {isConnected && connectData && (
+                <ConnectedBanner>
+                  <OriginIndicator origin="connected_partner" showTooltip={false} />
+                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
+                    Health data sourced from <strong>{connectData.sourceAccountName}</strong> via Procore Connect.
+                    Synced {new Date(connectData.syncedAt).toLocaleDateString()}.
+                    {connectData.shareLevel === 'summary' && ' Summary view only — drill-down data not shared.'}
+                  </Typography>
+                </ConnectedBanner>
+              )}
+
               {/* Integrity warning */}
-              {!result.integrity.isComplete && (
+              {!result.integrity.isComplete && !isConnected && (
                 <Banner variant="attention" style={{ marginBottom: 16 }}>
                   <Banner.Content>
                     <Banner.Title>Partial health score</Banner.Title>
@@ -199,84 +237,128 @@ export default function HealthDetailTearsheet({
                 </Banner>
               )}
 
-              {/* ── OVERVIEW TAB ── */}
-              {activeTab === 'Overview' && (
+              {/* Forecast warning */}
+              {showForecastWarning && (
+                <Box style={{ padding: 12, background: 'var(--color-pill-bg-yellow)', border: '1px solid var(--color-pill-border-yellow)', borderRadius: 6, marginBottom: 16 }}>
+                  <Typography intent="body" style={{ color: 'var(--color-pill-text-yellow)', fontWeight: 600, marginBottom: 4 }}>
+                    Forecast Warning
+                  </Typography>
+                  <Typography intent="small" style={{ color: 'var(--color-pill-text-yellow)' }}>
+                    This project is currently {result.compositeScore === 'green' ? 'Healthy' : 'At Risk'} but forecast to be{' '}
+                    {result.forecastScore === 'red' ? 'Critical' : 'At Risk'} based on open high-probability risks.
+                  </Typography>
+                </Box>
+              )}
+
+              {/* ── EVIDENCE TAB (v7 default) ── */}
+              {activeTab === 'Evidence' && (
                 <Card style={{ padding: 20, background: 'var(--color-surface-primary)' }}>
                   <Section>
                     <SectionHeading>
                       <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                        Current Score
+                        Why this score?
                       </Typography>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {result.integrity.signalOrigin === 'automated' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Connect size="sm" style={{ color: 'var(--color-text-secondary)' }} />
-                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>Automated data</Typography>
-                          </div>
-                        )}
-                        {result.integrity.signalOrigin === 'manual' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Person size="sm" style={{ color: 'var(--color-text-secondary)' }} />
-                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>Manual data</Typography>
-                          </div>
-                        )}
-                        {result.integrity.signalOrigin === 'mixed' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Person size="sm" style={{ color: 'var(--color-text-secondary)' }} />
-                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>Automated + Manual</Typography>
-                          </div>
-                        )}
-                        <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                          As of {new Date(result.dataAsOf).toLocaleDateString()}
-                        </Typography>
-                      </div>
+                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
+                        As of {new Date(result.dataAsOf).toLocaleDateString()}
+                      </Typography>
                     </SectionHeading>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-                      {(['cost', 'schedule', 'delivery', 'risk'] as KPICategory[]).map(cat => {
-                        const catKPIs = result.kpis.filter(k => k.category === cat);
-                        const worstStatus = catKPIs.some(k => k.status === 'red') ? 'red' : catKPIs.some(k => k.status === 'yellow') ? 'yellow' : 'green';
-                        return (
-                          <div key={cat} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, background: 'var(--color-surface-secondary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
-                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                              {CATEGORY_LABELS[cat]}
-                            </Typography>
-                            <Pill color={worstStatus === 'red' ? 'red' : worstStatus === 'yellow' ? 'yellow' : 'green'}>
-                              {worstStatus === 'red' ? 'Critical' : worstStatus === 'yellow' ? 'At Risk' : 'Good'}
-                            </Pill>
-                          </div>
-                        );
-                      })}
+
+                    {/* Trend sparkline */}
+                    <div style={{ marginBottom: 16 }}>
+                      <HealthSparkline
+                        history={result.history}
+                        forecastScore={showForecastWarning ? result.forecastScore : undefined}
+                        width={480}
+                        height={60}
+                      />
                     </div>
-                  </Section>
 
-                  <Section>
-                    <SectionHeading>
-                      <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                        Risk Exposure
+                    {/* Connected projects: aggregate dimensions only */}
+                    {isConnected && connectData && connectData.shareLevel === 'detail' ? (
+                      <EvidenceStack>
+                        {Object.entries(connectData.dimensions ?? {})
+                          .filter(([key, v]) => key !== 'composite' && v != null)
+                          .map(([dimKey, dimData]) => {
+                            const dim = dimData!;
+                            return (
+                              <EvidenceCard
+                                key={dimKey}
+                                kpi={{
+                                  key: dimKey as any,
+                                  label: dimKey.charAt(0).toUpperCase() + dimKey.slice(1),
+                                  category: 'cost' as KPICategory,
+                                  weight: 0,
+                                  threshold: { yellow: 0, red: 0 },
+                                  status: dim.status as any,
+                                  displayValue: dim.status,
+                                  numericValue: null,
+                                  dataSource: 'connected',
+                                  sourceLabel: connectData.sourceAccountName,
+                                  reasons: [],
+                                  integrity: { isComplete: true, missingFields: [], issueType: null, resolutionPath: null, signalOrigin: 'automated' },
+                                }}
+                                forecastScore={dim.forecastStatus}
+                              />
+                            );
+                          })
+                        }
+                      </EvidenceStack>
+                    ) : isConnected ? (
+                      <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
+                        Summary-level view only. Detailed dimension data is not shared for this project.
                       </Typography>
-                    </SectionHeading>
-                    <RiskExposureBar risks={result.risks} />
+                    ) : (
+                      <EvidenceStack>
+                        {orderedKPIs
+                          .filter(k => k.status !== 'green' && k.status !== 'unavailable')
+                          .concat(orderedKPIs.filter(k => k.status === 'green'))
+                          .slice(0, 8)
+                          .map(kpi => (
+                            <EvidenceCard
+                              key={kpi.key}
+                              kpi={kpi}
+                              forecastScore={result.forecastScore}
+                            />
+                          ))
+                        }
+                        {result.kpis.length === 0 && (
+                          <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
+                            No KPI data available for this project.
+                          </Typography>
+                        )}
+                      </EvidenceStack>
+                    )}
                   </Section>
 
-                  {result.forecastScore !== result.compositeScore && (
+                  {/* Exposure bar — not for connected/summary projects */}
+                  {!isConnected && result.risks.length > 0 && (
                     <Section>
-                      <Box style={{ padding: 12, background: 'var(--color-pill-bg-yellow)', border: '1px solid var(--color-pill-border-yellow)', borderRadius: 6 }}>
-                        <Typography intent="body" style={{ color: 'var(--color-pill-text-yellow)', fontWeight: 600, marginBottom: 4 }}>
-                          Forecast Warning
+                      <SectionHeading>
+                        <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                          Risk Exposure
                         </Typography>
-                        <Typography intent="small" style={{ color: 'var(--color-pill-text-yellow)' }}>
-                          This project is currently {result.compositeScore === 'green' ? 'Healthy' : 'At Risk'} but{' '}
-                          {result.risks.filter(r => r.status !== 'closed' && r.status !== 'mitigated' && r.probability >= 4).length} open high-probability risks
-                          {' '}forecast a {result.forecastScore === 'red' ? 'Critical' : 'At Risk'} status if not addressed.
-                        </Typography>
-                      </Box>
+                      </SectionHeading>
+                      <RiskExposureBar risks={result.risks} />
                     </Section>
+                  )}
+
+                  {/* Footer CTA */}
+                  {projectId && (
+                    <FooterLink>
+                      <Button
+                        variant="tertiary"
+                        icon={<ArrowRight size="sm" />}
+                        onClick={() => { window.location.href = `/project/${projectId}/health`; }}
+                      >
+                        Go to project health page
+                      </Button>
+                    </FooterLink>
                   )}
                 </Card>
               )}
 
               {/* ── KPIs TAB ── */}
-              {activeTab === 'KPIs' && (
+              {activeTab === 'KPIs' && !isConnected && (
                 <Card style={{ padding: 20, background: 'var(--color-surface-primary)' }}>
                   {categories.map(cat => {
                     const catKPIs = result.kpis.filter(k => k.category === cat);
@@ -307,12 +389,55 @@ export default function HealthDetailTearsheet({
                       </Section>
                     );
                   })}
+                  {isConnected && (
+                    <Typography intent="body" style={{ color: 'var(--color-text-secondary)' }}>
+                      KPI breakdown is not available for connected projects.
+                    </Typography>
+                  )}
                 </Card>
               )}
 
               {/* ── RISKS TAB ── */}
-              {activeTab === 'Risks' && (
+              {activeTab === 'Risks' && !isConnected && (
                 <Card style={{ padding: 20, background: 'var(--color-surface-primary)' }}>
+                  {v7Tags.length > 0 && (
+                    <Section>
+                      <SectionHeading>
+                        <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                          Risk Tags ({v7Tags.length})
+                        </Typography>
+                      </SectionHeading>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {v7Tags
+                          .sort((a, b) => (b.probability * b.impact) - (a.probability * a.impact))
+                          .map(tag => (
+                            tag.status === 'pending_approval'
+                              ? <PendingApprovalState key={tag.id} tag={tag} />
+                              : (
+                                <RiskItem key={tag.id}>
+                                  <ProbBar $prob={tag.probability} aria-hidden="true" />
+                                  <Box style={{ flex: 1 }}>
+                                    <Box style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                        {getRiskTypeName(tag.riskTypeId)}
+                                      </Typography>
+                                      <Pill color="gray" style={{ fontSize: 10 }}>{tag.sourceType}</Pill>
+                                      <Pill color={tag.status === 'open' ? 'yellow' : tag.status === 'mitigated' ? 'green' : 'gray'} style={{ fontSize: 10 }}>
+                                        {tag.status}
+                                      </Pill>
+                                    </Box>
+                                    <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
+                                      Probability: <strong>{riskProbLabel(tag.probability)}</strong>
+                                      {tag.impact > 0 && <> · Expected impact: <strong>${tag.impact.toLocaleString()}</strong></>}
+                                    </Typography>
+                                  </Box>
+                                </RiskItem>
+                              )
+                          ))}
+                      </div>
+                    </Section>
+                  )}
+
                   <Section>
                     <SectionHeading>
                       <Typography intent="h3" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
@@ -339,11 +464,6 @@ export default function HealthDetailTearsheet({
                                 <Pill color={riskStatusColor(risk)} style={{ fontSize: 10 }}>
                                   {risk.status.charAt(0).toUpperCase() + risk.status.slice(1)}
                                 </Pill>
-                                {risk.origin === 'promoted' ? (
-                                  <Pill color="green" style={{ fontSize: 10 }}>Auto</Pill>
-                                ) : (
-                                  <Pill color="blue" style={{ fontSize: 10 }}>Manual</Pill>
-                                )}
                               </Box>
                               <Typography intent="small" style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>
                                 {risk.description}
@@ -352,17 +472,6 @@ export default function HealthDetailTearsheet({
                                 Probability: <strong>{riskProbLabel(risk.probability)}</strong> · Category: <strong>{risk.category}</strong>
                                 {risk.dueDate && ` · Due ${risk.dueDate}`}
                               </Typography>
-                              <ActionBar>
-                                <Button size="sm" variant="secondary" className="b_secondary" onClick={() => {}}>
-                                  Mitigate
-                                </Button>
-                                <Button size="sm" variant="secondary" className="b_secondary" onClick={() => {}}>
-                                  Accept
-                                </Button>
-                                <Button size="sm" variant="secondary" className="b_secondary" onClick={() => {}}>
-                                  Close
-                                </Button>
-                              </ActionBar>
                             </Box>
                           </RiskItem>
                         ))
@@ -377,7 +486,7 @@ export default function HealthDetailTearsheet({
                   <Section>
                     <HealthSparkline
                       history={result.history}
-                      forecastScore={result.forecastScore !== result.compositeScore ? result.forecastScore : undefined}
+                      forecastScore={showForecastWarning ? result.forecastScore : undefined}
                       width={480}
                       height={100}
                     />

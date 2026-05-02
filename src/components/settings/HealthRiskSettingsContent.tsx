@@ -215,11 +215,11 @@ function OnboardingStepNav({ step }: { step: number }) {
 
 const ONBOARDING_STEPS = [
   {
-    title: 'What is Health & Risk?',
+    title: 'What is Risk Register?',
     body: (
       <OnboardingStep>
         <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-          Health &amp; Risk gives you a real-time view of project and portfolio health by automatically scoring each project across key dimensions — cost, schedule, delivery, and risk.
+          Risk Register gives you a real-time view of project and portfolio health by automatically scoring each project across key dimensions — cost, schedule, delivery, and risk.
         </Typography>
         <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
           Each project receives a composite health score (Green, Yellow, or Red) based on how its KPIs compare to the thresholds you configure. You can see these scores on the Portfolio Hub, the Portfolio Health page, and each project's detail view.
@@ -227,7 +227,7 @@ const ONBOARDING_STEPS = [
         <Banner variant="info">
           <Banner.Content>
             <Banner.Title>Designed for owners</Banner.Title>
-            <Banner.Body>The Health &amp; Risk framework is built around the metrics that matter most to project owners — financial exposure, milestone delivery, and unmitigated risk.</Banner.Body>
+            <Banner.Body>The Risk Register framework is built around the metrics that matter most to project owners — financial exposure, milestone delivery, and unmitigated risk.</Banner.Body>
           </Banner.Content>
         </Banner>
       </OnboardingStep>
@@ -261,14 +261,14 @@ const ONBOARDING_STEPS = [
     body: (
       <OnboardingStep>
         <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-          Follow these steps to set up Health &amp; Risk for your organization:
+          Follow these steps to set up the Risk Register for your organization:
         </Typography>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             { num: '1', label: 'Review Risk Types', desc: 'Check the default risk types and edit or create new ones to match your business.' },
             { num: '2', label: 'Configure KPIs', desc: 'Toggle KPIs on/off, set yellow and red thresholds, and assign weights that reflect your priorities.' },
             { num: '3', label: 'Set Portfolio Scope', desc: 'Choose which projects are included in the portfolio health score.' },
-            { num: '4', label: 'Review on the Hub', desc: 'Visit the Portfolio Hub → Health & Risk tab to see health scores across all your projects.' },
+            { num: '4', label: 'Review on the Hub', desc: 'Visit the Portfolio Hub → Risk Register tab to see health scores across all your projects.' },
           ].map(step => (
             <div key={step.num} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--color-action-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
@@ -297,7 +297,7 @@ function HealthRiskOnboardingModal({ open, onClose }: { open: boolean; onClose: 
   }
 
   return (
-    <Modal open={open} onClose={handleClose} aria-label="Health & Risk framework overview" style={{ width: 600 }}>
+    <Modal open={open} onClose={handleClose} aria-label="Risk Register framework overview" style={{ width: 600 }}>
       <Modal.Header onClose={handleClose}>
         {current.title}
       </Modal.Header>
@@ -383,9 +383,72 @@ const SOURCE_DISPLAY_LABELS: Record<string, string> = {
   action_plans:   'Action Plans',
 };
 
+// ─── ConnectAccountsTable ─────────────────────────────────────────────────────
+
+const ConnectTableWrapper = styled.div`
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+`;
+
+const ConnectTableRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-separator);
+  &:last-child { border-bottom: none; }
+  &:first-child { background: var(--color-surface-secondary); font-weight: 600; font-size: 12px; color: var(--color-text-secondary); }
+`;
+
+function ConnectAccountsTable() {
+  const { data } = useData();
+  const accounts = data.account?.connectedAccounts ?? [];
+
+  function formatDate(d: Date | null) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  return (
+    <ConnectTableWrapper>
+      <ConnectTableRow>
+        <Typography intent="small">Account</Typography>
+        <Typography intent="small">Share Level</Typography>
+        <Typography intent="small">Status</Typography>
+        <Typography intent="small">Last Synced</Typography>
+      </ConnectTableRow>
+      {accounts.length === 0 && (
+        <ConnectTableRow style={{ gridTemplateColumns: '1fr', fontWeight: 400, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <Typography intent="small">No connected accounts yet.</Typography>
+        </ConnectTableRow>
+      )}
+      {accounts.map(acc => (
+        <ConnectTableRow key={acc.id}>
+          <div>
+            <Typography intent="body" style={{ fontWeight: 500 }}>{acc.companyName}</Typography>
+            <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>{acc.contactEmail}</Typography>
+          </div>
+          <Pill color={acc.shareLevel === 'detail' ? 'blue' : 'gray'}>
+            {acc.shareLevel === 'detail' ? 'Detail' : 'Summary'}
+          </Pill>
+          <Pill color={acc.status === 'active' ? 'green' : acc.status === 'pending' ? 'yellow' : 'gray'}>
+            {acc.status.charAt(0).toUpperCase() + acc.status.slice(1)}
+          </Pill>
+          <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
+            {formatDate(acc.lastSyncedAt)}
+          </Typography>
+        </ConnectTableRow>
+      ))}
+    </ConnectTableWrapper>
+  );
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TABS = ['Risk Types', 'KPIs', 'Scope'] as const;
+const TABS = ['Risk Types', 'KPIs', 'Scope', 'Connect'] as const;
 type SettingsTab = typeof TABS[number];
 
 const KPI_CALC_LABELS: Record<KPIKey, string> = {
@@ -543,7 +606,7 @@ export default function HealthRiskSettingsContent() {
 
   return (
     <>
-      <Head><title>Health &amp; Risk Settings — Owner Prototype</title></Head>
+      <Head><title>Risk Register Settings — Owner Prototype</title></Head>
       <GlobalHeader />
       <AppLayout>
         <ToolLandingPage style={{ background: 'var(--color-surface-secondary)' }}>
@@ -561,24 +624,24 @@ export default function HealthRiskSettingsContent() {
                       Settings
                     </a>
                   </Breadcrumbs.Crumb>
-                  <Breadcrumbs.Crumb active>Health &amp; Risk Configuration</Breadcrumbs.Crumb>
+                  <Breadcrumbs.Crumb active>Risk Register Configuration</Breadcrumbs.Crumb>
                 </Breadcrumbs>
                 <Title>
                   <Title.Text>
                     <H1 style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-primary)' }}>
                       <Warning size="md" style={{ color: 'var(--color-pill-text-yellow)' }} />
-                      Health &amp; Risk Configuration
+                      Risk Register Configuration
                       <Pill color="blue">Account Level</Pill>
                     </H1>
                   </Title.Text>
                   <Title.Actions>
                     {/* Onboarding guide — always visible */}
-                    <Tooltip trigger="hover" placement="bottom" overlay={<Tooltip.Content>Learn how Health &amp; Risk works</Tooltip.Content>}>
+                    <Tooltip trigger="hover" placement="bottom" overlay={<Tooltip.Content>Learn how Risk Register works</Tooltip.Content>}>
                       <Button
                         variant="tertiary"
                         className="b_tertiary"
                         icon={<Info size="sm" />}
-                        aria-label="Learn how Health & Risk works"
+                        aria-label="Learn how Risk Register works"
                         onClick={() => setOnboardingOpen(true)}
                       >
                         How it works
@@ -980,6 +1043,30 @@ export default function HealthRiskSettingsContent() {
                   </TabBody>
                 )}
 
+                {/* ── Connect Tab ── */}
+                {activeTab === 'Connect' && (
+                  <TabBody>
+                    <DetailPage.Card>
+                      <DetailPage.Section heading="Procore Connect">
+                        <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
+                          Procore Connect allows your Owner account to receive pre-aggregated health and risk data from General Contractor accounts.
+                          GC data appears alongside your owner-managed projects in the portfolio health views.
+                        </Typography>
+                        <Banner variant="info" style={{ marginBottom: 20 }}>
+                          <Banner.Content>
+                            <Banner.Title>Connected accounts receive read-only health summaries</Banner.Title>
+                            <Banner.Body>
+                              GC accounts control what data they share. You can view health status and risk exposure at the detail or summary level,
+                              depending on the share level granted by each GC.
+                            </Banner.Body>
+                          </Banner.Content>
+                        </Banner>
+                        <ConnectAccountsTable />
+                      </DetailPage.Section>
+                    </DetailPage.Card>
+                  </TabBody>
+                )}
+
               </TabContent>
             </ToolLandingPage.Body>
 
@@ -991,7 +1078,7 @@ export default function HealthRiskSettingsContent() {
       {showToast && (
         <ToastContainer>
           <Toast variant="success">
-            <Toast.Text>Health &amp; Risk settings saved</Toast.Text>
+            <Toast.Text>Risk Register settings saved</Toast.Text>
             <Toast.Dismiss onClick={() => setShowToast(false)} aria-label="Dismiss" />
           </Toast>
         </ToastContainer>
