@@ -6,6 +6,16 @@
 import type { USState } from './shared';
 import type { AccountHealthConfig, RiskType } from './health';
 
+export interface ConnectedAccount {
+  id: string;
+  companyName: string;
+  contactEmail: string;
+  shareLevel: 'summary' | 'detail';
+  connectedAt: Date;
+  lastSyncedAt: Date | null;
+  status: 'active' | 'pending' | 'disconnected';
+}
+
 export interface Account {
   id: string;
   companyName: string;
@@ -16,6 +26,8 @@ export interface Account {
   healthConfig: AccountHealthConfig;
   /** Account-level Risk Type templates. Procore ships defaults; customers can add/edit. */
   riskTypes: RiskType[];
+  /** Procore Connect — GC accounts sharing health data with this owner account */
+  connectedAccounts: ConnectedAccount[];
 }
 
 export interface Office {

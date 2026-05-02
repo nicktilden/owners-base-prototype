@@ -18,6 +18,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-002',
@@ -29,6 +31,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-003',
@@ -40,6 +44,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-004',
@@ -51,6 +57,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-005',
@@ -62,6 +70,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'accept', 'avoid'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-006',
@@ -73,6 +83,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer', 'avoid'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-007',
@@ -84,6 +96,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-008',
@@ -95,6 +109,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-009',
@@ -106,6 +122,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-010',
@@ -117,6 +135,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'transfer', 'accept'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-011',
@@ -128,6 +148,8 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['mitigate', 'avoid'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
   {
     id: 'rt-012',
@@ -139,5 +161,7 @@ export const riskTypes: RiskType[] = [
     defaultResponseStrategies: ['accept', 'transfer'],
     isDefault: true,
     isHidden: false,
+    taggingRules: [],
+    approvalTriggers: [],
   },
 ];

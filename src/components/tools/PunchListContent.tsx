@@ -18,6 +18,7 @@ import { SmartGridWrapper } from "@/components/SmartGrid";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import PunchListDetailTearsheet from "@/components/tools/PunchListDetailTearsheet";
 import styled from "styled-components";
 import { punchList } from "@/data/seed/punch_list";
 
@@ -72,6 +73,7 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const gridApiRef = useRef<GridApi | null>(null);
 
   const rowData = useMemo(() => punchList.filter((p: any) => p.projectId === projectId), [projectId]);
@@ -194,6 +196,10 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
     gridApiRef.current = event.api;
   }, []);
 
+  const handleRowClick = useCallback((event: { data: any }) => {
+    if (event.data) setSelectedItem(event.data);
+  }, []);
+
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -207,6 +213,7 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
   );
 
   return (
+    <>
     <ToolPageLayout
       title="Punch List"
       icon={<PunchListIcon size="md" />}
@@ -297,6 +304,7 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
                   onGridReady={handleGridReady}
+                  onRowClicked={handleRowClick}
                   statusBar={{
                     statusPanels: [
                       {
@@ -321,5 +329,12 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
         </SplitViewCard.Main>
       </SplitViewCard>
     </ToolPageLayout>
+
+      <PunchListDetailTearsheet
+        item={selectedItem}
+        open={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
+      />
+    </>
   );
 }

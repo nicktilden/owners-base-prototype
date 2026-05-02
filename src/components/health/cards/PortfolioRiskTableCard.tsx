@@ -242,7 +242,7 @@ export default function PortfolioRiskTableCard() {
   return (
     <HubCardFrame
       title="Portfolio Risk"
-      infoTooltip="All active projects with Health & Risk KPI scores. Grouped by region."
+      infoTooltip="All active projects with Risk Register KPI scores. Grouped by region."
     >
       <ToolbarRow>
         <ToolbarLeft>

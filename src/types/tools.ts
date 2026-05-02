@@ -25,7 +25,8 @@ export type ToolKey =
   | 'submittals'
   | 'observations'
   | 'correspondence'
-  | 'commitments';
+  | 'commitments'
+  | 'risk';
 
 export type ExportFormat = 'PDF' | 'CSV' | 'Excel';
 
@@ -51,12 +52,13 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   observations:       'project',
   correspondence:     'project',
   commitments:        'project',
+  risk:               'project',
 };
 
 // Human-readable display names for tools in the nav
 export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   hubs:               'Home',
-  health:             'Health & Risk',
+  health:             'Risk Register',
   documents:          'Documents',
   schedule:           'Schedule',
   assets:             'Assets',
@@ -76,4 +78,5 @@ export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   observations:       'Observations',
   correspondence:     'Correspondence',
   commitments:        'Commitments',
+  risk:               'Risks',
 };

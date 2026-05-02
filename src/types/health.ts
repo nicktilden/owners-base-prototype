@@ -133,6 +133,136 @@ export interface IntegrityResult {
   signalOrigin: SignalOrigin;
 }
 
+// ─── v7 Tag Model ─────────────────────────────────────────────────────────────
+
+/** Source object types that can carry a RiskTag. */
+export type SourceType =
+  | 'rfi'
+  | 'change_event'
+  | 'punch_list'
+  | 'submittal'
+  | 'correspondence'
+  | 'milestone'
+  | 'budget_line'
+  | 'manual'; // points to a ManualRiskItem
+
+/** Lifecycle states for a RiskTag. */
+export type RiskTagStatus =
+  | 'open'
+  | 'pending_acceptance'  // manual escalation — PM lacks risk:accept
+  | 'pending_approval'    // automatic governance via ApprovalTrigger
+  | 'mitigated'
+  | 'accepted'
+  | 'closed';
+
+/** A RiskTag attaches risk metadata to an existing Procore source object. */
+export interface RiskTag {
+  id: string;
+  /** The type of source object this tag is attached to. */
+  sourceType: SourceType;
+  /** The id of the source object (rfi id, change_event id, etc.). */
+  sourceId: string;
+  /** Which project this tag belongs to (denormalized for efficient queries). */
+  projectId: string;
+  /** References the account-level RiskType template. */
+  riskTypeId: string;
+  /** 1–5, where 5 = almost certain */
+  probability: 1 | 2 | 3 | 4 | 5;
+  /** Type-specific impact value (dollar amount, days, severity level, etc.) */
+  impact: number;
+  status: RiskTagStatus;
+  /** User responsible for managing this risk. Defaults to source item owner. */
+  riskOwner: string; // User id
+  responseStrategy?: ResponseStrategy;
+  mitigationPlan?: string;
+  /** Expected residual impact after mitigation */
+  residualImpact?: number;
+  /** How this tag was created. */
+  origin: 'manual' | 'automated' | 'connected_partner';
+  createdBy: string; // User id
+  createdAt: Date;
+  /** When true, the tag closes automatically when the source item closes. */
+  autoCloseOnSourceClose: boolean;
+}
+
+/** ManualRiskItem — escape hatch for risks with no source Procore object. */
+export interface ManualRiskItem {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  riskTypeId: string;
+  probability: 1 | 2 | 3 | 4 | 5;
+  impact: number;
+  status: RiskTagStatus;
+  riskOwner: string; // User id
+  responseStrategy?: ResponseStrategy;
+  mitigationPlan?: string;
+  residualImpact?: number;
+  origin: 'manual';
+  createdBy: string;
+  createdAt: Date;
+}
+
+// ─── v7 Automation & Governance ───────────────────────────────────────────────
+
+/** Defines conditions for a SourceFilter (used in RiskTypeRule). */
+export interface SourceFilter {
+  field: string;
+  operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq' | 'contains';
+  value: number | string;
+}
+
+/** Automated tagging rule — fires when source items match the filter. */
+export interface RiskTypeRule {
+  id: string;
+  riskTypeId: string;
+  sourceType: SourceType;
+  filter: SourceFilter;
+  defaultProbability: 1 | 2 | 3 | 4 | 5;
+  /** Numeric impact value, or 'inherit_from_source' to copy from source item. */
+  defaultImpact: number | 'inherit_from_source';
+  /** If true, creates a tag automatically. If false, surfaces as a signal for review. */
+  autoCreate: boolean;
+}
+
+/** Triggers the existing Procore Workflows tool when a tag crosses a threshold. */
+export interface ApprovalTrigger {
+  id: string;
+  riskTypeId: string;
+  condition: SourceFilter;
+  workflowId: string;
+  onTrigger: 'pending_approval';
+}
+
+// ─── v7 Procore Connect ───────────────────────────────────────────────────────
+
+export interface ConnectedDimensionData {
+  status: HealthScore;
+  forecastStatus: HealthScore;
+  trend: HealthTrend;
+  delta?: number;
+}
+
+export interface ConnectedRiskExposure {
+  openCount: number;
+  totalExpectedImpact: number;
+  highSeverityCount: number;
+}
+
+/** Pre-aggregated health data from a GC's Procore account via Procore Connect. */
+export interface ConnectedProjectHealth {
+  sourceAccountId: string;
+  sourceAccountName: string;
+  sourceProjectId: string;
+  ownerProjectId: string;
+  shareLevel: 'summary' | 'detail';
+  dimensions: Partial<Record<string, ConnectedDimensionData>>;
+  riskExposure: Partial<Record<string, ConnectedRiskExposure>>;
+  syncedAt: Date;
+  source: 'procore-connect';
+}
+
 // ─── Risk Types (account-level templates) ─────────────────────────────────────
 
 export type RiskTypeCategory = 'financial' | 'schedule' | 'safety' | 'quality' | 'regulatory' | 'environmental' | 'contractual' | 'other';
@@ -155,6 +285,10 @@ export interface RiskType {
   isDefault: boolean;
   /** Whether this risk type is hidden from the portfolio risk register. */
   isHidden: boolean;
+  /** v7: Automated tagging rules for this type. */
+  taggingRules: RiskTypeRule[];
+  /** v7: Approval workflow triggers for this type. */
+  approvalTriggers: ApprovalTrigger[];
 }
 
 // ─── KPI Result ───────────────────────────────────────────────────────────────

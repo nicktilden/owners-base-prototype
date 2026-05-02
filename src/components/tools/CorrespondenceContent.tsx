@@ -18,6 +18,7 @@ import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import CorrespondenceDetailTearsheet from "@/components/tools/CorrespondenceDetailTearsheet";
 import styled from "styled-components";
 import { correspondence } from "@/data/seed/correspondence";
 
@@ -72,6 +73,7 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const gridApiRef = useRef<GridApi | null>(null);
 
   const rowData = useMemo(() => correspondence.filter((c: any) => c.projectId === projectId), [projectId]);
@@ -194,6 +196,10 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
     gridApiRef.current = event.api;
   }, []);
 
+  const handleRowClick = useCallback((event: { data: any }) => {
+    if (event.data) setSelectedItem(event.data);
+  }, []);
+
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -207,6 +213,7 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
   );
 
   return (
+    <>
     <ToolPageLayout
       title="Correspondence"
       icon={<CorrespondenceIcon size="md" />}
@@ -298,6 +305,7 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
                   onGridReady={handleGridReady}
+                  onRowClicked={handleRowClick}
                   statusBar={{
                     statusPanels: [
                       {
@@ -322,5 +330,12 @@ export default function CorrespondenceContent({ projectId }: CorrespondenceConte
         </SplitViewCard.Main>
       </SplitViewCard>
     </ToolPageLayout>
+
+      <CorrespondenceDetailTearsheet
+        item={selectedItem}
+        open={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
+      />
+    </>
   );
 }

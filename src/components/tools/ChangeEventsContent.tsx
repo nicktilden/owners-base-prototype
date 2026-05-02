@@ -6,6 +6,7 @@ import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
+import ChangeEventDetailTearsheet from "@/components/tools/ChangeEventDetailTearsheet";
 import styled from "styled-components";
 import { changeEvents } from "@/data/seed/change_events";
 
@@ -60,6 +61,7 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const gridApiRef = useRef<GridApi | null>(null);
 
   const rowData = useMemo(() => changeEvents.filter((e: any) => e.projectId === projectId), [projectId]);
@@ -158,6 +160,10 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
     gridApiRef.current = event.api;
   }, []);
 
+  const handleRowClick = useCallback((event: { data: any }) => {
+    if (event.data) setSelectedItem(event.data);
+  }, []);
+
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -169,6 +175,7 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
   );
 
   return (
+    <>
     <ToolPageLayout
       title="Change Events"
       icon={<ChangeEventsIcon size="md" />}
@@ -244,6 +251,7 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
                   onGridReady={handleGridReady}
+                  onRowClicked={handleRowClick}
                   statusBar={{
                     statusPanels: [
                       { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
@@ -262,5 +270,12 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
         </SplitViewCard.Main>
       </SplitViewCard>
     </ToolPageLayout>
+
+      <ChangeEventDetailTearsheet
+        item={selectedItem}
+        open={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
+      />
+    </>
   );
 }

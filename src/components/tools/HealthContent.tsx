@@ -27,6 +27,8 @@ import ScheduleHealthCard from '@/components/health/cards/ScheduleHealthCard';
 import DeliveryRiskCard from '@/components/health/cards/DeliveryRiskCard';
 import RiskRegisterCard from '@/components/health/cards/RiskRegisterCard';
 import RiskTrendCard from '@/components/health/cards/RiskTrendCard';
+import RiskCategoryDonutCard from '@/components/health/cards/RiskCategoryDonutCard';
+import RiskByTypeBarCard from '@/components/health/cards/RiskByTypeBarCard';
 import HubCardFrame, { HubCardEmptyState } from '@/components/hubs/HubCardFrame';
 import KPIPill from '@/components/KPIPill';
 import { SmartGridWrapper } from '@/components/SmartGrid';
@@ -35,13 +37,28 @@ import { riskColumnDefs } from '@/components/SmartGrid/riskColumnDefs';
 import RiskTitleCellRenderer from '@/components/SmartGrid/RiskTitleCellRenderer';
 import RiskStatusCellRenderer from '@/components/SmartGrid/RiskStatusCellRenderer';
 import RiskScoreCellRenderer from '@/components/SmartGrid/RiskScoreCellRenderer';
-import RiskRatingCellRenderer from '@/components/SmartGrid/RiskRatingCellRenderer';
+import RiskItemTypeCellRenderer from '@/components/SmartGrid/RiskItemTypeCellRenderer';
+import RiskCategoriesCellRenderer from '@/components/SmartGrid/RiskCategoriesCellRenderer';
+import RiskOriginCellRenderer from '@/components/SmartGrid/RiskOriginCellRenderer';
+import RfiDetailTearsheet from '@/components/tools/RfiDetailTearsheet';
+import ChangeEventDetailTearsheet from '@/components/tools/ChangeEventDetailTearsheet';
+import SubmittalDetailTearsheet from '@/components/tools/SubmittalDetailTearsheet';
+import PunchListDetailTearsheet from '@/components/tools/PunchListDetailTearsheet';
+import CorrespondenceDetailTearsheet from '@/components/tools/CorrespondenceDetailTearsheet';
 import { users } from '@/data/seed/users';
+import { riskTypes } from '@/data/seed/riskTypes';
+import { rfis } from '@/data/seed/rfis';
+import { changeEvents } from '@/data/seed/change_events';
+import { submittals } from '@/data/seed/submittals';
+import { punchList } from '@/data/seed/punch_list';
+import { correspondence } from '@/data/seed/correspondence';
 import { buildHealthResult, resolveKPIs } from '@/utils/healthEngine';
 import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
-import type { HealthResult, HealthScore, KPICategory, KPIKey, KPIResult, Risk, RiskCategory, RiskStatus, ResponseStrategy } from '@/types/health';
+import { useRiskTags } from '@/context/RiskTagsContext';
+import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
+import type { HealthResult, HealthScore, KPICategory, KPIKey, KPIResult, Risk, RiskTag, ManualRiskItem, RiskCategory, RiskStatus, ResponseStrategy } from '@/types/health';
 import { KPI_DESCRIPTIONS } from '@/types/health';
 import type { Project } from '@/types/project';
 
@@ -440,10 +457,10 @@ type PortfolioTab = typeof PORTFOLIO_TABS[number];
 type ProjectTab   = typeof PROJECT_TABS[number];
 
 const riskGroupByOptions = [
-  { id: 'category',         label: 'Category'          },
-  { id: 'status',           label: 'Status'            },
-  { id: 'responseStrategy', label: 'Response Strategy' },
-  { id: 'origin',           label: 'Origin'            },
+  { id: 'itemType',  label: 'Item Type'     },
+  { id: 'categories',label: 'Category'      },
+  { id: 'status',    label: 'Status'        },
+  { id: 'origin',    label: 'Origin'        },
 ];
 
 const RISK_CATEGORY_OPTIONS: { value: RiskCategory; label: string }[] = [
@@ -756,21 +773,188 @@ function CreateRiskRecordTearsheet({ open, projectId, onClose, onSave }: CreateR
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toRiskGridRow(r: Risk, assignedTo = ''): RiskGridRow {
+  const maxImpact = Math.max(r.impactCost, r.impactSchedule, r.impactSafety);
+  const catLabel = CATEGORY_DISPLAY[r.category] ?? r.category;
   return {
-    id:               r.id,
-    title:            r.title,
-    category:         r.category,
-    status:           r.status,
-    probability:      r.probability,
-    impactCost:       r.impactCost,
-    impactSchedule:   r.impactSchedule,
-    impactSafety:     r.impactSafety,
-    riskScore:        r.probability * Math.max(r.impactCost, r.impactSchedule, r.impactSafety),
-    responseStrategy: r.responseStrategy,
-    origin:           r.origin,
-    dueDate:          r.dueDate ?? '',
-    description:      r.description,
+    id:             r.id,
+    itemTitle:      r.title,
+    itemType:       'Manual',
+    itemDueDate:    r.dueDate ?? '',
+    itemStatus:     r.status,
+    itemAssignedTo: assignedTo,
+    categories:     [catLabel],
+    riskScore:      r.probability * maxImpact,
+    impactSummary:  `${maxImpact}/5`,
+    impactRaw:      maxImpact,
+    status:         r.status,
     assignedTo,
+    origin:         r.origin,
+    sourceType:     'manual',
+    sourceId:       r.id,
+    probability:    r.probability,
+    impact:         maxImpact,
+    riskTypeLabel:  r.category,
+    description:    r.description,
+  };
+}
+
+const riskTypeLookup = Object.fromEntries(riskTypes.map(rt => [rt.id, rt]));
+
+// ─── Source-item lookup maps ──────────────────────────────────────────────────
+
+const rfiMap = Object.fromEntries(rfis.map(r => [r.id, r]));
+const ceMap  = Object.fromEntries(changeEvents.map(c => [c.id, c]));
+const subMap = Object.fromEntries(submittals.map(s => [s.id, s]));
+const punchMap = Object.fromEntries(punchList.map(p => [p.id, p]));
+const corrMap  = Object.fromEntries(correspondence.map(c => [c.id, c]));
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  rfi:            'RFI',
+  change_event:   'Change Event',
+  submittal:      'Submittal',
+  punch_list:     'Punch List',
+  correspondence: 'Correspondence',
+  milestone:      'Milestone',
+  budget_line:    'Budget Line',
+  manual:         'Manual',
+};
+
+const CATEGORY_DISPLAY: Record<string, string> = {
+  financial:    'Financial',
+  schedule:     'Schedule',
+  safety:       'Safety',
+  quality:      'Quality',
+  contractual:  'Contractual',
+  regulatory:   'Regulatory',
+  environmental:'Environmental',
+  other:        'Other',
+};
+
+function formatImpact(impact: number, category: string): string {
+  if (impact <= 5) {
+    // 1-5 scale
+    return `${impact}/5`;
+  }
+  if (category === 'schedule') {
+    return impact === 1 ? '1 day' : `${impact} days`;
+  }
+  // Dollar amount
+  if (impact >= 1_000_000) return `$${(impact / 1_000_000).toFixed(1)}M`;
+  if (impact >= 1_000)     return `$${Math.round(impact / 1_000)}K`;
+  return `$${impact.toLocaleString()}`;
+}
+
+function getSourceItem(sourceType: string, sourceId: string): {
+  itemTitle: string;
+  itemDueDate: string;
+  itemStatus: string;
+  itemAssignedTo: string;
+} {
+  switch (sourceType) {
+    case 'rfi': {
+      const r = rfiMap[sourceId];
+      return {
+        itemTitle:      r ? (r.subject ?? sourceId) : sourceId,
+        itemDueDate:    r?.dueDate ?? '',
+        itemStatus:     r?.status ?? '',
+        itemAssignedTo: '',
+      };
+    }
+    case 'change_event': {
+      const c = ceMap[sourceId];
+      return {
+        itemTitle:      c?.title ?? sourceId,
+        itemDueDate:    c?.created ?? '',
+        itemStatus:     c?.status ?? '',
+        itemAssignedTo: '',
+      };
+    }
+    case 'submittal': {
+      const s = subMap[sourceId];
+      return {
+        itemTitle:      s?.title ?? sourceId,
+        itemDueDate:    s?.dueDate ?? '',
+        itemStatus:     s?.status ?? '',
+        itemAssignedTo: s?.responsibleContractor ?? '',
+      };
+    }
+    case 'punch_list': {
+      const p = punchMap[sourceId];
+      return {
+        itemTitle:      p?.description ?? sourceId,
+        itemDueDate:    p?.dueDate ?? '',
+        itemStatus:     p?.status ?? '',
+        itemAssignedTo: p?.assignedTo ?? '',
+      };
+    }
+    case 'correspondence': {
+      const c = corrMap[sourceId];
+      return {
+        itemTitle:      c?.subject ?? sourceId,
+        itemDueDate:    c?.date ?? '',
+        itemStatus:     c?.status ?? '',
+        itemAssignedTo: c?.from ?? '',
+      };
+    }
+    default:
+      return { itemTitle: sourceId, itemDueDate: '', itemStatus: '', itemAssignedTo: '' };
+  }
+}
+
+function toRiskGridRowFromTag(tag: RiskTag, ownerName = ''): RiskGridRow {
+  const rt = riskTypeLookup[tag.riskTypeId];
+  const category = rt?.category ?? 'financial';
+  const catLabel = CATEGORY_DISPLAY[category] ?? category;
+  const impactNorm = tag.impact > 5 ? Math.min(5, Math.round(tag.impact / 100000)) || 1 : tag.impact;
+  const sourceItem = getSourceItem(tag.sourceType, tag.sourceId);
+  return {
+    id:            tag.id,
+    itemTitle:     sourceItem.itemTitle,
+    itemType:      SOURCE_TYPE_LABELS[tag.sourceType] ?? tag.sourceType,
+    itemDueDate:   sourceItem.itemDueDate,
+    itemStatus:    sourceItem.itemStatus,
+    itemAssignedTo:sourceItem.itemAssignedTo,
+    categories:    [catLabel],
+    riskScore:     tag.probability * impactNorm,
+    impactSummary: formatImpact(tag.impact, category),
+    impactRaw:     tag.impact,
+    status:        tag.status,
+    assignedTo:    ownerName,
+    origin:        tag.origin,
+    sourceType:    tag.sourceType,
+    sourceId:      tag.sourceId,
+    probability:   tag.probability,
+    impact:        tag.impact,
+    riskTypeLabel: rt?.label ?? '',
+    description:   tag.mitigationPlan ?? '',
+  };
+}
+
+function toRiskGridRowFromManualItem(item: ManualRiskItem, ownerName = ''): RiskGridRow {
+  const rt = riskTypeLookup[item.riskTypeId];
+  const category = rt?.category ?? 'financial';
+  const catLabel = CATEGORY_DISPLAY[category] ?? category;
+  const impactNorm = item.impact > 5 ? Math.min(5, Math.round(item.impact / 100000)) || 1 : item.impact;
+  return {
+    id:            item.id,
+    itemTitle:     item.title,
+    itemType:      'Manual',
+    itemDueDate:   '',
+    itemStatus:    '',
+    itemAssignedTo:'',
+    categories:    [catLabel],
+    riskScore:     item.probability * impactNorm,
+    impactSummary: formatImpact(item.impact, category),
+    impactRaw:     item.impact,
+    status:        item.status,
+    assignedTo:    ownerName,
+    origin:        item.origin,
+    sourceType:    'manual',
+    sourceId:      item.id,
+    probability:   item.probability,
+    impact:        item.impact,
+    riskTypeLabel: rt?.label ?? '',
+    description:   item.description,
   };
 }
 
@@ -904,14 +1088,13 @@ function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel
             riskTitleCellRenderer: RiskTitleCellRenderer,
             riskStatusCellRenderer: RiskStatusCellRenderer,
             riskScoreCellRenderer: RiskScoreCellRenderer,
-            riskProbabilityCellRenderer: (p: Parameters<typeof RiskRatingCellRenderer>[0]) =>
-              RiskRatingCellRenderer({ ...p, prefix: 'P' }),
-            riskImpactCellRenderer: (p: Parameters<typeof RiskRatingCellRenderer>[0]) =>
-              RiskRatingCellRenderer({ ...p, prefix: 'I' }),
+            riskItemTypeCellRenderer: RiskItemTypeCellRenderer,
+            riskCategoriesCellRenderer: RiskCategoriesCellRenderer,
+            riskOriginCellRenderer: RiskOriginCellRenderer,
           }}
           context={{ onOpenRisk } as RiskGridContext}
           groupDisplayType="groupRows"
-          autoGroupColumnDef={{ headerName: 'Risk Title', minWidth: 220 }}
+          autoGroupColumnDef={{ headerName: 'Item Title', minWidth: 220 }}
           sideBar={filtersOpen ? {
             toolPanels: [{ id: 'filters', labelDefault: 'Filters', labelKey: 'filters', iconKey: 'filter', toolPanel: 'agFiltersToolPanel' }],
             defaultToolPanel: 'filters',
@@ -1061,7 +1244,7 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
         {displayedKPIs.length === 0
           ? <HubCardEmptyState
               title="There Are No KPIs to Display Right Now"
-              body="Select up to 4 KPIs from your active Health &amp; Risk settings to track on this project."
+              body="Select up to 4 KPIs from your active Risk Register settings to track on this project."
               actions={
                 <>
                   <Button variant="secondary" className="b_secondary" size="sm" onClick={openConfig}>
@@ -1132,7 +1315,7 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
           <SettingsBanner>
             <SettingsBannerText>
               <Typography intent="body" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block', marginBottom: 4 }}>
-                Manage Health &amp; Risk KPIs
+                Manage Risk Register KPIs
               </Typography>
               <Typography intent="body" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
                 Available KPIs are defined in Account Settings. Go to Settings to add, remove, or adjust thresholds.
@@ -1300,6 +1483,8 @@ interface HealthContentProps {
 export default function HealthContent({ scope, projectId }: HealthContentProps) {
   const { data } = useData();
   const config = data.account?.healthConfig;
+  const { getRiskTagsForProject } = useRiskTags();
+  const { getManualRiskItemsForProject } = useManualRiskItems();
   const [activeTab, setActiveTab] = useState<PortfolioTab | ProjectTab>('Overview');
   const [tearsheet, setTearsheet] = useState<{ project: Project; result: HealthResult } | null>(null);
   const [createRiskOpen, setCreateRiskOpen] = useState(false);
@@ -1340,25 +1525,61 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
     return [...seedRisks, ...extra];
   }, [scope, projectId, extraRisks]);
 
-  const activeRiskRows = useMemo<RiskGridRow[]>(() =>
-    allProjectRisks
+  const projectRiskTags = useMemo(() =>
+    scope === 'project' && projectId ? getRiskTagsForProject(projectId) : [],
+  [scope, projectId, getRiskTagsForProject]);
+
+  const projectManualItems = useMemo(() =>
+    scope === 'project' && projectId ? getManualRiskItemsForProject(projectId) : [],
+  [scope, projectId, getManualRiskItemsForProject]);
+
+  const RESOLVED_STATUSES = new Set(['closed', 'mitigated']);
+
+  const activeRiskRows = useMemo<RiskGridRow[]>(() => {
+    const legacyRows = allProjectRisks
       .filter(r => r.status !== 'closed' && r.status !== 'mitigated' && !resolvedIds.has(r.id))
       .map(r => {
         const uid = assignedUsers[r.id];
         const u = users.find(u => u.id === uid);
         return toRiskGridRow(r, u ? `${u.firstName} ${u.lastName}` : '');
-      }),
-  [allProjectRisks, resolvedIds, assignedUsers, users]);
+      });
+    const tagRows = projectRiskTags
+      .filter(t => !RESOLVED_STATUSES.has(t.status) && !resolvedIds.has(t.id))
+      .map(t => {
+        const u = users.find(u => u.id === t.riskOwner);
+        return toRiskGridRowFromTag(t, u ? `${u.firstName} ${u.lastName}` : '');
+      });
+    const manualRows = projectManualItems
+      .filter(m => !RESOLVED_STATUSES.has(m.status) && !resolvedIds.has(m.id))
+      .map(m => {
+        const u = users.find(u => u.id === m.riskOwner);
+        return toRiskGridRowFromManualItem(m, u ? `${u.firstName} ${u.lastName}` : '');
+      });
+    return [...legacyRows, ...tagRows, ...manualRows];
+  }, [allProjectRisks, projectRiskTags, projectManualItems, resolvedIds, assignedUsers]);
 
-  const resolvedRiskRows = useMemo<RiskGridRow[]>(() =>
-    allProjectRisks
+  const resolvedRiskRows = useMemo<RiskGridRow[]>(() => {
+    const legacyRows = allProjectRisks
       .filter(r => r.status === 'closed' || r.status === 'mitigated' || resolvedIds.has(r.id))
       .map(r => {
         const uid = assignedUsers[r.id];
         const u = users.find(u => u.id === uid);
         return toRiskGridRow(r, u ? `${u.firstName} ${u.lastName}` : '');
-      }),
-  [allProjectRisks, resolvedIds, assignedUsers, users]);
+      });
+    const tagRows = projectRiskTags
+      .filter(t => RESOLVED_STATUSES.has(t.status) || resolvedIds.has(t.id))
+      .map(t => {
+        const u = users.find(u => u.id === t.riskOwner);
+        return toRiskGridRowFromTag(t, u ? `${u.firstName} ${u.lastName}` : '');
+      });
+    const manualRows = projectManualItems
+      .filter(m => RESOLVED_STATUSES.has(m.status) || resolvedIds.has(m.id))
+      .map(m => {
+        const u = users.find(u => u.id === m.riskOwner);
+        return toRiskGridRowFromManualItem(m, u ? `${u.firstName} ${u.lastName}` : '');
+      });
+    return [...legacyRows, ...tagRows, ...manualRows];
+  }, [allProjectRisks, projectRiskTags, projectManualItems, resolvedIds, assignedUsers]);
 
   // ── Project-scope KPI scorecard ───────────────────────────────────────────
   // (computed inside ProjectRiskScorecard sub-component)
@@ -1375,7 +1596,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
   return (
     <>
       <ToolPageLayout
-        title="Health & Risk"
+        title="Risk Register"
         breadcrumbs={breadcrumbs}
         actions={scope === 'project' && projectId ? (
           <Button
@@ -1489,28 +1710,27 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
 
         {/* ── PROJECT: OVERVIEW TAB ── */}
         {scope === 'project' && singleResult && currentTab === 'Overview' && projectId && (
-          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* Row 1: Risk Signals scorecard + Risk Trend chart */}
-            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>
-                <ProjectRiskScorecard projectId={projectId} />
-              </div>
-              <div style={{ flexShrink: 0, width: 440, display: 'flex' }}>
-                <RiskTrendCard risks={allProjectRisks} resolvedIds={resolvedIds} />
-              </div>
-            </div>
+            {/* Risk summary cards */}
+            <CardsGrid>
+              <RiskCategoryDonutCard scope="project" projectId={projectId} />
+              <RiskByTypeBarCard scope="project" projectId={projectId} />
+              <RiskTrendCard risks={allProjectRisks} resolvedIds={resolvedIds} />
+            </CardsGrid>
 
             {/* Active risk records grid */}
-            <RiskGrid
-              rows={activeRiskRows}
-              gridId="active-risk-records"
-              title="Active Risk Records"
-              localStorageKey="owner-prototype-risk-records-active-grid"
-              searchPlaceholder="Search active risks"
-              emptyLabel="No active risk records for this project."
-              onOpenRisk={setOpenRiskId}
-            />
+            <div style={{ padding: '0 20px 20px' }}>
+              <RiskGrid
+                rows={activeRiskRows}
+                gridId="active-risk-records"
+                title="Active Risks"
+                localStorageKey="owner-prototype-risk-records-active-grid"
+                searchPlaceholder="Search active risks"
+                emptyLabel="No active risk records for this project."
+                onOpenRisk={setOpenRiskId}
+              />
+            </div>
           </div>
         )}
 
@@ -1553,195 +1773,42 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
         />
       )}
 
-      {/* ── Risk Detail Tearsheet ── */}
+      {/* ── Source-item tearsheets dispatched from Active Risks grid ── */}
       {openRiskId && (() => {
-        const risk = allProjectRisks.find(r => r.id === openRiskId);
-        const isResolved = resolvedIds.has(openRiskId) || risk?.status === 'closed' || risk?.status === 'mitigated';
-        const assignedUserId = assignedUsers[openRiskId] ?? '';
-        const assignedUser = users.find(u => u.id === assignedUserId);
+        // Find the row in active or resolved rows to get sourceType / sourceId
+        const allRows = [...activeRiskRows, ...resolvedRiskRows];
+        const row = allRows.find(r => r.id === openRiskId);
+        if (!row) return null;
 
-        const TOOL_LINKS: { label: string; href: string }[] = projectId ? [
-          { label: 'Budget', href: `/project/${projectId}/budget` },
-          { label: 'RFIs', href: `/project/${projectId}/rfis` },
-          { label: 'Schedule', href: `/project/${projectId}/schedule` },
-          { label: 'Change Events', href: `/project/${projectId}/change_events` },
-          { label: 'Submittals', href: `/project/${projectId}/submittals` },
-        ] : [];
+        const close = () => setOpenRiskId(null);
 
-        const CATEGORY_LINKS: Record<string, string[]> = {
-          financial:    ['Budget', 'Change Events'],
-          schedule:     ['Schedule', 'RFIs'],
-          contractual:  ['Change Events', 'RFIs', 'Submittals'],
-          regulatory:   ['Submittals'],
-          safety:       ['RFIs'],
-          environmental:['RFIs'],
-        };
-        const relevantLinks = TOOL_LINKS.filter(l =>
-          (CATEGORY_LINKS[risk?.category ?? ''] ?? []).includes(l.label)
-        );
-
-        return (
-          <>
-          <RiskDetailTearsheetWidth />
-          <Tearsheet
-            open
-            onClose={() => setOpenRiskId(null)}
-            placement="right"
-            block
-            aria-label={risk?.title ?? 'Risk details'}
-          >
-            <div className="risk-detail-tearsheet-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {risk && (
-                <>
-                  {/* Header */}
-                  <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--color-border-separator)' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)', flex: 1 }}>
-                        {risk.title}
-                      </Typography>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <Pill color={risk.status === 'assessed' ? 'yellow' : risk.status === 'mitigated' ? 'green' : 'gray'}>
-                        {risk.status.charAt(0).toUpperCase() + risk.status.slice(1)}
-                      </Pill>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '2px 8px', borderRadius: 10, fontWeight: 700, fontSize: 13,
-                        background: risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 20 ? 'var(--color-pill-bg-red)' : risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 12 ? 'var(--color-pill-bg-yellow)' : 'var(--color-pill-bg-green)',
-                        color: risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 20 ? 'var(--color-pill-text-red)' : risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety) >= 12 ? 'var(--color-pill-text-yellow)' : 'var(--color-pill-text-green)',
-                      }}>
-                        Score: {risk.probability * Math.max(risk.impactCost, risk.impactSchedule, risk.impactSafety)}
-                      </span>
-                      <Pill color="gray">{risk.category.charAt(0).toUpperCase() + risk.category.slice(1)}</Pill>
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-                    {/* Description */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Description</div>
-                      <Typography intent="body" style={{ color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
-                        {risk.description}
-                      </Typography>
-                    </div>
-
-                    {/* Scores */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Risk Scoring</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                        {[
-                          { label: 'Probability', prefix: 'P' as const, num: risk.probability },
-                          { label: 'Cost Impact',     prefix: 'I' as const, num: risk.impactCost },
-                          { label: 'Schedule Impact', prefix: 'I' as const, num: risk.impactSchedule },
-                          { label: 'Safety Impact',   prefix: 'I' as const, num: risk.impactSafety },
-                        ].map(({ label, prefix, num }) => {
-                          const score = num ?? 0;
-                          const isHigh = score >= 5;
-                          const isMedHigh = score >= 4;
-                          const isMed = score >= 3;
-                          const bg = isHigh ? 'var(--color-pill-bg-red)' : isMedHigh ? '#fff3cd' : isMed ? 'var(--color-pill-bg-yellow)' : 'var(--color-pill-bg-green)';
-                          const text = isHigh ? 'var(--color-pill-text-red)' : isMedHigh ? '#856404' : isMed ? 'var(--color-pill-text-yellow)' : 'var(--color-pill-text-green)';
-                          return (
-                            <div key={label} style={{ background: bg, borderRadius: 6, padding: '10px 12px', textAlign: 'center' }}>
-                              <div style={{ fontSize: 11, color: text, opacity: 0.8, marginBottom: 4 }}>{label}</div>
-                              <div style={{ fontWeight: 700, fontSize: 16, color: text }}>{prefix}:{num}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Assign */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Assigned To</div>
-                      <Select
-                        label={assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : undefined}
-                        placeholder="Select a team member"
-                        onSelect={({ item }) => setAssignedUsers(prev => ({ ...prev, [openRiskId]: item as string }))}
-                        onClear={assignedUserId ? () => setAssignedUsers(prev => { const next = { ...prev }; delete next[openRiskId]; return next; }) : undefined}
-                        block
-                      >
-                        {users.map(u => (
-                          <Select.Option key={u.id} value={u.id} selected={u.id === assignedUserId}>
-                            {u.firstName} {u.lastName} — {u.jobTitle}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {/* Related tools */}
-                    {relevantLinks.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Related Tools</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                          {relevantLinks.map(({ label, href }) => (
-                            <Link key={label} href={href} onClick={() => setOpenRiskId(null)}>
-                              <Button variant="secondary" className="b_secondary" size="sm">
-                                {label} →
-                              </Button>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Details */}
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Details</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {[
-                          { label: 'Response Strategy', value: risk.responseStrategy.charAt(0).toUpperCase() + risk.responseStrategy.slice(1) },
-                          { label: 'Origin', value: risk.origin.charAt(0).toUpperCase() + risk.origin.slice(1) },
-                          { label: 'Due Date', value: risk.dueDate ?? '—' },
-                        ].map(({ label, value }) => (
-                          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, padding: '6px 0', borderBottom: '1px solid var(--color-border-separator)' }}>
-                            <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-                            <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                  </div>
-                  {/* Footer */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: 8,
-                    padding: '16px 24px',
-                    borderTop: '1px solid var(--color-border-separator)',
-                    flexShrink: 0,
-                  }}>
-                    <Button
-                      variant="primary"
-                      className="b_primary"
-                      onClick={() => setOpenRiskId(null)}
-                    >
-                      Save
-                    </Button>
-                    {!isResolved && (
-                      <Button
-                        variant="secondary"
-                        className="b_secondary"
-                        onClick={() => {
-                          setResolvedIds(prev => new Set([...prev, openRiskId]));
-                          setOpenRiskId(null);
-                          setActiveTab('Resolved' as any);
-                        }}
-                      >
-                        Resolve
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </Tearsheet>
-          </>
-        );
+        if (row.sourceType === 'rfi') {
+          const rfi = rfiMap[row.sourceId];
+          if (!rfi) return null;
+          const proj = allProjects.find(p => p.id === rfi.projectId);
+          return <RfiDetailTearsheet key={openRiskId} rfi={rfi} projectName={proj?.name ?? ''} open onClose={close} />;
+        }
+        if (row.sourceType === 'change_event') {
+          const ce = ceMap[row.sourceId];
+          if (!ce) return null;
+          return <ChangeEventDetailTearsheet key={openRiskId} item={ce} open onClose={close} />;
+        }
+        if (row.sourceType === 'submittal') {
+          const sub = subMap[row.sourceId];
+          if (!sub) return null;
+          return <SubmittalDetailTearsheet key={openRiskId} item={sub} open onClose={close} />;
+        }
+        if (row.sourceType === 'punch_list') {
+          const punch = punchMap[row.sourceId];
+          if (!punch) return null;
+          return <PunchListDetailTearsheet key={openRiskId} item={punch} open onClose={close} />;
+        }
+        if (row.sourceType === 'correspondence') {
+          const corr = corrMap[row.sourceId];
+          if (!corr) return null;
+          return <CorrespondenceDetailTearsheet key={openRiskId} item={corr} open onClose={close} />;
+        }
+        return null;
       })()}
     </>
   );

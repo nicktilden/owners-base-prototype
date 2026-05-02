@@ -27,6 +27,9 @@ import type {
   PortfolioHealthSummary,
   Risk,
   SignalOrigin,
+  ManualRiskItem,
+  RiskTag,
+  ConnectedProjectHealth,
 } from '@/types/health';
 import {
   DEFAULT_THRESHOLDS,
@@ -216,18 +219,27 @@ function evalScheduleVariance(n: NormalizedProjectData, threshold: KPIThreshold)
   return evalScheduleStatus(n, threshold);
 }
 
-function evalAggregateRisk(_n: NormalizedProjectData, threshold: KPIThreshold, risks: Risk[]) {
-  const openHighProb = risks.filter(r => r.status !== 'closed' && r.status !== 'mitigated' && r.probability >= 4);
-  const count = openHighProb.length;
+function evalAggregateRisk(
+  _n: NormalizedProjectData,
+  threshold: KPIThreshold,
+  risks: Risk[],
+  riskTags: RiskTag[] = [],
+  manualRisks: ManualRiskItem[] = [],
+) {
+  const legacyOpen = risks.filter(r => r.status !== 'closed' && r.status !== 'mitigated' && r.probability >= 4);
+  const tagOpen = riskTags.filter(t => t.status !== 'closed' && t.status !== 'mitigated' && t.status !== 'accepted' && t.probability >= 4);
+  const manualOpen = manualRisks.filter(m => m.status !== 'closed' && m.status !== 'mitigated' && m.status !== 'accepted' && m.probability >= 4);
+  const count = legacyOpen.length + tagOpen.length + manualOpen.length;
+  const total = risks.length + riskTags.length + manualRisks.length;
   const status = scoreHigherWorse(count, threshold);
   return {
     status,
     displayValue: `${count} open high-prob risk${count !== 1 ? 's' : ''}`,
     numericValue: count,
-    dataSource: (risks.length > 0 ? 'seed' : 'unavailable') as 'seed' | 'unavailable',
+    dataSource: (total > 0 ? 'seed' : 'unavailable') as 'seed' | 'unavailable',
     sourceLabel: 'Risk Register',
     reasons: status !== 'green' ? [`${count} open high-probability risks identified`] : [],
-    integrity: risks.length > 0 ? ok() : noData(),
+    integrity: total > 0 ? ok() : noData(),
   };
 }
 
@@ -391,6 +403,8 @@ export function resolveKPIs(
   config: AccountHealthConfig,
   connection?: ProjectConnection,
   risks: Risk[] = [],
+  riskTags: RiskTag[] = [],
+  manualRisks: ManualRiskItem[] = [],
 ): KPIResult[] {
   // Normalize raw data once; eval functions consume NormalizedProjectData
   const n = normalizeProjectData(project, connection);
@@ -410,7 +424,7 @@ export function resolveKPIs(
       case 'scheduleStatus':       partial = evalScheduleStatus(n, threshold); break;
       case 'milestoneRate':        partial = evalMilestoneRate(n, threshold); break;
       case 'scheduleVariance':     partial = evalScheduleVariance(n, threshold); break;
-      case 'aggregateRisk':        partial = evalAggregateRisk(n, threshold, risks); break;
+      case 'aggregateRisk':        partial = evalAggregateRisk(n, threshold, risks, riskTags, manualRisks); break;
       case 'rfisAtRisk':           partial = evalRFIsAtRisk(n, threshold); break;
       case 'submittalsAtRisk':     partial = evalSubmittalsAtRisk(n, threshold); break;
       case 'invoiceStatus':        partial = evalInvoiceStatus(n, threshold); break;
@@ -450,16 +464,31 @@ export function computeCompositeScore(kpis: KPIResult[]): HealthScore {
  * A project that is currently green but has 3+ high-probability risks → forecast yellow.
  * 5+ high-probability risks or any probability-5 risk → forecast red.
  */
-export function computeForecastScore(currentScore: HealthScore, risks: Risk[]): HealthScore {
-  const openHighProb = risks.filter(r =>
+export function computeForecastScore(
+  currentScore: HealthScore,
+  risks: Risk[] = [],
+  riskTags: RiskTag[] = [],
+  manualRisks: ManualRiskItem[] = [],
+): HealthScore {
+  const legacyOpen = risks.filter(r =>
     r.status !== 'closed' && r.status !== 'mitigated' && r.probability >= 4
   );
-  const criticalRisk = openHighProb.some(r => r.probability === 5 && (r.impactCost >= 4 || r.impactSchedule >= 4));
+  const tagOpen = riskTags.filter(t =>
+    t.status !== 'closed' && t.status !== 'mitigated' && t.status !== 'accepted' && t.probability >= 4
+  );
+  const manualOpen = manualRisks.filter(m =>
+    m.status !== 'closed' && m.status !== 'mitigated' && m.status !== 'accepted' && m.probability >= 4
+  );
 
-  if (criticalRisk || openHighProb.length >= 5) {
+  const allHighProb = [...legacyOpen, ...tagOpen, ...manualOpen];
+  const criticalRisk = legacyOpen.some(r => r.probability === 5 && (r.impactCost >= 4 || r.impactSchedule >= 4))
+    || tagOpen.some(t => t.probability === 5 && t.impact >= 4)
+    || manualOpen.some(m => m.probability === 5 && m.impact >= 4);
+
+  if (criticalRisk || allHighProb.length >= 5) {
     return currentScore === 'green' ? 'yellow' : 'red';
   }
-  if (openHighProb.length >= 3) {
+  if (allHighProb.length >= 3) {
     return currentScore === 'green' ? 'yellow' : currentScore;
   }
   return currentScore;
@@ -485,10 +514,38 @@ export function buildHealthResult(
   config: AccountHealthConfig,
   connection?: ProjectConnection,
   risks: Risk[] = [],
+  riskTags: RiskTag[] = [],
+  manualRisks: ManualRiskItem[] = [],
+  connectData?: ConnectedProjectHealth,
+  currentDate: Date = new Date(),
 ): HealthResult {
-  const kpis = resolveKPIs(project, config, connection, risks);
+  // Connected projects: use pre-aggregated data from GC account — bypass normalization
+  if (connectData) {
+    const compositeScore: HealthScore = (connectData.dimensions?.['composite']?.status as HealthScore) ?? 'green';
+    const forecastScore: HealthScore = (connectData.dimensions?.['composite']?.forecastStatus as HealthScore) ?? compositeScore;
+    const trend: HealthTrend = connectData.dimensions?.['composite']?.trend ?? 'stable';
+
+    return {
+      compositeScore,
+      forecastScore,
+      trend,
+      kpis: [],
+      risks: [],
+      history: project.healthHistory ?? [],
+      dataAsOf: connectData.syncedAt.toISOString(),
+      integrity: {
+        isComplete: true,
+        missingFields: [],
+        issueType: null,
+        resolutionPath: null,
+        signalOrigin: 'automated',
+      },
+    };
+  }
+
+  const kpis = resolveKPIs(project, config, connection, risks, riskTags, manualRisks);
   const compositeScore = computeCompositeScore(kpis);
-  const forecastScore = computeForecastScore(compositeScore, risks);
+  const forecastScore = computeForecastScore(compositeScore, risks, riskTags, manualRisks);
   const history = project.healthHistory ?? [];
   const trend = computeTrend(history);
 
@@ -496,9 +553,8 @@ export function buildHealthResult(
   const someUnavailable = kpis.some(k => k.status === 'unavailable');
   const missingFields = kpis.filter(k => k.status === 'unavailable').map(k => k.label);
 
-  // Compute signal origin: connected data = automated, seed/risk-record data = manual/mixed
   const hasConnected = kpis.some(k => k.dataSource === 'connected');
-  const hasManual = kpis.some(k => k.dataSource === 'seed' || k.dataSource === 'own') || risks.length > 0;
+  const hasManual = kpis.some(k => k.dataSource === 'seed' || k.dataSource === 'own') || risks.length > 0 || riskTags.length > 0;
   const signalOrigin: SignalOrigin = hasConnected && hasManual ? 'mixed' : hasConnected ? 'automated' : 'manual';
 
   const integrity: IntegrityResult = {
@@ -516,7 +572,7 @@ export function buildHealthResult(
     kpis,
     risks,
     history,
-    dataAsOf: new Date().toISOString(),
+    dataAsOf: currentDate.toISOString(),
     integrity,
   };
 }

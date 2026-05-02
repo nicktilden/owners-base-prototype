@@ -23,9 +23,15 @@ export default function RiskTitleCellRenderer(
         textDecoration: 'underline',
         textDecorationColor: 'transparent',
         transition: 'text-decoration-color 0.15s',
+        maxWidth: '100%',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        display: 'block',
       }}
       onMouseEnter={e => (e.currentTarget.style.textDecorationColor = 'var(--color-action-primary)')}
       onMouseLeave={e => (e.currentTarget.style.textDecorationColor = 'transparent')}
+      title={value ?? ''}
     >
       {value}
     </button>

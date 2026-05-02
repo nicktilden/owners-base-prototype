@@ -23,7 +23,10 @@ export type PermissionKey =
   | 'projects:delete'
   | 'projects:manage_members'
   | 'tools:enable'
-  | 'tools:disable';
+  | 'tools:disable'
+  | 'risk:accept'
+  | 'risk:configure'
+  | 'risk:trigger_workflow';
 
 export type RolePermissionMap = Record<string, PermissionKey[]>;
 export type RoleToolPermissionMap = Record<string, UserToolPermissions>;
@@ -60,6 +63,7 @@ export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'update',
   commitments:       'update',
   tasks:             'create',
+  risk:              'update',
 };
 
 export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
@@ -84,6 +88,7 @@ export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'admin',
   commitments:       'admin',
   tasks:             'admin',
+  risk:              'admin',
 };
 
 export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
@@ -108,6 +113,7 @@ export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'admin',
   commitments:       'admin',
   tasks:             'admin',
+  risk:              'update',
 };
 
 export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
@@ -132,6 +138,7 @@ export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'create',
   commitments:       'create',
   tasks:             'create',
+  risk:              'update',
 };
 
 export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
@@ -156,6 +163,7 @@ export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'none',
   commitments:       'none',
   tasks:             'none',
+  risk:              'read',
 };
 
 export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
@@ -180,6 +188,7 @@ export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
   correspondence:    'read',
   commitments:       'read',
   tasks:             'read',
+  risk:              'read',
 };
 
 import type { UserRole } from './user';

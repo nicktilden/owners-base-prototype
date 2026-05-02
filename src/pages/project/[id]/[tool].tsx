@@ -49,7 +49,7 @@ export default function ProjectToolPage() {
   if (toolKey === 'health' && projectId) {
     return (
       <>
-        <Head><title>Health &amp; Risk — Owner Prototype</title></Head>
+        <Head><title>Risk Register — Owner Prototype</title></Head>
         <HealthContent scope="project" projectId={projectId} />
       </>
     );

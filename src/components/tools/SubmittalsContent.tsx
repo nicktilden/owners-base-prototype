@@ -19,6 +19,7 @@ import { SmartGridWrapper } from "@/components/SmartGrid";
 import type { ColDef } from "ag-grid-community";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
+import SubmittalDetailTearsheet from "@/components/tools/SubmittalDetailTearsheet";
 import styled from "styled-components";
 import { submittals } from "@/data/seed/submittals";
 
@@ -73,6 +74,7 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const gridApiRef = useRef<GridApi | null>(null);
 
   const rowData = useMemo(() => submittals.filter((s: any) => s.projectId === projectId), [projectId]);
@@ -177,6 +179,10 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
     []
   );
 
+  const handleRowClick = useCallback((event: { data: any }) => {
+    if (event.data) setSelectedItem(event.data);
+  }, []);
+
   const actions = (
     <>
       <Dropdown label="Export" variant="secondary" className="b_secondary">
@@ -188,6 +194,7 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
   );
 
   return (
+    <>
     <ToolPageLayout
       title="Submittals"
       icon={<SubmittalsIcon size="md" />}
@@ -262,6 +269,7 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
                   groupDisplayType="groupRows"
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   onGridReady={handleGridReady}
+                  onRowClicked={handleRowClick}
                   statusBar={{
                     statusPanels: [
                       { statusPanel: "agTotalAndFilteredRowCountComponent", align: "left" },
@@ -280,5 +288,12 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
         </SplitViewCard.Main>
       </SplitViewCard>
     </ToolPageLayout>
+
+      <SubmittalDetailTearsheet
+        item={selectedItem}
+        open={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
+      />
+    </>
   );
 }
