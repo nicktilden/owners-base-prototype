@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 800" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Health and Risk data model v7 — tags on existing objects</title>
+<desc>The v7 data model. RiskTag attaches to existing Procore objects rather than creating new records. ManualRiskItem fills the escape-hatch case. ConnectedProjectHealth flows in from Procore Connect.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.new { font-size: 11px; font-weight: 500; fill:#FF8060; }
+</style>
+</defs>
+
+<text class="ts" x="40" y="30">Configuration (account-level)</text>
+
+<rect x="40" y="44" width="180" height="56" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="130" y="68" text-anchor="middle" fill="#8B84E0">HealthConfig</text>
+<text class="ts" x="130" y="86" text-anchor="middle" fill="#A89EF0">Active dimensions, template</text>
+
+<rect x="40" y="116" width="180" height="56" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="130" y="140" text-anchor="middle" fill="#8B84E0">ThresholdRule</text>
+<text class="ts" x="130" y="158" text-anchor="middle" fill="#A89EF0">ruleType: current | forecast</text>
+
+<rect x="40" y="188" width="180" height="80" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="130" y="212" text-anchor="middle" fill="#8B84E0">RiskType</text>
+<text class="ts" x="130" y="230" text-anchor="middle" fill="#A89EF0">+ taggingRules[]</text>
+<text class="ts" x="130" y="248" text-anchor="middle" fill="#A89EF0">+ approvalTriggers[]</text>
+<text class="new" x="225" y="208">v7</text>
+
+<rect x="40" y="284" width="180" height="56" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="130" y="308" text-anchor="middle" fill="#8B84E0">RiskTypeRule</text>
+<text class="ts" x="130" y="326" text-anchor="middle" fill="#A89EF0">Auto-tag matching items</text>
+<text class="new" x="225" y="304">new</text>
+
+<rect x="40" y="356" width="180" height="56" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="130" y="380" text-anchor="middle" fill="#8B84E0">ApprovalTrigger</text>
+<text class="ts" x="130" y="398" text-anchor="middle" fill="#A89EF0">Fires Procore Workflows</text>
+<text class="new" x="225" y="376">new</text>
+
+<text class="ts" x="260" y="30">Source data</text>
+
+<rect x="260" y="44" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="71" text-anchor="middle">RFI</text>
+
+<rect x="260" y="100" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="127" text-anchor="middle">Change Event</text>
+
+<rect x="260" y="156" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="183" text-anchor="middle">Punch List item</text>
+
+<rect x="260" y="212" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="239" text-anchor="middle">Submittal</text>
+
+<rect x="260" y="268" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="295" text-anchor="middle">Milestone</text>
+
+<rect x="260" y="324" width="160" height="44" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="340" y="351" text-anchor="middle">Budget line</text>
+
+<rect x="260" y="380" width="160" height="60" rx="8" fill="#2A1E0A" stroke="#D09820" stroke-width="0.5"/>
+<text class="th" x="340" y="402" text-anchor="middle" fill="#C89028">Connect data</text>
+<text class="ts" x="340" y="420" text-anchor="middle" fill="#E8B840">Pre-aggregated, partner</text>
+<text class="new" x="425" y="398">new</text>
+
+<text class="ts" x="460" y="30">Tags + manual + computed</text>
+
+<rect x="460" y="44" width="200" height="80" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="1.5"/>
+<text class="th" x="560" y="68" text-anchor="middle" fill="#E06840">RiskTag</text>
+<text class="ts" x="560" y="86" text-anchor="middle" fill="#FF8060">sourceType + sourceId →</text>
+<text class="ts" x="560" y="104" text-anchor="middle" fill="#FF8060">probability, impact, status</text>
+<text class="new" x="665" y="60">core v7</text>
+
+<rect x="460" y="140" width="200" height="68" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="th" x="560" y="164" text-anchor="middle" fill="#E06840">ManualRiskItem</text>
+<text class="ts" x="560" y="182" text-anchor="middle" fill="#FF8060">Escape hatch — no source</text>
+<text class="ts" x="560" y="198" text-anchor="middle" fill="#FF8060">title + description + tag fields</text>
+
+<rect x="460" y="224" width="200" height="56" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="560" y="248" text-anchor="middle" fill="#2EA888">Normalized data</text>
+<text class="ts" x="560" y="266" text-anchor="middle" fill="#4EC9A8">Source tools + tags + Connect</text>
+
+<rect x="460" y="296" width="200" height="56" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="560" y="320" text-anchor="middle" fill="#2EA888">DimensionResult</text>
+<text class="ts" x="560" y="338" text-anchor="middle" fill="#4EC9A8">Per-dimension integrity</text>
+
+<rect x="460" y="368" width="200" height="56" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="560" y="392" text-anchor="middle" fill="#2EA888">Risk Signal (view)</text>
+<text class="ts" x="560" y="410" text-anchor="middle" fill="#4EC9A8">Aggregated tags + manual items</text>
+
+<line x1="220" y1="72" x2="260" y2="66" stroke="#18A878" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="220" y1="144" x2="460" y2="394" stroke="#7060E0" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<line x1="220" y1="228" x2="460" y2="68" stroke="#7060E0" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<line x1="220" y1="312" x2="460" y2="68" stroke="#C84820" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<line x1="220" y1="384" x2="460" y2="68" stroke="#C84820" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+<line x1="420" y1="66" x2="460" y2="84" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="420" y1="122" x2="460" y2="92" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="420" y1="178" x2="460" y2="100" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="420" y1="234" x2="460" y2="108" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="420" y1="290" x2="460" y2="108" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="420" y1="346" x2="460" y2="116" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<line x1="420" y1="410" x2="460" y2="252" stroke="#D09820" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<line x1="560" y1="124" x2="560" y2="224" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="560" y1="208" x2="560" y2="224" stroke="#C84820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="560" y1="280" x2="560" y2="296" stroke="#18A878" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="560" y1="352" x2="560" y2="368" stroke="#18A878" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<text class="th" x="40" y="480">What changed from v6</text>
+
+<text class="ts" x="40" y="504">RiskRecord is removed. RiskTag (the new core object) attaches to existing source items by sourceType + sourceId.</text>
+<text class="ts" x="40" y="522">A single source item can carry multiple tags — a Change Event might be both Cost Risk and Schedule Risk.</text>
+<text class="ts" x="40" y="540">When the source item closes, the tag auto-closes by default (overrideable per tag). Tag history retained.</text>
+
+<text class="ts" x="40" y="568">ManualRiskItem is the escape hatch — used when no source Procore object represents the risk.</text>
+<text class="ts" x="40" y="586">Behaves identically to a tag in the engine, but has its own title and description fields.</text>
+
+<text class="ts" x="40" y="614">RiskType now defines automation rules and approval triggers in addition to fields and lifecycle.</text>
+<text class="ts" x="40" y="632">RiskTypeRule fires automatically — auto-create a tag, or surface as a signal for user review.</text>
+<text class="ts" x="40" y="650">ApprovalTrigger fires the existing Procore Workflows tool when a tag crosses a threshold.</text>
+
+<text class="ts" x="40" y="678">Connect data flows in pre-aggregated. Bypasses normalization. Marked with origin: 'connected_partner.'</text>
+<text class="ts" x="40" y="696">A mixed portfolio can include both Owner-managed projects (full detail) and Connected projects (rollups only).</text>
+
+<text class="ts" x="40" y="744">Legend</text>
+<rect x="40" y="754" width="14" height="14" rx="3" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="60" y="765">Configuration</text>
+<rect x="170" y="754" width="14" height="14" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="190" y="765">Source</text>
+<rect x="270" y="754" width="14" height="14" rx="3" fill="#2A1E0A" stroke="#D09820" stroke-width="0.5"/>
+<text class="ts" x="290" y="765">Connect</text>
+<rect x="380" y="754" width="14" height="14" rx="3" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="ts" x="400" y="765">Tag / manual</text>
+<rect x="500" y="754" width="14" height="14" rx="3" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="ts" x="520" y="765">Calculated</text>
+</svg>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 700" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Risk Type as a conditional form</title>
+<desc>Shows how selecting a Risk Type shapes the fields, scoring, and dimension contributions of a Risk Record.</desc>
+<defs>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.field { font-size: 12px; fill:#D8E4EE; }
+.req { font-size: 10px; fill:#E07070; }
+</style>
+</defs>
+
+<!-- Header -->
+<text class="th" x="40" y="36">Step 1: Select Type — this selection drives everything below</text>
+
+<!-- Type selector -->
+<rect x="40" y="48" width="640" height="40" rx="6" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="56" y="72">Risk Type</text>
+<rect x="200" y="56" width="200" height="24" rx="4" fill="#1E2D3D" stroke="#2A80D0" stroke-width="1"/>
+<text class="field" x="212" y="72" fill="#4D90D8">Financial Risk ▾</text>
+<text class="tiny" x="408" y="72">Other types: Schedule · Safety · Contractual · Site · Regulatory · Quality · Custom...</text>
+
+<!-- Three columns -->
+<rect x="40" y="108" width="200" height="360" rx="8" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="th" x="140" y="130" text-anchor="middle" fill="#4D90D8">Financial Risk</text>
+<text class="tiny" x="140" y="148" text-anchor="middle">Type = "Financial Risk"</text>
+
+<text class="ts" x="56" y="174">Title *</text>
+<rect x="56" y="180" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="ts" x="56" y="218">Exposure amount *</text>
+<text class="req" x="56" y="232">Financial-specific field</text>
+<rect x="56" y="236" width="168" height="20" rx="3" fill="#221E08" stroke="#C07A18" stroke-width="0.5"/>
+<text class="tiny" x="64" y="250" fill="#F0B060">$ value</text>
+
+<text class="ts" x="56" y="274">Contract clause</text>
+<text class="req" x="56" y="286" fill="rgba(255,255,255,0.4)">Financial-specific field</text>
+<rect x="56" y="290" width="168" height="20" rx="3" fill="#221E08" stroke="#C07A18" stroke-width="0.5"/>
+
+<text class="ts" x="56" y="328">Probability (1–5) *</text>
+<rect x="56" y="334" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="tiny" x="64" y="348">Shared field, all types</text>
+
+<text class="ts" x="56" y="372">Schedule impact</text>
+<rect x="56" y="378" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" stroke-dasharray="2 2"/>
+<text class="tiny" x="64" y="392" fill="rgba(255,255,255,0.4)">Hidden for this type</text>
+
+<text class="ts" x="56" y="416">Dimensions affected</text>
+<rect x="56" y="422" width="72" height="18" rx="9" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="tiny" x="92" y="434" text-anchor="middle" fill="#4D90D8">Cost (primary)</text>
+
+<!-- Divider -->
+<line x1="260" y1="108" x2="260" y2="468" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+<rect x="260" y="108" width="200" height="360" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="th" x="360" y="130" text-anchor="middle" fill="#E06840">Safety Risk</text>
+<text class="tiny" x="360" y="148" text-anchor="middle">Type = "Safety Risk"</text>
+
+<text class="ts" x="276" y="174">Title *</text>
+<rect x="276" y="180" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="ts" x="276" y="218">Incident type *</text>
+<text class="req" x="276" y="232">Safety-specific field</text>
+<rect x="276" y="236" width="168" height="20" rx="3" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="tiny" x="284" y="250" fill="#FF8060">Near miss · Injury · Property...</text>
+
+<text class="ts" x="276" y="274">OSHA recordable? *</text>
+<text class="req" x="276" y="286">Safety-specific field</text>
+<rect x="276" y="290" width="168" height="20" rx="3" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+
+<text class="ts" x="276" y="328">Probability (1–5) *</text>
+<rect x="276" y="334" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="tiny" x="284" y="348">Shared field, all types</text>
+
+<text class="ts" x="276" y="372">Schedule impact</text>
+<rect x="276" y="378" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" stroke-dasharray="2 2"/>
+<text class="tiny" x="284" y="392" fill="rgba(255,255,255,0.4)">Hidden for this type</text>
+
+<text class="ts" x="276" y="416">Dimensions affected</text>
+<rect x="276" y="422" width="60" height="18" rx="9" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="tiny" x="306" y="434" text-anchor="middle" fill="#E06840">Safety</text>
+
+<!-- Divider -->
+<line x1="480" y1="108" x2="480" y2="468" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+<rect x="480" y="108" width="200" height="360" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="580" y="130" text-anchor="middle" fill="#2EA888">Schedule Risk</text>
+<text class="tiny" x="580" y="148" text-anchor="middle">Type = "Schedule Risk"</text>
+
+<text class="ts" x="496" y="174">Title *</text>
+<rect x="496" y="180" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="ts" x="496" y="218">Affected milestone *</text>
+<text class="req" x="496" y="232">Schedule-specific field</text>
+<rect x="496" y="236" width="168" height="20" rx="3" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+
+<text class="ts" x="496" y="274">Float consumed (days)</text>
+<text class="req" x="496" y="286">Schedule-specific field</text>
+<rect x="496" y="290" width="168" height="20" rx="3" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+
+<text class="ts" x="496" y="328">Probability (1–5) *</text>
+<rect x="496" y="334" width="168" height="20" rx="3" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="tiny" x="504" y="348">Shared field, all types</text>
+
+<text class="ts" x="496" y="372">Schedule impact (days) *</text>
+<text class="req" x="496" y="386">Shown only for this type</text>
+<rect x="496" y="390" width="168" height="20" rx="3" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+
+<text class="ts" x="496" y="430">Dimensions affected</text>
+<rect x="496" y="438" width="80" height="18" rx="9" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="tiny" x="536" y="450" text-anchor="middle" fill="#2EA888">Schedule</text>
+
+<!-- Notes section -->
+<rect x="40" y="488" width="640" height="180" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="510">What this means for the product</text>
+
+<text class="ts" x="56" y="534">Type is selected first and locked after save.</text>
+<text class="ts" x="56" y="552">The form renders based on the Type. Shared fields (title, probability, owner, status) appear on every type.</text>
+<text class="ts" x="56" y="570">Type-specific fields appear conditionally. Admins define which fields belong to which type in the Risk Type editor.</text>
+
+<text class="ts" x="56" y="598">Scoring is type-aware. A Financial Risk can exclude "schedule impact days" from its scoring formula entirely.</text>
+<text class="ts" x="56" y="616">The probability scale (1–5) is universal. The impact categories are type-specific (financial = $ exposure, safety = severity level,</text>
+<text class="ts" x="56" y="634">schedule = days of float consumed). This means forecast exposure is calculated differently per type before rolling up to a dimension.</text>
+
+<text class="ts" x="56" y="660">The convergent default schema — the one two customers independently built — maps cleanly to this model: shared</text>
+<text class="ts" x="56" y="678">fields in the core, type-specific fields as conditional extensions, dimension mapping per type.</text>
+</svg>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 580" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Portfolio Hub Health card — delta-led layout</title>
+<desc>The hub card leads with what's changing and what's coming, with the leaderboard accessible as a secondary tab.</desc>
+<defs>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.kpi { font-size: 28px; font-weight: 500; fill:#D8E4EE; }
+.delta-up { font-size: 11px; fill:#E07070; }
+.delta-down { font-size: 11px; fill:#90D850; }
+</style>
+</defs>
+
+<rect x="40" y="40" width="600" height="320" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+
+<text class="th" x="56" y="68">Portfolio Health</text>
+<text class="tiny" x="56" y="84">Updated 2 hours ago</text>
+
+<text class="ts" x="540" y="68">Filter: All sources</text>
+<text class="ts" x="540" y="84">Go to portfolio →</text>
+
+<rect x="56" y="104" width="120" height="24" rx="4" fill="#1E2D3D" stroke="#2A80D0" stroke-width="1"/>
+<text class="ts" x="116" y="120" text-anchor="middle" fill="#4D90D8">What changed</text>
+
+<rect x="186" y="104" width="120" height="24" rx="4" fill="#1A2535" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="ts" x="246" y="120" text-anchor="middle" fill="rgba(255,255,255,0.6)">What's coming</text>
+
+<rect x="316" y="104" width="120" height="24" rx="4" fill="#1A2535" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="ts" x="376" y="120" text-anchor="middle" fill="rgba(255,255,255,0.6)">All projects</text>
+
+<text class="th" x="56" y="160">Movement since last week</text>
+
+<rect x="56" y="172" width="180" height="80" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="kpi" x="72" y="208" fill="#D89040">3</text>
+<text class="ts" x="72" y="228" fill="#F0B060">projects degraded</text>
+<text class="delta-up" x="72" y="244">↑ 2 from last week</text>
+
+<rect x="248" y="172" width="180" height="80" rx="6" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="kpi" x="264" y="208">2</text>
+<text class="ts" x="264" y="228">projects improved</text>
+<text class="delta-down" x="264" y="244">↓ from At Risk → On Track</text>
+
+<rect x="440" y="172" width="184" height="80" rx="6" fill="#250E0E" stroke="#D04848" stroke-width="0.5"/>
+<text class="kpi" x="456" y="208" fill="#C05050">1</text>
+<text class="ts" x="456" y="228" fill="#C05050">portfolio threshold breached</text>
+<text class="tiny" x="456" y="244" fill="#E07070">&gt;20% of projects are Red</text>
+
+<text class="th" x="56" y="288">Forecast — projects to watch</text>
+
+<rect x="56" y="300" width="568" height="44" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<rect x="68" y="312" width="56" height="20" rx="10" fill="#121E0A" stroke="none"/>
+<rect x="96" y="312" width="28" height="20" fill="#281E0D" stroke="none"/>
+<rect x="68" y="312" width="56" height="20" rx="10" fill="none" stroke="#C07A18" stroke-width="0.5"/>
+<line x1="96" y1="314" x2="96" y2="330" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="140" y="326" fill="#D89040">2 projects forecast to enter At Risk in the next 30 days</text>
+<text class="tiny" x="540" y="326" fill="#F0B060">View forecast →</text>
+
+<text class="th" x="40" y="400">Why this layout</text>
+<text class="ts" x="40" y="420">Owners ask: "what's changed since I last looked, and what should I look at first?" Leading with movement</text>
+<text class="ts" x="40" y="438">and forecast answers that. The leaderboard exists as a tab — useful when you want it, not the default lens.</text>
+
+<text class="th" x="40" y="478">Three tabs</text>
+<text class="ts" x="40" y="498">What changed: deltas since last snapshot — the default tab</text>
+<text class="ts" x="40" y="516">What's coming: forecast tensions and projects trending toward impact</text>
+<text class="ts" x="40" y="534">All projects: the leaderboard, sortable by current or forecast status</text>
+
+<text class="ts" x="40" y="572">Filter dropdown applies across all three tabs. Clicking any number opens the detail Tearsheet for that subset.</text>
+</svg>
