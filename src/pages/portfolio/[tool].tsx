@@ -9,6 +9,7 @@ const BudgetContent          = dynamic(() => import('@/components/tools/BudgetCo
 const AssetsContent          = dynamic(() => import('@/components/tools/AssetsContent'),          { ssr: false });
 const TasksContent           = dynamic(() => import('@/components/tools/TasksContent'),           { ssr: false });
 const CapitalPlanningContent = dynamic(() => import('@/components/tools/CapitalPlanningContent'), { ssr: false });
+const CapitalPlanningSettingsContent = dynamic(() => import('@/components/tools/CapitalPlanningSettingsContent'), { ssr: false });
 const FundingSourceContent   = dynamic(() => import('@/components/tools/FundingSourceContent'),   { ssr: false });
 
 const GlobalHeader = dynamic(() => import('@/components/nav/GlobalHeader'), { ssr: false });
@@ -30,6 +31,33 @@ export default function PortfolioToolPage() {
     );
   }
 
+  if (toolKey === 'capital_planning_mvp') {
+    return (
+      <>
+        <Head><title>Capital Planning — Owner Prototype</title></Head>
+        <CapitalPlanningContent pageVariant="mvp" />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_target_budget') {
+    return (
+      <>
+        <Head><title>Capital Planning — Owner Prototype</title></Head>
+        <CapitalPlanningContent pageVariant="target_budget" />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_target_budget_2_0') {
+    return (
+      <>
+        <Head><title>Capital Planning — Owner Prototype</title></Head>
+        <CapitalPlanningContent pageVariant="target_budget_2_0" />
+      </>
+    );
+  }
+
   if (toolKey === 'capital_planning_future') {
     return (
       <>
@@ -44,6 +72,42 @@ export default function PortfolioToolPage() {
       <>
         <Head><title>Capital Planning — Owner Prototype</title></Head>
         <CapitalPlanningContent />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_settings') {
+    return (
+      <>
+        <Head><title>Capital Planning Settings — Owner Prototype</title></Head>
+        <CapitalPlanningSettingsContent />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_next_settings') {
+    return (
+      <>
+        <Head><title>Capital Planning Settings — Owner Prototype</title></Head>
+        <CapitalPlanningSettingsContent capitalPlanningPageVariant="next" />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_target_budget_settings') {
+    return (
+      <>
+        <Head><title>Capital Planning Settings — Owner Prototype</title></Head>
+        <CapitalPlanningSettingsContent capitalPlanningPageVariant="target_budget" />
+      </>
+    );
+  }
+
+  if (toolKey === 'capital_planning_future_settings') {
+    return (
+      <>
+        <Head><title>Capital Planning Settings — Owner Prototype</title></Head>
+        <CapitalPlanningSettingsContent capitalPlanningPageVariant="future" />
       </>
     );
   }
