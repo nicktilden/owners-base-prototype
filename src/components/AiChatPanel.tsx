@@ -753,6 +753,9 @@ function getAutoPromptForContext(ctx: AiPanelContextData): string {
   if (ctx.cardType === 'schedule_variance' && ctx.projectId) {
     return `Analyze the schedule for ${ctx.itemName} — show me the milestone status, key risks, and recommended actions.`;
   }
+  if (ctx.cardType === 'risk_scorecard') {
+    return `Summarize the Risk Signals scorecard — interpret each KPI, highlight the most critical signals, and recommend actions.`;
+  }
   if (ctx.itemId) {
     return `Tell me about ${ctx.itemName} (${ctx.itemId}) — what are the key risks and what actions should I take?`;
   }
@@ -938,7 +941,66 @@ function buildOpenItemsSummaryResponse(): string {
   return response;
 }
 
+function buildRiskScorecardResponse(aiSummary: string): string {
+  // Parse the KPI lines passed in aiSummary: "Label: value (status)"
+  const lines = aiSummary.split('\n').filter(Boolean);
+
+  const critical = lines.filter(l => l.includes('(Critical)'));
+  const atRisk = lines.filter(l => l.includes('(At Risk)'));
+  const onTrack = lines.filter(l => l.includes('(On Track)'));
+  const noData = lines.filter(l => l.includes('(No data)'));
+
+  let response = `**Risk Signals — Portfolio KPI Summary**\n\n`;
+
+  response += `📊 **${lines.length} KPI${lines.length !== 1 ? 's' : ''} tracked** across your active portfolio\n\n`;
+
+  if (critical.length > 0) {
+    response += `🔴 **Critical (${critical.length})**\n`;
+    critical.forEach(l => response += `• ${l.replace(' (Critical)', '')}\n`);
+    response += `\n`;
+  }
+
+  if (atRisk.length > 0) {
+    response += `🟡 **At Risk (${atRisk.length})**\n`;
+    atRisk.forEach(l => response += `• ${l.replace(' (At Risk)', '')}\n`);
+    response += `\n`;
+  }
+
+  if (onTrack.length > 0) {
+    response += `🟢 **On Track (${onTrack.length})**\n`;
+    onTrack.forEach(l => response += `• ${l.replace(' (On Track)', '')}\n`);
+    response += `\n`;
+  }
+
+  if (noData.length > 0) {
+    response += `⚪ **No Data (${noData.length})**\n`;
+    noData.forEach(l => response += `• ${l.replace(' (No data)', '')}\n`);
+    response += `\n`;
+  }
+
+  response += `**✅ Recommended Actions:**\n`;
+  if (critical.length > 0) {
+    response += `1. Immediately investigate the ${critical.length} critical KPI${critical.length !== 1 ? 's' : ''} — escalate to project teams for root cause analysis\n`;
+    response += `2. Review budget and schedule baselines on affected projects\n`;
+    response += `3. Issue an owner's advisory to flag portfolio-level risk exposure\n`;
+  } else if (atRisk.length > 0) {
+    response += `1. Schedule a portfolio review meeting to address the ${atRisk.length} at-risk KPI${atRisk.length !== 1 ? 's' : ''}\n`;
+    response += `2. Request recovery plans from project teams within 5 business days\n`;
+    response += `3. Increase monitoring frequency on at-risk projects\n`;
+  } else {
+    response += `1. Portfolio health is tracking well — continue standard monitoring cadence\n`;
+    response += `2. Review KPI thresholds in Risk Register Settings to ensure they reflect current standards\n`;
+  }
+
+  response += `\nWould you like me to drill into a specific KPI, draft an executive summary, or identify which projects are driving the at-risk signals?`;
+
+  return response;
+}
+
 function getSimulatedResponse(ctx: AiPanelContextData | null, message: string): string {
+  if (ctx?.cardType === 'risk_scorecard' && ctx?.aiSummary) {
+    return buildRiskScorecardResponse(ctx.aiSummary);
+  }
   if (ctx?.cardType === 'open_items' && ctx?.itemId) {
     const itemResponse = buildOpenItemResponse(ctx.itemId);
     if (itemResponse) return itemResponse;
@@ -1136,6 +1198,8 @@ export default function AiChatPanel() {
       autoSkill = SKILLS.find((s) => s.id === 'cost-advisor') ?? null;
     } else if (context.cardType === 'open_items') {
       autoSkill = SKILLS.find((s) => s.id === 'item-reviewer') ?? null;
+    } else if (context.cardType === 'risk_scorecard') {
+      autoSkill = SKILLS.find((s) => s.id === 'risk-monitor') ?? null;
     }
     if (autoSkill) setSelectedSkill(autoSkill);
 

@@ -4,6 +4,7 @@
  */
 
 export { account } from './account';
+export { risks, getRisksForProject } from './risks';
 export { activeUser } from './activeUser';
 export { users } from './users';
 export { projects } from './projects';
@@ -25,10 +26,19 @@ export { changeEvents } from './change_events';
 export { invoicing } from './invoicing';
 export { primeContracts } from './prime_contracts';
 export { punchList } from './punch_list';
-export { specifications } from './specifications';
+export { specifications, specificationSections } from './specifications';
 export { submittals } from './submittals';
 export { observations } from './observations';
 export { correspondence } from './correspondence';
 export { commitments } from './commitments';
 export { capitalPlanning } from './capital_planning';
 export { fundingSource } from './funding_source';
+
+// v7 Health & Risk
+export { riskTags } from './riskTags';
+export { manualRiskItems } from './manualRiskItems';
+export { connectedProjects } from './connectedProjects';
+export { riskTypeRules } from './riskTypeRules';
+export { approvalTriggers } from './approvalTriggers';
+export { healthSnapshotsByProject } from './healthSnapshots';
+export { connectedAccounts } from './account';

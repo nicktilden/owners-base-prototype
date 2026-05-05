@@ -3,6 +3,7 @@ import {
   Button,
   Dropdown,
   Search,
+  Select,
   SplitViewCard,
   Tabs,
   ToggleButton,
@@ -78,6 +79,17 @@ const CATEGORY_FILTER_OPTIONS = CATEGORY_OPTIONS.map((c) => ({
 
 type TabKey = "list" | "my_tasks";
 
+interface GroupByOption {
+  id: "status" | "category" | "assignedTo";
+  label: string;
+}
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { id: "status", label: "Status" },
+  { id: "category", label: "Category" },
+  { id: "assignedTo", label: "Assigned To" },
+];
+
 interface TasksContentProps {
   projectId: string;
 }
@@ -89,6 +101,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
   const [searchText, setSearchText] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const gridApiRef = useRef<GridApi<Task> | null>(null);
 
   const project = useMemo(
@@ -195,6 +208,36 @@ export default function TasksContent({ projectId }: TasksContentProps) {
     });
   }, []);
 
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
+
   const sideBar = useMemo(() => false, []);
 
   const projectLabel = project
@@ -204,7 +247,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
   const breadcrumbs = [
     { label: "Portfolio", href: "/portfolio" },
     ...(projectId
-      ? [{ label: projectLabel, href: `/project/${projectId}` }]
+      ? [{ label: projectLabel, href: `/project/${projectId}/overview` }]
       : []),
   ];
 
@@ -263,6 +306,7 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                   </div>
                   <ToggleButton
                     selected={filtersOpen}
+                    className="b_toggle"
                     icon={<Filter />}
                     onClick={handleFiltersToggle}
                   >
@@ -270,6 +314,25 @@ export default function TasksContent({ projectId }: TasksContentProps) {
                   </ToggleButton>
                 </ToolbarLeft>
                 <ToolbarRight>
+                  <div style={{ width: 200 }}>
+                    <Select
+                      placeholder="Group by"
+                      label={groupBy ? `Group by: ${groupBy.label}` : undefined}
+                      onSelect={handleGroupBySelect}
+                      onClear={groupBy ? handleGroupByClear : undefined}
+                      block
+                    >
+                      {GROUP_BY_OPTIONS.map((opt) => (
+                        <Select.Option
+                          key={opt.id}
+                          value={opt}
+                          selected={groupBy?.id === opt.id}
+                        >
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
                   <ToggleButton
                     selected={configOpen}
                     icon={<Sliders />}

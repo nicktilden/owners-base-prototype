@@ -9,7 +9,7 @@ import {
   File,
   EllipsisVertical,
 } from "@procore/core-icons";
-import styled from "styled-components";
+import styled, { createGlobalStyle } from "styled-components";
 import { sampleOpenItemRows, type OpenItemRow } from "@/data/openitems";
 import { rfis } from "@/data/seed/rfis";
 import { projects } from "@/data/seed/projects";
@@ -17,6 +17,10 @@ import { usePersona } from "@/context/PersonaContext";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { formatDateMMDDYYYY } from "@/utils/date";
+import { useHubLoading } from "@/context/HubLoadingContext";
+import HubCardSkeleton from "@/components/skeletons/HubCardSkeleton";
+import MyOpenItemsSkeleton from "@/components/skeletons/MyOpenItemsSkeleton";
+import HubCardTable from "@/components/HubCardTable";
 
 // ─── Hub Card anatomy ─────────────────────────────────────────────────────────
 
@@ -24,47 +28,6 @@ const HeaderActions = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-// ─── Table layout ─────────────────────────────────────────────────────────────
-
-const ItemTable = styled.div`
-  width: 100%;
-`;
-
-const TableHeader = styled.div`
-  display: grid;
-  grid-template-columns: 100px 1fr 100px 90px 36px;
-  padding: 0 8px;
-  height: 28px;
-  align-items: center;
-  border-bottom: 1px solid var(--color-border-separator);
-`;
-
-const HeaderCell = styled.span`
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  line-height: 16px;
-  white-space: nowrap;
-  padding: 6px 0;
-
-  &:nth-child(3) {
-    text-align: left;
-  }
-  &:nth-child(4) {
-    text-align: left;
-  }
-`;
-
-const ItemRow = styled.div<{ $even?: boolean }>`
-  display: grid;
-  grid-template-columns: 100px 1fr 110px 100px 36px;
-  padding: 0 8px;
-  min-height: 44px;
-  align-items: center;
-  background: ${({ $even }) => ($even ? "var(--color-surface-primary)" : "var(--color-surface-secondary)")};
-  border-bottom: 1px solid var(--color-border-separator);
-  cursor: pointer;
 `;
 
 const TypeCell = styled.div`
@@ -131,6 +94,12 @@ const StatusCell = styled.div`
   justify-content: flex-start;
 `;
 
+const MyOpenItemsTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .my-open-items-tearsheet-root) {
+    flex: 0 0 60vw !important;
+  }
+`;
+
 const TearsheetHeader = styled.div`
   padding: 20px 24px 12px;
   border-bottom: 1px solid var(--color-border-separator);
@@ -167,15 +136,18 @@ for (const p of projects) {
   projectLookup[p.id] = { name: p.name, number: p.number };
 }
 
-function useMyOpenItems(): OpenItemRow[] {
+/** OpenItemRow with projectId normalised to seed string format ('proj-001'). */
+type OpenItemRowNorm = Omit<OpenItemRow, 'projectId'> & { projectId: string };
+
+function useMyOpenItems(): OpenItemRowNorm[] {
   const { activeUser } = usePersona();
   return useMemo(() => {
     const userName = activeUser
       ? `${activeUser.firstName} ${activeUser.lastName}`
       : "Bridget O'Sullivan";
 
-    // RFIs assigned to the active user, converted to OpenItemRow shape
-    const rfiItems: OpenItemRow[] = rfis
+    // RFIs assigned to the active user, converted to OpenItemRowNorm shape
+    const rfiItems: OpenItemRowNorm[] = rfis
       .filter((r) => r.assignees.includes(userName) && r.status !== 'Closed' && r.status !== 'Closed - Revised' && r.status !== 'Closed - Draft')
       .map((r, idx) => {
         const proj = projectLookup[r.projectId];
@@ -196,7 +168,8 @@ function useMyOpenItems(): OpenItemRow[] {
           daysOverdue,
           assignee: userName,
           submittedBy: r.createdBy,
-          projectId: parseInt(r.projectId.replace("proj-", ""), 10),
+          // Keep the seed string ID for reliable cross-source filtering
+          projectId: r.projectId,
           projectNumber: proj?.number ?? '',
           projectName: proj?.name ?? '',
           specSection: '',
@@ -204,13 +177,17 @@ function useMyOpenItems(): OpenItemRow[] {
         };
       });
 
-    // Original open items for backwards compatibility
+    // sampleOpenItemRows items — convert numeric projectId to seed string format
     const legacyItems = sampleOpenItemRows
-      .filter((r) => r.assignee === userName && r.status !== "Closed" && r.status !== "Void");
+      .filter((r) => r.assignee === userName && r.status !== "Closed" && r.status !== "Void")
+      .map((r) => ({
+        ...r,
+        // Normalise to seed string format so filtering is consistent
+        projectId: `proj-${String(r.projectId).padStart(3, '0')}`,
+      }));
 
     return [...rfiItems, ...legacyItems]
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-      .slice(0, 5);
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   }, [activeUser]);
 }
 
@@ -239,20 +216,21 @@ function isOverdue(isoDate: string): boolean {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface MyOpenItemsCardProps {
-  /** When provided, filters open items to only those belonging to this project (matches OpenItemRow.projectId). */
-  projectId?: number;
+  /** Seed string project ID (e.g. 'proj-001'). When provided, filters to only items for this project. */
+  seedProjectId?: string;
 }
 
-export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}) {
+export default function MyOpenItemsCard({ seedProjectId }: MyOpenItemsCardProps = {}) {
+  const { isLoading } = useHubLoading();
   const [search, setSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<OpenItemRow | null>(null);
+  const [selectedItem, setSelectedItem] = useState<OpenItemRowNorm | null>(null);
   const [projectFilter, setProjectFilter] = useState("All Projects");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const { openPanel: openAiPanel } = useAiPanel();
   const allOpenItems = useMyOpenItems();
-  const MY_OPEN_ITEMS = projectId != null
-    ? allOpenItems.filter((item) => item.projectId === projectId)
+  const MY_OPEN_ITEMS = seedProjectId != null
+    ? allOpenItems.filter((item) => item.projectId === seedProjectId)
     : allOpenItems;
 
   const projectOptions = ["All Projects", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.projectName))).sort()];
@@ -271,6 +249,14 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
       item.type.toLowerCase().includes(q)
     );
   });
+
+  if (isLoading) {
+    return (
+      <HubCardSkeleton hasControls controlCount={3} actionCount={3}>
+        <MyOpenItemsSkeleton />
+      </HubCardSkeleton>
+    );
+  }
 
   return (
     <>
@@ -328,7 +314,7 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
             value={search}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           />
-          {projectId == null && (
+          {seedProjectId == null && (
             <Select
               onSelect={(next) => {
                 if (typeof next === "string") setProjectFilter(next);
@@ -372,47 +358,55 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
         </>
       }
     >
-        <ItemTable role="table" aria-label="My open items">
-          <TableHeader role="row">
-            <HeaderCell role="columnheader">Type</HeaderCell>
-            <HeaderCell role="columnheader">{projectId != null ? "Open Item Title" : "Project Details and Open Item Title"}</HeaderCell>
-            <HeaderCell role="columnheader">Due Date</HeaderCell>
-            <HeaderCell role="columnheader">Status</HeaderCell>
-            <HeaderCell role="columnheader" />
-          </TableHeader>
-
+        <HubCardTable columns="100px 1fr 110px 100px 36px">
+          <HubCardTable.Header>
+            <HubCardTable.HeaderCell>Type</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell>{seedProjectId != null ? "Open Item Title" : "Project Details and Open Item Title"}</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell>Due Date</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell>Status</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell />
+          </HubCardTable.Header>
+          <HubCardTable.Body>
           {filtered.map((item, idx) => {
             const overdue = isOverdue(item.dueDate);
             return (
-              <ItemRow key={item.id} role="row" tabIndex={0} $even={idx % 2 === 0}>
-                <TypeCell role="cell">
-                  <span style={{ color: "var(--color-text-primary)", display: "flex", alignItems: "center", flexShrink: 0 }}>
-                    {TYPE_ICONS[item.type] ?? <File size="sm" />}
-                  </span>
-                  <TypeLabel>{item.type}</TypeLabel>
-                </TypeCell>
+              <HubCardTable.Row key={item.id} index={idx}>
+                <HubCardTable.Cell>
+                  <TypeCell>
+                    <span style={{ color: "var(--color-text-primary)", display: "flex", alignItems: "center", flexShrink: 0 }}>
+                      {TYPE_ICONS[item.type] ?? <File size="sm" />}
+                    </span>
+                    <TypeLabel>{item.type}</TypeLabel>
+                  </TypeCell>
+                </HubCardTable.Cell>
 
-                <TitleCell role="cell">
-                  {projectId == null && <ProjectLabel>{item.projectName}</ProjectLabel>}
-                  <ItemLinkButton
-                    onClick={() => setSelectedItem(item)}
-                    aria-label={`Open details for ${item.number}`}
-                  >
-                    {item.number}: {item.title.length > 24 ? `${item.title.slice(0, 24)}…` : item.title}
-                  </ItemLinkButton>
-                </TitleCell>
+                <HubCardTable.Cell>
+                  <TitleCell>
+                    {seedProjectId == null && <ProjectLabel>{item.projectName}</ProjectLabel>}
+                    <ItemLinkButton
+                      onClick={() => setSelectedItem(item)}
+                      aria-label={`Open details for ${item.number}`}
+                    >
+                      {item.number}: {item.title.length > 24 ? `${item.title.slice(0, 24)}…` : item.title}
+                    </ItemLinkButton>
+                  </TitleCell>
+                </HubCardTable.Cell>
 
-                <DueDateCell role="cell" $overdue={overdue}>
-                  {formatDueDate(item.dueDate)}
-                </DueDateCell>
+                <HubCardTable.Cell>
+                  <DueDateCell $overdue={overdue}>
+                    {formatDueDate(item.dueDate)}
+                  </DueDateCell>
+                </HubCardTable.Cell>
 
-                <StatusCell role="cell">
-                  <Pill color={STATUS_COLOR[item.status] ?? "gray"} data-pill-color={STATUS_COLOR[item.status] ?? "gray"}>
-                    {item.status}
-                  </Pill>
-                </StatusCell>
+                <HubCardTable.Cell>
+                  <StatusCell>
+                    <Pill color={STATUS_COLOR[item.status] ?? "gray"} data-pill-color={STATUS_COLOR[item.status] ?? "gray"}>
+                      {item.status}
+                    </Pill>
+                  </StatusCell>
+                </HubCardTable.Cell>
 
-                <div role="cell" style={{ display: "flex", justifyContent: "center" }}>
+                <HubCardTable.Cell style={{ display: "flex", justifyContent: "center" }}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -420,7 +414,6 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
                       openAiPanel({
                         itemName: `${item.number}: ${item.title}`,
                         itemId: item.number,
-                        projectId: item.projectId,
                         pills: [
                           { label: item.type, color: 'blue' },
                           { label: item.priority, color: item.priority === 'Critical' ? 'red' : item.priority === 'High' ? 'yellow' : 'green' },
@@ -447,12 +440,14 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
                   >
                     <Copilot size="sm" style={{ color: colors.orange50, width: 14, height: 14 }} />
                   </button>
-                </div>
-              </ItemRow>
+                </HubCardTable.Cell>
+              </HubCardTable.Row>
             );
           })}
-        </ItemTable>
+          </HubCardTable.Body>
+        </HubCardTable>
     </HubCardFrame>
+    <MyOpenItemsTearsheetWidth />
     <Tearsheet
       open={selectedItem !== null}
       onClose={() => setSelectedItem(null)}
@@ -460,6 +455,7 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
       block
       aria-label="Open item details"
     >
+      <div className="my-open-items-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {selectedItem && (
         <>
           <TearsheetHeader>
@@ -498,6 +494,7 @@ export default function MyOpenItemsCard({ projectId }: MyOpenItemsCardProps = {}
           </TearsheetBody>
         </>
       )}
+      </div>
     </Tearsheet>
     </>
   );

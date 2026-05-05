@@ -4,20 +4,25 @@ import {
   Dropdown,
   Pill,
   Search,
+  Select,
   SplitViewCard,
   Tabs,
+  ToggleButton,
 } from "@procore/core-react";
 import {
   ChevronDown,
   ChevronRight,
   Clear,
   ClipboardCheck as ActionPlansIcon,
+  Filter,
   Plus,
+  Sliders,
 } from "@procore/core-icons";
 import type { ColDef, GridApi, ICellRendererParams, RowClickedEvent } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { actionPlans } from "@/data/seed/action_plans";
 import { actionPlanTypes, actionPlanTemplates } from "@/data/seed/action_plan_types";
 import type { ActionPlan, ActionPlanItem, ActionPlanStatus, ActionPlanItemStatus } from "@/types/action_plans";
@@ -110,6 +115,13 @@ const ToolbarLeft = styled.div`
   flex: 1;
 `;
 
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 const GridArea = styled.div`
   display: flex;
   height: 640px;
@@ -183,16 +195,13 @@ function ProgressRenderer(params: ICellRendererParams<ActionPlan>) {
     return <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>No items</span>;
   }
   return (
-    <div style={{ minWidth: 120 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ flex: 1, height: 6, borderRadius: 3, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
-          <div style={{ width: `${percent}%`, height: "100%", borderRadius: 3, background: barColor }} />
-        </div>
-        <span style={{ fontSize: 12, fontWeight: 600, color: barColor, minWidth: 36 }}>{percent}%</span>
+    <div style={{ minWidth: 140, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-surface-tertiary)", overflow: "hidden" }}>
+        <div style={{ width: `${percent}%`, height: "100%", borderRadius: 4, background: barColor, transition: "width 0.2s ease" }} />
       </div>
-      <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>
-        {closed}/{total} items closed{overdue && <span style={{ color: "var(--color-text-error)", fontWeight: 600 }}> · overdue</span>}
-      </div>
+      <span style={{ fontSize: 12, fontWeight: 600, color: barColor, whiteSpace: "nowrap" }}>
+        {closed}/{total} closed{overdue && <span style={{ color: "var(--color-text-error)", fontWeight: 600 }}> · overdue</span>}
+      </span>
     </div>
   );
 }
@@ -398,6 +407,35 @@ const planColumnDefs: ColDef<ActionPlan>[] = [
   },
 ];
 
+// Seed usage counts per template (projects actively using each template out of 20 total)
+const TEMPLATE_USAGE: Record<string, { used: number; total: number }> = {
+  "tpl-001": { used: 5,  total: 20 },
+  "tpl-002": { used: 8,  total: 20 },
+  "tpl-003": { used: 12, total: 20 },
+  "tpl-004": { used: 10, total: 20 },
+  "tpl-005": { used: 4,  total: 20 },
+  "tpl-006": { used: 3,  total: 20 },
+};
+
+function TemplateUsageCellRenderer(params: ICellRendererParams) {
+  const usage = TEMPLATE_USAGE[params.data?.id] ?? { used: 0, total: 20 };
+  const pct = Math.round((usage.used / usage.total) * 100);
+  const isLow = pct < 40;
+  const barColor = isLow ? "#c62828" : pct < 70 ? "var(--color-action-primary)" : "#2e7d32";
+  const textColor = isLow ? "#c62828" : pct < 70 ? "var(--color-action-primary)" : "#2e7d32";
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, height: "100%", padding: "0 4px" }}>
+      <div style={{ flex: 1, height: 8, background: "#e0e0e0", borderRadius: 4, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 4, transition: "width 0.3s ease" }} />
+      </div>
+      <span style={{ minWidth: 36, textAlign: "right", fontWeight: 600, fontSize: 13, color: textColor }}>
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
 const templateColumnDefs: ColDef[] = [
   {
     field: "name",
@@ -426,6 +464,19 @@ const templateColumnDefs: ColDef[] = [
     filter: "agNumberColumnFilter",
     valueGetter: (params) =>
       params.data?.sections?.reduce((sum: number, s: { items: unknown[] }) => sum + s.items.length, 0) ?? 0,
+  },
+  {
+    colId: "usage",
+    headerName: "Usage",
+    width: 180,
+    minWidth: 140,
+    sortable: true,
+    filter: false,
+    valueGetter: (params) => {
+      const u = TEMPLATE_USAGE[params.data?.id] ?? { used: 0, total: 20 };
+      return Math.round((u.used / u.total) * 100);
+    },
+    cellRenderer: TemplateUsageCellRenderer,
   },
   {
     field: "description",
@@ -457,6 +508,16 @@ const templateColumnDefs: ColDef[] = [
 type TabKey = "list" | "templates";
 const STATUS_OPTIONS: ActionPlanStatus[] = ["draft", "in_progress", "complete"];
 
+interface GroupByOption {
+  id: "type" | "status";
+  label: string;
+}
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { id: "type",   label: "Type"   },
+  { id: "status", label: "Status" },
+];
+
 interface ActionPlansContentProps {
   projectId: string;
 }
@@ -467,6 +528,8 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<ActionPlanStatus[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<ActionPlan | null>(null);
   const gridApiRef = useRef<GridApi<ActionPlan> | null>(null);
   const templateGridApiRef = useRef<GridApi | null>(null);
@@ -534,6 +597,44 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
     applyStatusFilter([]);
   }
 
+  const handleFiltersToggle = useCallback(() => {
+    setFilterOpen((prev) => { if (!prev) setConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleConfigToggle = useCallback(() => {
+    setConfigOpen((prev) => { if (!prev) setFilterOpen(false); return !prev; });
+  }, []);
+
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
+
   const hasFilters = statusFilter.length > 0;
 
 
@@ -579,14 +680,44 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                       onClear={handleSearchClear}
                     />
                   </div>
-                  <Button
-                    variant={filterOpen || hasFilters ? "primary" : "secondary"}
-                    size="md"
-                    onClick={() => setFilterOpen((v) => !v)}
+                  <ToggleButton
+                    selected={filterOpen}
+                    className="b_toggle"
+                    icon={<Filter />}
+                    onClick={handleFiltersToggle}
                   >
-                    Filter{hasFilters ? ` (${statusFilter.length})` : ""}
-                  </Button>
+                    Filters{hasFilters ? ` (${statusFilter.length})` : ""}
+                  </ToggleButton>
                 </ToolbarLeft>
+                <ToolbarRight>
+                  <div style={{ width: 200 }}>
+                    <Select
+                      placeholder="Group by"
+                      label={groupBy ? `Group by: ${groupBy.label}` : undefined}
+                      onSelect={handleGroupBySelect}
+                      onClear={groupBy ? handleGroupByClear : undefined}
+                      block
+                    >
+                      {GROUP_BY_OPTIONS.map((opt) => (
+                        <Select.Option
+                          key={opt.id}
+                          value={opt}
+                          selected={groupBy?.id === opt.id}
+                        >
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ToggleButton
+                    selected={configOpen}
+                    className="b_toggle"
+                    icon={<Sliders />}
+                    onClick={handleConfigToggle}
+                  >
+                    Configure
+                  </ToggleButton>
+                </ToolbarRight>
               </ToolbarRow>
 
               {filterOpen && (
@@ -630,6 +761,8 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     rowData={rowData}
                     columnDefs={planColumnDefs}
                     getRowId={getRowId}
+                    groupDisplayType="groupRows"
+                    autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
                     onGridReady={(event) => {
                       gridApiRef.current = event.api;
@@ -649,6 +782,11 @@ export default function ActionPlansContent({ projectId }: ActionPlansContentProp
                     onClose={() => setSelectedPlan(null)}
                   />
                 )}
+                <ConfigureColumnsPanel
+                  open={configOpen}
+                  gridApi={gridApiRef.current}
+                  onClose={() => setConfigOpen(false)}
+                />
               </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>

@@ -7,15 +7,19 @@ import {
   Select,
   SplitViewCard,
   Tabs,
+  ToggleButton,
 } from "@procore/core-react";
 import {
   Calendar as ScheduleIcon,
+  Filter,
   Plus,
+  Sliders,
 } from "@procore/core-icons";
 import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { scheduleEntries } from "@/data/seed/schedule";
 import { projects } from "@/data/seed/projects";
 import type { ScheduleEntry, ScheduleItem, Milestone, ScheduleStatus } from "@/types/schedule";
@@ -57,6 +61,13 @@ const ToolbarLeft = styled.div`
   align-items: center;
   gap: 8px;
   flex: 1;
+`;
+
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 `;
 
 const GridArea = styled.div`
@@ -128,6 +139,24 @@ function ActualDateRenderer(params: ICellRendererParams<Milestone>) {
 
 type TabKey = "schedule" | "milestones";
 
+interface ScheduleGroupByOption {
+  id: "status";
+  label: string;
+}
+
+interface MilestoneGroupByOption {
+  id: "status";
+  label: string;
+}
+
+const SCHEDULE_GROUP_BY_OPTIONS: ScheduleGroupByOption[] = [
+  { id: "status", label: "Status" },
+];
+
+const MILESTONE_GROUP_BY_OPTIONS: MilestoneGroupByOption[] = [
+  { id: "status", label: "Status" },
+];
+
 interface ScheduleContentProps {
   projectId: string;
 }
@@ -137,8 +166,20 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("schedule");
   useResetScrollOnTabChange(activeTab);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [searchText, setSearchText] = useState("");
-  const gridApiRef = useRef<GridApi | null>(null);
+
+  // Schedule tab state
+  const [scheduleSearchText, setScheduleSearchText] = useState("");
+  const [scheduleFiltersOpen, setScheduleFiltersOpen] = useState(false);
+  const [scheduleConfigOpen, setScheduleConfigOpen] = useState(false);
+  const [scheduleGroupBy, setScheduleGroupBy] = useState<ScheduleGroupByOption | null>(null);
+  const scheduleGridApiRef = useRef<GridApi<ScheduleItem> | null>(null);
+
+  // Milestones tab state
+  const [milestoneSearchText, setMilestoneSearchText] = useState("");
+  const [milestoneFiltersOpen, setMilestoneFiltersOpen] = useState(false);
+  const [milestoneConfigOpen, setMilestoneConfigOpen] = useState(false);
+  const [milestoneGroupBy, setMilestoneGroupBy] = useState<MilestoneGroupByOption | null>(null);
+  const milestoneGridApiRef = useRef<GridApi<Milestone> | null>(null);
 
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -179,19 +220,111 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
     []
   );
 
-  const handleSearchChange = useCallback(
+  // Schedule tab handlers
+  const handleScheduleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
-      setSearchText(value);
-      gridApiRef.current?.setGridOption("quickFilterText", value);
+      setScheduleSearchText(value);
+      scheduleGridApiRef.current?.setGridOption("quickFilterText", value);
     },
     []
   );
 
-  const handleSearchClear = useCallback(() => {
-    setSearchText("");
-    gridApiRef.current?.setGridOption("quickFilterText", "");
+  const handleScheduleSearchClear = useCallback(() => {
+    setScheduleSearchText("");
+    scheduleGridApiRef.current?.setGridOption("quickFilterText", "");
   }, []);
+
+  const handleScheduleFiltersToggle = useCallback(() => {
+    setScheduleFiltersOpen((prev) => { if (!prev) setScheduleConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleScheduleConfigToggle = useCallback(() => {
+    setScheduleConfigOpen((prev) => { if (!prev) setScheduleFiltersOpen(false); return !prev; });
+  }, []);
+
+  const handleScheduleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as ScheduleGroupByOption;
+      const prevId = scheduleGroupBy?.id;
+      setScheduleGroupBy(opt);
+      const api = scheduleGridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [scheduleGroupBy]
+  );
+
+  const handleScheduleGroupByClear = useCallback(() => {
+    const prevId = scheduleGroupBy?.id;
+    setScheduleGroupBy(null);
+    const api = scheduleGridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [scheduleGroupBy]);
+
+  // Milestone tab handlers
+  const handleMilestoneSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setMilestoneSearchText(value);
+      milestoneGridApiRef.current?.setGridOption("quickFilterText", value);
+    },
+    []
+  );
+
+  const handleMilestoneSearchClear = useCallback(() => {
+    setMilestoneSearchText("");
+    milestoneGridApiRef.current?.setGridOption("quickFilterText", "");
+  }, []);
+
+  const handleMilestoneFiltersToggle = useCallback(() => {
+    setMilestoneFiltersOpen((prev) => { if (!prev) setMilestoneConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleMilestoneConfigToggle = useCallback(() => {
+    setMilestoneConfigOpen((prev) => { if (!prev) setMilestoneFiltersOpen(false); return !prev; });
+  }, []);
+
+  const handleMilestoneGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as MilestoneGroupByOption;
+      const prevId = milestoneGroupBy?.id;
+      setMilestoneGroupBy(opt);
+      const api = milestoneGridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [milestoneGroupBy]
+  );
+
+  const handleMilestoneGroupByClear = useCallback(() => {
+    const prevId = milestoneGroupBy?.id;
+    setMilestoneGroupBy(null);
+    const api = milestoneGridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [milestoneGroupBy]);
 
   const scheduleColumnDefs = useMemo<ColDef<ScheduleItem>[]>(() => {
     const cols: ColDef<ScheduleItem>[] = [];
@@ -202,6 +335,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "Project",
         minWidth: 180,
         filter: "agSetColumnFilter",
+        enableRowGroup: true,
         valueGetter: (params) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
         cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
@@ -227,6 +361,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         field: "status",
         headerName: "Status",
         filter: "agSetColumnFilter",
+        enableRowGroup: true,
         cellRenderer: ScheduleStatusPillRenderer,
       },
       {
@@ -278,6 +413,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "Project",
         minWidth: 180,
         filter: "agSetColumnFilter",
+        enableRowGroup: true,
         valueGetter: (params) =>
           params.data ? (projectMap.get(params.data.projectId) ?? params.data.projectId) : "",
         cellStyle: { color: "var(--color-text-link)", cursor: "pointer" },
@@ -298,6 +434,13 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         minWidth: 220,
         filter: "agTextColumnFilter",
         cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
+      },
+      {
+        field: "status",
+        headerName: "Status",
+        filter: "agSetColumnFilter",
+        enableRowGroup: true,
+        cellRenderer: ScheduleStatusPillRenderer,
       },
       {
         field: "milestoneDate",
@@ -393,17 +536,55 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                   <div style={{ maxWidth: 260 }}>
                     <Search
                       placeholder="Search"
-                      value={searchText}
-                      onChange={handleSearchChange}
-                      onClear={handleSearchClear}
+                      value={scheduleSearchText}
+                      onChange={handleScheduleSearchChange}
+                      onClear={handleScheduleSearchClear}
                     />
                   </div>
+                  <ToggleButton
+                    selected={scheduleFiltersOpen}
+                    className="b_toggle"
+                    icon={<Filter />}
+                    onClick={handleScheduleFiltersToggle}
+                  >
+                    Filters
+                  </ToggleButton>
                   {projectFilter}
                 </ToolbarLeft>
+                <ToolbarRight>
+                  <div style={{ width: 200 }}>
+                    <Select
+                      placeholder="Group by"
+                      label={scheduleGroupBy ? `Group by: ${scheduleGroupBy.label}` : undefined}
+                      onSelect={handleScheduleGroupBySelect}
+                      onClear={scheduleGroupBy ? handleScheduleGroupByClear : undefined}
+                      block
+                    >
+                      {SCHEDULE_GROUP_BY_OPTIONS.map((opt) => (
+                        <Select.Option key={opt.id} value={opt} selected={scheduleGroupBy?.id === opt.id}>
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ToggleButton
+                    selected={scheduleConfigOpen}
+                    className="b_toggle"
+                    icon={<Sliders />}
+                    onClick={handleScheduleConfigToggle}
+                  >
+                    Configure
+                  </ToggleButton>
+                </ToolbarRight>
               </ToolbarRow>
 
               <GridArea>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {scheduleFiltersOpen && (
+                  <div style={{ width: 240, borderRight: "1px solid var(--color-border-default)", padding: "16px 12px", background: "var(--color-surface-secondary)", flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Filters</span>
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0, transition: "flex 0.25s ease" }}>
                   <SmartGridWrapper<ScheduleItem>
                     id="schedule-items-grid"
                     localStorageKey="owner-prototype-schedule-grid"
@@ -411,9 +592,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     rowData={scheduleItems}
                     columnDefs={scheduleColumnDefs}
                     getRowId={getScheduleRowId}
+                    groupDisplayType="groupRows"
+                    autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
                     onGridReady={(event) => {
-                      gridApiRef.current = event.api;
+                      scheduleGridApiRef.current = event.api;
                     }}
                     statusBar={{
                       statusPanels: [
@@ -423,6 +606,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     }}
                   />
                 </div>
+                <ConfigureColumnsPanel
+                  open={scheduleConfigOpen}
+                  gridApi={scheduleGridApiRef.current}
+                  onClose={() => setScheduleConfigOpen(false)}
+                />
               </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>
@@ -438,17 +626,55 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                   <div style={{ maxWidth: 260 }}>
                     <Search
                       placeholder="Search"
-                      value={searchText}
-                      onChange={handleSearchChange}
-                      onClear={handleSearchClear}
+                      value={milestoneSearchText}
+                      onChange={handleMilestoneSearchChange}
+                      onClear={handleMilestoneSearchClear}
                     />
                   </div>
+                  <ToggleButton
+                    selected={milestoneFiltersOpen}
+                    className="b_toggle"
+                    icon={<Filter />}
+                    onClick={handleMilestoneFiltersToggle}
+                  >
+                    Filters
+                  </ToggleButton>
                   {projectFilter}
                 </ToolbarLeft>
+                <ToolbarRight>
+                  <div style={{ width: 200 }}>
+                    <Select
+                      placeholder="Group by"
+                      label={milestoneGroupBy ? `Group by: ${milestoneGroupBy.label}` : undefined}
+                      onSelect={handleMilestoneGroupBySelect}
+                      onClear={milestoneGroupBy ? handleMilestoneGroupByClear : undefined}
+                      block
+                    >
+                      {MILESTONE_GROUP_BY_OPTIONS.map((opt) => (
+                        <Select.Option key={opt.id} value={opt} selected={milestoneGroupBy?.id === opt.id}>
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <ToggleButton
+                    selected={milestoneConfigOpen}
+                    className="b_toggle"
+                    icon={<Sliders />}
+                    onClick={handleMilestoneConfigToggle}
+                  >
+                    Configure
+                  </ToggleButton>
+                </ToolbarRight>
               </ToolbarRow>
 
               <GridArea>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {milestoneFiltersOpen && (
+                  <div style={{ width: 240, borderRight: "1px solid var(--color-border-default)", padding: "16px 12px", background: "var(--color-surface-secondary)", flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Filters</span>
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0, transition: "flex 0.25s ease" }}>
                   <SmartGridWrapper<Milestone>
                     id="milestones-grid"
                     localStorageKey="owner-prototype-milestones-grid"
@@ -456,9 +682,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     rowData={milestones}
                     columnDefs={milestoneColumnDefs}
                     getRowId={getMilestoneRowId}
+                    groupDisplayType="groupRows"
+                    autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
                     onGridReady={(event) => {
-                      gridApiRef.current = event.api;
+                      milestoneGridApiRef.current = event.api;
                     }}
                     statusBar={{
                       statusPanels: [
@@ -468,6 +696,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     }}
                   />
                 </div>
+                <ConfigureColumnsPanel
+                  open={milestoneConfigOpen}
+                  gridApi={milestoneGridApiRef.current}
+                  onClose={() => setMilestoneConfigOpen(false)}
+                />
               </GridArea>
             </SplitViewCard.Section>
           </SplitViewCard.Main>

@@ -1,12 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   DetailPage,
-  MultiSelect,
   Search,
-  SegmentedController,
+  Select,
   ToggleButton,
 } from "@procore/core-react";
-import { ArrowDown, ArrowUp, Clear, Filter, Location, Sliders, ViewRows } from "@procore/core-icons";
+import SegmentedControl from "@/components/SegmentedControl";
+import { Filter, List, Location, Sliders, ViewThumbnails } from "@procore/core-icons";
 import type { CellValueChangedEvent, GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import { portfolioColumnDefs, CONNECTED_DATA_COL_IDS } from "@/components/SmartGrid/portfolioColumnDefs";
@@ -18,8 +18,13 @@ import type { ProjectRow } from "@/data/projects";
 import { PROJECT_MANAGER_NAMES, PROJECT_REGION_NAMES } from "@/data/projects";
 import { useHubFilters } from "@/context/HubFilterContext";
 import type { PortfolioGridContext } from "@/components/SmartGrid/portfolioGridContext";
-import ProjectEditTearsheet from "@/components/ProjectEditTearsheet";
+import ProjectEditTearsheet, { type TabKey as TearsheetTabKey } from "@/components/ProjectEditTearsheet";
+import ProjectTileCard from "@/components/ProjectTileCard";
 import styled from "styled-components";
+import { useHubLoading } from "@/context/HubLoadingContext";
+import ProjectsTableSkeleton from "@/components/skeletons/ProjectsTableSkeleton";
+import ProjectTileGridSkeleton from "@/components/skeletons/ProjectTileGridSkeleton";
+import PortfolioMapView from "@/components/PortfolioMapView";
 
 const ToolbarRow = styled.div`
   display: flex;
@@ -52,66 +57,16 @@ const GridArea = styled.div`
   overflow: hidden;
 `;
 
-const GroupChipsRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0 8px;
-  flex-wrap: wrap;
+const TileGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 4px 0 16px;
+  max-height: 640px;
+  overflow-y: auto;
 `;
 
-const GroupChip = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--color-surface-secondary);
-  border: 1px solid var(--color-border-default);
-  border-radius: 20px;
-  padding: 2px 6px 2px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-`;
-
-const ChipLabel = styled.span`
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  margin-right: 2px;
-`;
-
-const ChipIconBtn = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 1px;
-  display: flex;
-  align-items: center;
-  color: var(--color-text-secondary);
-  border-radius: 50%;
-  &:hover { background: var(--color-surface-tertiary); color: var(--color-text-primary); }
-`;
-
-const ChipSeparator = styled.span`
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  user-select: none;
-  margin: 0 2px;
-`;
-
-const ClearAllBtn = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--color-orange-50, #f26925);
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 4px;
-  &:hover { text-decoration: underline; }
-`;
-
-type ViewMode = "rows" | "map";
+type ViewMode = "rows" | "tiles" | "map";
 
 interface GroupByOption {
   id: "stage" | "program" | "priority" | "region" | "projectManager" | "city" | "state";
@@ -129,6 +84,7 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
 ];
 
 export default function ProjectsTableCard() {
+  const { isLoading } = useHubLoading();
   const [viewMode, setViewMode] = useState<ViewMode>("rows");
   const [searchText, setSearchText] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -137,13 +93,14 @@ export default function ProjectsTableCard() {
   const gridApiRef = useRef<GridApi<ProjectRow> | null>(null);
   const [gridApi, setGridApi] = useState<GridApi<ProjectRow> | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
-  const [editProjectTab, setEditProjectTab] = useState<"General" | "Connection">("General");
+  const [editProjectTab, setEditProjectTab] = useState<TearsheetTabKey>("General");
   const { filteredProjectRows, patchProjectRow } = useHubFilters();
 
   const gridContext = useMemo<PortfolioGridContext>(
     () => ({
       onEditProject: (row) => { setEditProjectTab("General"); setEditProject(row); },
       onOpenConnectionTab: (row) => { setEditProjectTab("Connection"); setEditProject(row); },
+      onOpenHealthTab: (row) => { setEditProjectTab("Health"); setEditProject(row); },
     }),
     []
   );
@@ -262,12 +219,9 @@ export default function ProjectsTableCard() {
     const api = gridApiRef.current;
     if (!api) return;
     const nextIds = new Set(next.map((g) => g.id));
-    const prevIds = new Set(prev.map((g) => g.id));
     api.applyColumnState({
       state: [
-        // Apply new groups in order (hide the column so it doesn't appear as a regular column)
         ...next.map((g, i) => ({ colId: g.id, rowGroup: true, rowGroupIndex: i, hide: true })),
-        // Restore columns that were previously grouped but are no longer
         ...prev
           .filter((g) => !nextIds.has(g.id))
           .map((g) => ({ colId: g.id, rowGroup: false, rowGroupIndex: null, hide: false })),
@@ -276,39 +230,14 @@ export default function ProjectsTableCard() {
     });
   }, []);
 
-  /** MultiSelect onChange — preserves existing order, appends new picks at the end */
-  const handleGroupByChange = useCallback(
-    (selected: GroupByOption[]) => {
-      const selectedIds = new Set(selected.map((g) => g.id));
-      const kept = groupBys.filter((g) => selectedIds.has(g.id));
-      const keptIds = new Set(kept.map((g) => g.id));
-      const added = selected.filter((g) => !keptIds.has(g.id));
-      const next = [...kept, ...added];
-      setGroupBys(next);
-      applyGroupsToGrid(next, groupBys);
-    },
-    [groupBys, applyGroupsToGrid]
-  );
-
-  /** Remove a single level from the active groupings */
-  const handleRemoveGroupBy = useCallback(
-    (id: string) => {
-      const next = groupBys.filter((g) => g.id !== id);
-      setGroupBys(next);
-      applyGroupsToGrid(next, groupBys);
-    },
-    [groupBys, applyGroupsToGrid]
-  );
-
-  /** Move a group level up or down in the nesting order */
-  const handleReorderGroupBy = useCallback(
-    (id: string, dir: "up" | "down") => {
-      const idx = groupBys.findIndex((g) => g.id === id);
-      if (idx < 0) return;
-      const next = [...groupBys];
-      const swap = dir === "up" ? idx - 1 : idx + 1;
-      if (swap < 0 || swap >= next.length) return;
-      [next[idx], next[swap]] = [next[swap], next[idx]];
+  /** Toggle a single group-by option on/off */
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const alreadySelected = groupBys.some((g) => g.id === opt.id);
+      const next = alreadySelected
+        ? groupBys.filter((g) => g.id !== opt.id)
+        : [...groupBys, opt];
       setGroupBys(next);
       applyGroupsToGrid(next, groupBys);
     },
@@ -322,6 +251,22 @@ export default function ProjectsTableCard() {
   }, [groupBys, applyGroupsToGrid]);
 
   const sideBar = useMemo(() => false, []);
+
+  if (isLoading) {
+    return (
+      <DetailPage.Card navigationLabel="Projects">
+        <DetailPage.Section heading="Portfolio">
+          {viewMode === "tiles" ? (
+            <ProjectTileGridSkeleton />
+          ) : viewMode === "map" ? (
+            <ProjectsTableSkeleton />
+          ) : (
+            <ProjectsTableSkeleton />
+          )}
+        </DetailPage.Section>
+      </DetailPage.Card>
+    );
+  }
 
   return (
     <DetailPage.Card navigationLabel="Projects">
@@ -346,33 +291,45 @@ export default function ProjectsTableCard() {
             </ToggleButton>
           </ToolbarLeft>
           <ToolbarRight>
-            <div style={{ width: 226 }}>
-              <MultiSelect
-                options={GROUP_BY_OPTIONS}
-                value={groupBys}
-                onChange={handleGroupByChange}
-                getId={(o) => o.id}
-                getLabel={(o) => o.label}
+            <div style={{ width: 200 }}>
+              <Select
                 placeholder="Group by"
+                label={groupBys.length > 0 ? `Group by: ${groupBys.map((g) => g.label).join(", ")}` : undefined}
+                onSelect={handleGroupBySelect}
+                onClear={groupBys.length > 0 ? handleGroupByClear : undefined}
                 block
-              />
+              >
+                {GROUP_BY_OPTIONS.map((opt) => (
+                  <Select.Option
+                    key={opt.id}
+                    value={opt}
+                    selected={groupBys.some((g) => g.id === opt.id)}
+                  >
+                    {opt.label}
+                  </Select.Option>
+                ))}
+              </Select>
             </div>
-            <SegmentedController className="b_radiogroup">
-              <SegmentedController.Segment
+            <SegmentedControl>
+              <SegmentedControl.Segment
                 selected={viewMode === "rows"}
                 onClick={() => setViewMode("rows")}
+                icon={<List />}
                 tooltip="List view"
-              >
-                <ViewRows />
-              </SegmentedController.Segment>
-              <SegmentedController.Segment
+              />
+              <SegmentedControl.Segment
+                selected={viewMode === "tiles"}
+                onClick={() => setViewMode("tiles")}
+                icon={<ViewThumbnails />}
+                tooltip="Tile view"
+              />
+              <SegmentedControl.Segment
                 selected={viewMode === "map"}
                 onClick={() => setViewMode("map")}
+                icon={<Location />}
                 tooltip="Map view"
-              >
-                <Location />
-              </SegmentedController.Segment>
-            </SegmentedController>
+              />
+            </SegmentedControl>
             <ToggleButton
               selected={configOpen}
               className="b_toggle"
@@ -384,44 +341,27 @@ export default function ProjectsTableCard() {
           </ToolbarRight>
         </ToolbarRow>
 
-        {groupBys.length > 0 && (
-          <GroupChipsRow>
-            <ChipLabel>Grouped by:</ChipLabel>
-            {groupBys.map((g, i) => (
-              <React.Fragment key={g.id}>
-                {i > 0 && <ChipSeparator>›</ChipSeparator>}
-                <GroupChip>
-                  {g.label}
-                  <ChipIconBtn
-                    title="Move up"
-                    onClick={() => handleReorderGroupBy(g.id, "up")}
-                    disabled={i === 0}
-                    style={{ opacity: i === 0 ? 0.3 : 1 }}
-                  >
-                    <ArrowUp size="sm" />
-                  </ChipIconBtn>
-                  <ChipIconBtn
-                    title="Move down"
-                    onClick={() => handleReorderGroupBy(g.id, "down")}
-                    disabled={i === groupBys.length - 1}
-                    style={{ opacity: i === groupBys.length - 1 ? 0.3 : 1 }}
-                  >
-                    <ArrowDown size="sm" />
-                  </ChipIconBtn>
-                  <ChipIconBtn title="Remove" onClick={() => handleRemoveGroupBy(g.id)}>
-                    <Clear size="sm" />
-                  </ChipIconBtn>
-                </GroupChip>
-              </React.Fragment>
-            ))}
-            <ClearAllBtn onClick={handleGroupByClear}>Clear all</ClearAllBtn>
-          </GroupChipsRow>
-        )}
-
         {viewMode === "map" ? (
-          <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>
-            Map view coming soon.
-          </div>
+          <PortfolioMapView
+            projects={rowData}
+            onOpenProject={(row, tab) => {
+              setEditProjectTab(tab ?? "General");
+              setEditProject(row);
+            }}
+          />
+        ) : viewMode === "tiles" ? (
+          <TileGrid>
+            {rowData.map((project) => (
+              <ProjectTileCard
+                key={project.id}
+                project={project}
+                onOpen={(row, tab) => {
+                  setEditProjectTab(tab ?? "General");
+                  setEditProject(row);
+                }}
+              />
+            ))}
+          </TileGrid>
         ) : (
           <GridArea>
             <PortfolioFiltersPanel

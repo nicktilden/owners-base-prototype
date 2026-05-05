@@ -25,12 +25,12 @@ import {
   People,
   Clear,
   Wrench,
-  ClipboardCheck,
   NotepadList,
   Payments,
   Envelope,
   NotepadPencil,
   Home,
+  Warning,
 } from '@procore/core-icons';
 import styled, { keyframes, css } from 'styled-components';
 import { useLevel } from '@/context/LevelContext';
@@ -165,6 +165,7 @@ const NavItemEl = styled.a<{ $active?: boolean }>`
 
 const TOOL_ICONS: Partial<Record<ToolKey, React.ReactNode>> = {
   hubs:             <Home size="sm" />,
+  health:           <Warning size="sm" />,
   documents:        <FileList size="sm" />,
   schedule:         <Calendar size="sm" />,
   assets:           <Assets size="sm" />,
@@ -173,7 +174,6 @@ const TOOL_ICONS: Partial<Record<ToolKey, React.ReactNode>> = {
   capital_planning: <CurrencyUSA size="sm" />,
   funding_source:   <Building size="sm" />,
   bidding:          <WrenchHammer size="sm" />,
-  action_plans:     <ClipboardCheck size="sm" />,
   change_events:    <File size="sm" />,
   change_orders:    <NotepadList size="sm" />,
   invoicing:        <FileCurrencyUSA size="sm" />,
@@ -226,7 +226,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
       label: TOOL_DISPLAY_NAMES[key],
       icon: TOOL_ICONS[key] ?? <File size="sm" />,
       href: key === 'hubs'
-        ? baseHref
+        ? '/portfolio'
         : `${baseHref}/${key.replace(/_/g, '-')}`,
     }))
     .sort((a, b) => {
@@ -241,7 +241,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
       key: '__project_overview__',
       label: 'Project Overview',
       icon: <Home size="sm" />,
-      href: `/project/${activeProjectId}`,
+      href: `/project/${activeProjectId}/overview`,
     };
     toolNavItems.splice(1, 0, projectOverviewItem);
   }
@@ -305,7 +305,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
 
           {toolNavItems.map((item) => {
             const normalizedHref = item.href.replace(/\/+$/, '') || '/';
-            const isHomeItem = item.key === 'hubs' || item.key === '__project_overview__';
+            const isHomeItem = item.key === 'hubs';
             const isActive = isHomeItem
               ? currentPath === normalizedHref
               : currentPath === normalizedHref || currentPath.startsWith(`${normalizedHref}/`);

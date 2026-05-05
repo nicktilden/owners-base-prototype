@@ -6,11 +6,17 @@
 import React, { useState, useCallback } from 'react';
 import { Tearsheet, Typography, Pill, Avatar, Button } from '@procore/core-react';
 import { Lightning } from '@procore/core-icons';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import ActionRail from '@/components/hubs/ActionRail';
 import type { ActionCardType, ActionRole, HubAction } from '@/types/actions';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
+
+const ActionPanelTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .action-panel-tearsheet-root) {
+    flex: 0 0 50vw !important;
+  }
+`;
 
 const PanelHeader = styled.div`
   padding: 20px 24px 16px;
@@ -167,11 +173,14 @@ export default function ActionPanel({
     financial_scorecard: 'Financial Scorecard',
     schedule_variance: 'Schedule Variance',
     open_items: 'Open Items',
+    risk_scorecard: 'Risk Signals',
   };
 
   return (
-    <Tearsheet open={open} onClose={onClose} aria-label="AI Actions" placement="right">
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <>
+      <ActionPanelTearsheetWidth />
+      <Tearsheet open={open} onClose={onClose} aria-label="AI Actions" placement="right">
+        <div className="action-panel-tearsheet-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* ── Header ── */}
         <PanelHeader>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -272,7 +281,8 @@ export default function ActionPanel({
             onExecute={handleExecute}
           />
         </RailWrapper>
-      </div>
-    </Tearsheet>
+        </div>
+      </Tearsheet>
+    </>
   );
 }

@@ -116,6 +116,10 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
   const { setProject, clearProject } = useLevel();
   const { activeUser } = usePersona();
 
+  function truncateName(name: string): string {
+    return name.length > 25 ? name.slice(0, 25) + '…' : name;
+  }
+
   // Filter projects visible to the active user
   const visibleProjects = data.projects.filter((p) => {
     if (!activeUser) return true;
@@ -176,12 +180,12 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
 
   const goToProject = (id: string) => {
     setProject(id);
-    router.push(`/project/${id}`);
+    router.push(`/project/${id}/overview`);
     onClose();
   };
   const goToSampleProject = (id: number) => {
     clearProject();
-    router.push(`/project/${id}`);
+    router.push(`/project/${id}/overview`);
     onClose();
   };
 
@@ -229,12 +233,12 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
               <>
                 {favorites.map((p) => (
                   <ProjectRow key={p.id} onClick={() => goToProject(p.id)}>
-                    <Typography intent="body">{p.number} — {p.name}</Typography>
+                    <Typography intent="body">{p.number} — {truncateName(p.name)}</Typography>
                   </ProjectRow>
                 ))}
                 {sampleFavorites.map((p) => (
                   <ProjectRow key={`sample-${p.id}`} onClick={() => goToSampleProject(p.id)}>
-                    <Typography intent="body">{p.number} — {p.name}</Typography>
+                    <Typography intent="body">{p.number} — {truncateName(p.name)}</Typography>
                   </ProjectRow>
                 ))}
               </>
@@ -259,7 +263,7 @@ export default function ProjectPickerPopover({ anchorRef, onClose }: ProjectPick
             ) : (
               filtered.map((p) => (
                 <ProjectRow key={`all-${p.id}`} onClick={() => goToProject(p.id)}>
-                  <Typography intent="body">{p.number} — {p.name}</Typography>
+                  <Typography intent="body">{p.number} — {truncateName(p.name)}</Typography>
                 </ProjectRow>
               ))
             )}

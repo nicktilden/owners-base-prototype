@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Box, Button, Dropdown, EmptyState, Page, Select, Table, Tearsheet, Typography } from "@procore/core-react";
 import { Trash } from "@procore/core-icons";
+import { createGlobalStyle } from "styled-components";
 import type { CapitalPlanningSampleRow } from "./capitalPlanningData";
 
 /*
@@ -17,6 +18,12 @@ import type { CapitalPlanningSampleRow } from "./capitalPlanningData";
 
 /** Same as `Page` main surface (`colors.gray96` in @procore/core-react PageLayout). */
 const HLBI_PAGE_SURFACE = "hsl(200, 8%, 96%)";
+
+const HLBITearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .high-level-budget-items-tearsheet-layout) {
+    flex: 0 0 50vw !important;
+  }
+`;
 
 /** User-added amount-based line: only item + amount are used; other columns are blank. `amountText` is raw input for stable typing. */
 export type HighLevelBudgetLineAmountOnly = {
@@ -337,7 +344,9 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
   );
 
   return (
-    <Tearsheet open={open} onClose={onClose} placement="right" aria-label="High level budget items">
+    <>
+      <HLBITearsheetWidth />
+      <Tearsheet open={open} onClose={onClose} placement="right" aria-label="High level budget items">
       {row ? (
         <div
           className="high-level-budget-items-tearsheet-layout"
@@ -772,5 +781,6 @@ export function HighLevelBudgetItemsTearsheet({ open, onClose, onSave, row }: Hi
         </div>
       ) : null}
     </Tearsheet>
+    </>
   );
 }

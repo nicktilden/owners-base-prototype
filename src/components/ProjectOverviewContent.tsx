@@ -16,12 +16,22 @@ import {
   AllOpenItemsCard,
   ProjectTeamCard,
 } from "@/components/ProjectOverviewHubCards";
+import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
+import CostHealthCard from "@/components/health/cards/CostHealthCard";
+import ScheduleHealthCard from "@/components/health/cards/ScheduleHealthCard";
+import DeliveryRiskCard from "@/components/health/cards/DeliveryRiskCard";
+import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
 import { sampleProjectRows } from "@/data/projects";
+
+/** Convert numeric projectRowId (1–50) to seed string format ('proj-001'…). */
+function toSeedId(projectRowId: number): string {
+  return `proj-${String(projectRowId).padStart(3, "0")}`;
+}
 
 const GlobalHeader = dynamic(() => import("@/components/nav/GlobalHeader"), { ssr: false });
 const AppLayout = dynamic(() => import("@/components/nav/AppLayout"), { ssr: false });
 
-const tabs = ["Overview"] as const;
+const tabs = ["Overview", "Risk Register"] as const;
 type TabName = (typeof tabs)[number];
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
@@ -98,15 +108,22 @@ const TAB_CARDS: Record<TabName, string[]> = {
     "All Open Items",
     "Project Team",
   ],
+  "Risk Register": [
+    "Project Health",
+    "Cost Health",
+    "Schedule Health",
+    "Delivery Risk",
+    "Risk Register",
+  ],
 };
 
 type HiddenCards = Record<TabName, Set<string>>;
 
 function makeEmptyHidden(): HiddenCards {
-  return { Overview: new Set() };
+  return { Overview: new Set(), "Risk Register": new Set() };
 }
 
-function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number }) {
+function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectRowId: number; seedProjectId: string }) {
   const project = sampleProjectRows.find((r) => r.id === projectRowId);
 
   const [activeTab, setActiveTab] = useState<TabName>("Overview");
@@ -177,7 +194,7 @@ function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number })
   return (
     <>
       <Head>
-        <title>{project?.name ?? "Project Overview"} — Owner Prototype</title>
+        <title>{project ? `${project.number} — ${project.name}` : "Project Overview"} — Owner Prototype</title>
       </Head>
       <GlobalHeader />
       <AppLayout>
@@ -189,7 +206,7 @@ function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number })
                   <Title.Text>
                     <H1 style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <Home size="md" />
-                      {project?.name ?? "Project Overview"}
+                      {project ? `${project.number} — ${project.name}` : "Project Overview"}
                     </H1>
                   </Title.Text>
                   <Title.Actions>
@@ -304,7 +321,7 @@ function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number })
                   {visible("My Open Items") || visible("All Open Items") ? (
                     <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
                       {visible("My Open Items") && (
-                        <MyOpenItemsCard projectId={projectRowId} />
+                        <MyOpenItemsCard seedProjectId={seedProjectId} />
                       )}
                       {visible("All Open Items") && (
                         <AllOpenItemsCard projectRowId={projectRowId} />
@@ -317,6 +334,23 @@ function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number })
                       <ProjectTeamCard projectRowId={projectRowId} />
                     </HubsContentLayout.Row>
                   )}
+                </HubsContentLayout>
+              )}
+              {activeTab === "Risk Register" && (
+                <HubsContentLayout>
+                  {isCardVisible("Risk Register", "Project Health") || isCardVisible("Risk Register", "Risk Register") ? (
+                    <HubsContentLayout.Row>
+                      {isCardVisible("Risk Register", "Project Health") && <HealthSummaryCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Risk Register", "Risk Register") && <RiskRegisterCard scope="project" projectId={seedProjectId} />}
+                    </HubsContentLayout.Row>
+                  ) : null}
+                  {isCardVisible("Risk Register", "Cost Health") || isCardVisible("Risk Register", "Schedule Health") || isCardVisible("Risk Register", "Delivery Risk") ? (
+                    <HubsContentLayout.Row>
+                      {isCardVisible("Risk Register", "Cost Health") && <CostHealthCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Risk Register", "Schedule Health") && <ScheduleHealthCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Risk Register", "Delivery Risk") && <DeliveryRiskCard scope="project" projectId={seedProjectId} />}
+                    </HubsContentLayout.Row>
+                  ) : null}
                 </HubsContentLayout>
               )}
             </ToolLandingPage.Body>
@@ -406,11 +440,17 @@ function ProjectOverviewContentInner({ projectRowId }: { projectRowId: number })
 
 export default function ProjectOverviewContent() {
   const router = useRouter();
-  const projectRowId = Number(router.query.id) || 1;
+  const rawId = typeof router.query.id === 'string' ? router.query.id : '';
+
+  // URL id is a seed string like 'proj-001'. Parse numeric index for sampleProjectRows.
+  // 'proj-001' → 1, 'proj-012' → 12, etc.
+  const seedMatch = rawId.match(/^proj-(\d+)$/);
+  const projectRowId = seedMatch ? parseInt(seedMatch[1], 10) : (Number(rawId) || 1);
+  const seedProjectId = seedMatch ? rawId : toSeedId(projectRowId);
 
   return (
     <HubFilterProvider>
-      <ProjectOverviewContentInner projectRowId={projectRowId} />
+      <ProjectOverviewContentInner projectRowId={projectRowId} seedProjectId={seedProjectId} />
     </HubFilterProvider>
   );
 }

@@ -45,8 +45,11 @@ export interface Milestone {
   projectId: string;
   type: 'milestone';
   name: string;
+  status?: ScheduleStatus;
   milestoneDate: Date;
   actualMilestoneDate: Date | null;
+  /** Optional note explaining why the actual date differs from baseline. */
+  note?: string;
   wbs: string;
   predecessors: ScheduleLink[];
   successors: ScheduleLink[];

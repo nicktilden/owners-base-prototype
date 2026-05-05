@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Button, Card, H2, Page, Pill, Tabs, Tearsheet, Typography } from "@procore/core-react";
 import { Pencil, Paperclip, Connect } from "@procore/core-icons";
+import TagPanel from "@/components/risk/TagPanel";
 import styled, { createGlobalStyle } from "styled-components";
 import type { Rfi, RfiStatus } from "@/types/rfis";
 import { formatDateMMDDYYYY } from "@/utils/date";
@@ -8,8 +9,8 @@ import { specifications } from "@/data/seed/specifications";
 import { getConnectedRfiInfo, type ConnectedRfiInfo } from "@/data/procoreConnect";
 
 const RfiTearsheetWidth = createGlobalStyle`
-  [class*="StyledTearsheetBody"] {
-    flex: 0 0 55vw !important;
+  [class*="StyledTearsheetBody"]:has(> .rfi-detail-tearsheet-root) {
+    flex: 0 0 60vw !important;
   }
 `;
 
@@ -200,6 +201,7 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
     <>
       <RfiTearsheetWidth />
       <Tearsheet open={open} onClose={onClose} aria-label="RFI details" placement="right">
+        <div className="rfi-detail-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Page style={{ height: "100%", background: "var(--color-surface-primary)", color: "var(--color-text-primary)" }}>
           <Page.Main style={{ height: "100%", overflow: "hidden", background: "var(--color-surface-primary)" }}>
             <Page.Header style={{ background: "var(--color-surface-primary)", borderColor: "var(--color-border-separator)" }}>
@@ -340,6 +342,17 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
                     )}
                   </SectionCard>
 
+                  {/* ── Risk section ── */}
+                  <SectionCard>
+                    <H2 style={{ marginBottom: 16 }}>Risk</H2>
+                    <TagPanel
+                      sourceType="rfi"
+                      sourceId={rfi.id}
+                      projectId={rfi.projectId}
+                      prefillImpact={rfi.costImpact.hasImpact ? (rfi.costImpact.amount ?? 0) : 0}
+                    />
+                  </SectionCard>
+
                   {/* ── General Information section ── */}
                   <SectionCard>
                     <H2 style={{ marginBottom: 20 }}>General Information</H2>
@@ -466,6 +479,7 @@ export default function RfiDetailTearsheet({ rfi, projectName, open, onClose }: 
             </Page.Body>
           </Page.Main>
         </Page>
+        </div>
       </Tearsheet>
     </>
   );

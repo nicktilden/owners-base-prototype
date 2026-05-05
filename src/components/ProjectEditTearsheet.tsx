@@ -39,6 +39,9 @@ import {
 import styled, { createGlobalStyle } from "styled-components";
 import type { ProjectRow, ProjectStage } from "@/data/projects";
 import { useConnection } from "@/context/ConnectionContext";
+import { buildHealthResult } from "@/utils/healthEngine";
+import { account } from "@/data/seed/account";
+import type { Project } from "@/types/project";
 import type { ProjectConnection, ConnectFeatureIcon } from "@/data/procoreConnect";
 import {
   UPSTREAM_COMPANIES,
@@ -57,7 +60,7 @@ import type { ProjectStatus, ProjectType, DeliveryMethod, ProjectSector } from "
 
 const ProjectEditTearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .project-edit-tearsheet-root) {
-    flex: 0 0 min(720px, 92vw) !important;
+    flex: 0 0 60vw !important;
   }
 `;
 
@@ -74,8 +77,8 @@ const READ_ONLY_BOX = {
   border: "1px solid var(--color-border-separator)",
 } as const;
 
-const TABS = ["General", "Financial", "Schedule", "Classification", "Connection"] as const;
-type TabKey = (typeof TABS)[number];
+const TABS = ["General", "Financial", "Schedule", "Classification", "Connection", "Health"] as const;
+export type TabKey = (typeof TABS)[number];
 
 // ─── Connection tab styled components ─────────────────────────────────────────
 
@@ -248,9 +251,9 @@ const StepCircle = styled.div<{ $active: boolean; $completed: boolean }>`
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  background: ${(p) => (p.$completed ? "#ff5200" : p.$active ? "#fff" : "var(--color-surface-secondary)")};
-  border: 2px solid ${(p) => (p.$active || p.$completed ? "#ff5200" : "#c4cacc")};
-  color: ${(p) => (p.$completed ? "#fff" : p.$active ? "#ff5200" : "#6a767c")};
+  background: ${(p) => (p.$completed ? "var(--color-action-primary)" : p.$active ? "#fff" : "var(--color-surface-secondary)")};
+  border: 2px solid ${(p) => (p.$active || p.$completed ? "var(--color-action-primary)" : "#c4cacc")};
+  color: ${(p) => (p.$completed ? "#fff" : p.$active ? "var(--color-action-primary)" : "#6a767c")};
   flex-shrink: 0;
 `;
 
@@ -265,7 +268,7 @@ const StepLabel = styled.div<{ $active: boolean }>`
 const StepConnector = styled.div<{ $completed: boolean }>`
   flex: 1;
   height: 2px;
-  background: ${(p) => (p.$completed ? "#ff5200" : "#eef0f1")};
+  background: ${(p) => (p.$completed ? "var(--color-action-primary)" : "#eef0f1")};
   margin: 13px 8px 0;
 `;
 
@@ -396,6 +399,229 @@ const ThingsToConsider = styled.ul`
   color: #464f53;
   line-height: 1.7;
 `;
+
+// ─── Health tab styled components ─────────────────────────────────────────────
+
+const HealthBannerWrap = styled.div`
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const KPICategoryHeader = styled.div`
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-secondary);
+  padding: 12px 0 6px;
+  border-bottom: 1px solid var(--color-border-separator);
+  margin-bottom: 4px;
+`;
+
+const KPIRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-separator);
+  &:last-child { border-bottom: none; }
+`;
+
+const KPIStatusDot = styled.span<{ $status: string }>`
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  background: ${({ $status }) => {
+    if ($status === "green") return "#2e7d32";
+    if ($status === "yellow") return "#f9a825";
+    if ($status === "red") return "#c62828";
+    return "#c4cacc";
+  }};
+`;
+
+const KPIInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const KPILabel = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+`;
+
+const KPIValue = styled.div`
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 1px;
+`;
+
+const KPIReason = styled.div`
+  font-size: 12px;
+  color: #a50e0e;
+  margin-top: 3px;
+  font-style: italic;
+`;
+
+
+const HealthDataNote = styled.div`
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 20px;
+  padding: 10px 14px;
+  background: var(--color-surface-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-separator);
+`;
+
+// ─── ProjectRow → Project adapter (reused in Health tab) ─────────────────────
+
+function rowToProjectForHealth(row: ProjectRow, connection?: import("@/data/procoreConnect").ProjectConnection): Project {
+  const budgetVariancePct =
+    row.originalBudget > 0
+      ? ((row.estimatedCostAtCompletion - row.originalBudget) / row.originalBudget) * 100
+      : undefined;
+
+  const sched = getProjectPortfolioScheduleSummary(row);
+  const scheduleVarianceDays =
+    sched.scheduleVariance !== 0 ? sched.scheduleVariance : undefined;
+
+  return {
+    id: String(row.id),
+    number: row.number,
+    name: row.name,
+    stage: row.stage as Project["stage"],
+    status: "active",
+    program: null,
+    estimatedBudget: row.originalBudget,
+    priority: (row.priority as Project["priority"]) ?? "medium",
+    scope: "new_construction",
+    sector: "Commercial > Office",
+    delivery: "Design-Bid-Build (DBB)",
+    type: "Capital Improvements",
+    region: "Midwest",
+    country: "United States",
+    city: row.city ?? "",
+    state: (row.state ?? "Michigan") as Project["state"],
+    zip: "",
+    address: row.location,
+    latitude: 0,
+    longitude: 0,
+    favorite: row.favorite,
+    photo: null,
+    startDate: new Date(row.startDate),
+    endDate: new Date(row.endDate),
+    description: "",
+    budgetVariancePct,
+    scheduleVarianceDays,
+    healthHistory: [],
+    procoreConnect: connection,
+  };
+}
+
+// ─── Health tab component ─────────────────────────────────────────────────────
+
+const SCORE_LABELS: Record<"green" | "yellow" | "red", string> = {
+  green: "Healthy",
+  yellow: "At Risk",
+  red: "Critical",
+};
+
+
+const CATEGORY_ORDER = ["cost", "schedule", "risk", "delivery"] as const;
+const CATEGORY_LABELS: Record<string, string> = {
+  cost: "Cost & Financial",
+  schedule: "Schedule",
+  risk: "Risk",
+  delivery: "Delivery & Compliance",
+};
+
+function HealthTabContent({ project, connection }: { project: ProjectRow; connection: import("@/data/procoreConnect").ProjectConnection | undefined }) {
+  const adapted = rowToProjectForHealth(project, connection);
+  const result = buildHealthResult(adapted, account.healthConfig, connection, []);
+
+  const { compositeScore, forecastScore, kpis } = result;
+
+  const scoredScore = compositeScore as "green" | "yellow" | "red" | "unavailable";
+  const forecasted = forecastScore as "green" | "yellow" | "red" | "unavailable";
+
+  const kpisByCategory = CATEGORY_ORDER.reduce<Record<string, typeof kpis>>(
+    (acc, cat) => {
+      acc[cat] = kpis.filter((k) => k.category === cat);
+      return acc;
+    },
+    {}
+  );
+
+  const bannerVariant =
+    scoredScore === "red" ? "error" :
+    scoredScore === "yellow" ? "attention" : "info";
+  const bannerTitle =
+    scoredScore === "red" ? "Critical" :
+    scoredScore === "yellow" ? "At Risk" :
+    scoredScore === "green" ? "Healthy" : "No Data";
+
+  const flaggedKPIs = kpis.filter((k) => k.status === "red" || k.status === "yellow");
+  const bannerBody =
+    flaggedKPIs.length > 0
+      ? `${flaggedKPIs.length} KPI${flaggedKPIs.length > 1 ? "s are" : " is"} flagging issues: ${flaggedKPIs.map((k) => k.label).join(", ")}.`
+      : "All KPIs are on track.";
+
+  const forecastBannerBody =
+    forecasted !== "unavailable" && forecastScore !== compositeScore
+      ? `Forecast: ${SCORE_LABELS[forecasted as "green" | "yellow" | "red"]} — unresolved risks may impact this project's trajectory.`
+      : null;
+
+  return (
+    <div>
+      <HealthBannerWrap>
+        <Banner variant={bannerVariant}>
+          <Banner.Title>{bannerTitle}</Banner.Title>
+          <Banner.Body>{bannerBody}</Banner.Body>
+        </Banner>
+        {forecastBannerBody && (
+          <Banner variant="attention">
+            <Banner.Body>{forecastBannerBody}</Banner.Body>
+          </Banner>
+        )}
+      </HealthBannerWrap>
+
+      {CATEGORY_ORDER.map((cat) => {
+        const items = kpisByCategory[cat];
+        if (!items || items.length === 0) return null;
+        return (
+          <div key={cat}>
+            <KPICategoryHeader>{CATEGORY_LABELS[cat]}</KPICategoryHeader>
+            {items.map((kpi) => (
+              <KPIRow key={kpi.key}>
+                <KPIStatusDot $status={kpi.status} />
+                <KPIInfo>
+                  <KPILabel>{kpi.label}</KPILabel>
+                  <KPIValue>{kpi.displayValue}</KPIValue>
+                  {kpi.reasons.map((reason, i) => (
+                    <KPIReason key={i}>{reason}</KPIReason>
+                  ))}
+                </KPIInfo>
+                <Pill color="gray" style={{ fontSize: 10 }}>{kpi.sourceLabel}</Pill>
+              </KPIRow>
+            ))}
+          </div>
+        );
+      })}
+
+      <HealthDataNote>
+        Health scores are computed from available project data.
+        {connection
+          ? ` Connected to ${connection.upstream.company} — live data active.`
+          : " Connect this project to a GC to enable richer health signals."}
+      </HealthDataNote>
+    </div>
+  );
+}
 
 // ─── Connect empty state ───────────────────────────────────────────────────────
 
@@ -759,7 +985,7 @@ export default function ProjectEditTearsheet({
                   background: "var(--color-surface-secondary)",
                 }}
               >
-                {!isConnected && !connectBannerDismissed && (
+                {!isConnected && !connectBannerDismissed && activeTab !== "Health" && (
                   <div style={{ marginBottom: 16 }}>
                     <OrangeConnectBanner variant="attention">
                       <Banner.Icon icon={<Connect size="lg" />} />
@@ -786,7 +1012,7 @@ export default function ProjectEditTearsheet({
                   </div>
                 )}
 
-                <div style={{ display: activeTab === "Classification" ? "none" : "block" }}>
+                <div style={{ display: (activeTab === "Classification" || activeTab === "Health") ? "none" : "block" }}>
                   <Form
                     key={project.id}
                     initialValues={initialValues}
@@ -1358,6 +1584,13 @@ export default function ProjectEditTearsheet({
                         </Button>
                       </ConnectEmptyStateWrap>
                     )}
+                  </SectionCard>
+                )}
+
+                {activeTab === "Health" && (
+                  <SectionCard>
+                    <H2 style={{ marginBottom: 16 }}>Project Health</H2>
+                    <HealthTabContent project={project} connection={connection} />
                   </SectionCard>
                 )}
 

@@ -197,7 +197,7 @@ const portfolioHub: Hub = {
           id: 'hub-card-p4-5',
           tabId: 'hub-tab-p4',
           type: 'custom_metric',
-          title: 'Template adoption',
+          title: 'Action Plans Adoption',
           order: 4,
           config: { toolKey: 'action_plans', customMetricKey: 'exploration_ap_template_adoption' },
           createdBy: 'user-009',

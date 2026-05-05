@@ -3,8 +3,9 @@
  * All cards are scoped to a single project via `projectRowId` (numeric, matching sampleProjectRows.id).
  */
 
-import React, { useMemo, useState } from "react";
-import { Button, Link, Pill, Typography } from "@procore/core-react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Button, Form, Link, Modal, Pill, TextArea, TextInput, Tooltip, Typography } from "@procore/core-react";
 import {
   ArrowRight,
   Building,
@@ -12,9 +13,11 @@ import {
   ChevronDown,
   CompassDirection,
   ExternalLink,
+  Info,
   Location,
   Person,
   Ruler,
+  Cog,
   ConcentricCircles,
 } from "@procore/core-icons";
 import styled from "styled-components";
@@ -25,6 +28,8 @@ import { users } from "@/data/seed/users";
 import { sampleOpenItemRows } from "@/data/openitems";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { formatDateMMDDYYYY } from "@/utils/date";
+import { projectImages } from "@/images/projectImages";
+import HubCardTable from "@/components/HubCardTable";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -148,9 +153,19 @@ export function ProjectInfoCard({ projectRowId }: CardProps) {
     <HubCardFrame title="Project Info" actions={actions}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <PrimaryRow>
-          <ProjectImagePlaceholder>
-            <Building size="lg" />
-          </ProjectImagePlaceholder>
+          {(() => {
+            const seedId = `proj-${String(projectRowId).padStart(3, '0')}`;
+            const img = projectImages[seedId];
+            return img ? (
+              <div style={{ width: 120, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--color-border-separator)' }}>
+                <img src={img.src} alt={project.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ) : (
+              <ProjectImagePlaceholder>
+                <Building size="lg" />
+              </ProjectImagePlaceholder>
+            );
+          })()}
 
           <ProjectNameBlock>
             <Typography
@@ -255,7 +270,6 @@ const PROJECT_LINKS_DATA: Record<string, ProjectLink[]> = {
   ],
 };
 
-// Per-project overrides for first few projects for variety
 const PROJECT_LINKS_OVERRIDES: Record<number, ProjectLink[]> = {
   1: [
     { label: "Site Logistic Plans", url: "#" },
@@ -279,34 +293,6 @@ const PROJECT_LINKS_OVERRIDES: Record<number, ProjectLink[]> = {
     { label: "Project Dashboard", url: "#", hasExternal: true },
   ],
 };
-
-const LinkList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border: 1px solid var(--color-border-separator);
-  border-radius: 8px;
-  overflow: hidden;
-`;
-
-const LinkRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--color-surface-primary);
-  border-bottom: 1px solid var(--color-border-separator);
-  gap: 8px;
-  min-height: 40px;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: var(--color-surface-hover);
-  }
-`;
 
 const LinkLabel = styled.span`
   font-size: 14px;
@@ -362,18 +348,24 @@ export function ProjectLinksCard({ projectRowId }: CardProps) {
       infoTooltip="Quick links to frequently accessed project resources, drawings, and external tools."
       actions={actions}
     >
-      <LinkList>
-        {links.map((link) => (
-          <LinkRow key={link.label}>
-            <LinkLabel>{link.label}</LinkLabel>
-            {link.hasExternal && (
-              <LinkIconBtn aria-label={`Open ${link.label} externally`}>
-                <ExternalLink size="sm" />
-              </LinkIconBtn>
-            )}
-          </LinkRow>
-        ))}
-      </LinkList>
+      <HubCardTable columns="1fr 36px">
+        <HubCardTable.Body>
+          {links.map((link, idx) => (
+            <HubCardTable.Row key={link.label} index={idx}>
+              <HubCardTable.Cell>
+                <LinkLabel>{link.label}</LinkLabel>
+              </HubCardTable.Cell>
+              <HubCardTable.Cell style={{ display: "flex", justifyContent: "center" }}>
+                {link.hasExternal && (
+                  <LinkIconBtn aria-label={`Open ${link.label} externally`}>
+                    <ExternalLink size="sm" />
+                  </LinkIconBtn>
+                )}
+              </HubCardTable.Cell>
+            </HubCardTable.Row>
+          ))}
+        </HubCardTable.Body>
+      </HubCardTable>
     </HubCardFrame>
   );
 }
@@ -483,60 +475,13 @@ interface MilestoneRow {
   baselineDate: Date;
   actualDate: Date | null;
   varianceDays: number;
+  note?: string;
 }
 
 const DATES_PAGE_SIZE = 4;
 
-const DatesTable = styled.div`
-  width: 100%;
-`;
-
-const DatesTableHeader = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 120px 120px 80px;
-  padding: 0 8px;
-  height: 28px;
-  align-items: center;
-  border-bottom: 1px solid var(--color-border-separator);
-`;
-
-const DatesHeaderCell = styled.span`
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-`;
-
-const DatesRow = styled.div<{ $even?: boolean }>`
-  display: grid;
-  grid-template-columns: 1fr 120px 120px 80px;
-  padding: 0 8px;
-  min-height: 40px;
-  align-items: center;
-  background: ${({ $even }) =>
-    $even ? "var(--color-surface-primary)" : "var(--color-surface-secondary)"};
-  border-bottom: 1px solid var(--color-border-separator);
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const DatesNameCell = styled.span`
-  font-size: 13px;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-right: 8px;
-`;
-
-const DatesDateCell = styled.span`
-  font-size: 12px;
-  color: var(--color-text-secondary);
-`;
-
 const VarianceCell = styled.span<{ $late?: boolean; $early?: boolean }>`
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: ${({ $late, $early }) =>
     $late ? "#d92626" : $early ? "#1d7c40" : "var(--color-text-secondary)"};
@@ -557,13 +502,9 @@ const PageInfo = styled.span`
 `;
 
 const TimelineWrap = styled.div`
-  padding: 8px 0 12px;
+  padding: 16px 0 4px;
   flex-shrink: 0;
-`;
-
-const TimelineSvgWrap = styled.div`
   width: 100%;
-  overflow: hidden;
 `;
 
 function formatVariance(days: number, hasActual: boolean): string {
@@ -588,13 +529,38 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
       const varianceDays = actual
         ? Math.round((actual.getTime() - baseline.getTime()) / 86400000)
         : 0;
-      return { name: m.name, baselineDate: baseline, actualDate: actual, varianceDays };
+      return { name: m.name, baselineDate: baseline, actualDate: actual, varianceDays, note: m.note };
     });
   }, [seedId]);
 
   const [page, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(milestones.length / DATES_PAGE_SIZE));
   const pageItems = milestones.slice(page * DATES_PAGE_SIZE, (page + 1) * DATES_PAGE_SIZE);
+
+  const [configureOpen, setConfigureOpen] = useState(false);
+  // Local edits: name → { actualDate: string; note: string }
+  const [milestoneEdits, setMilestoneEdits] = useState<Map<string, { actualDate: string; note: string }>>(new Map());
+
+  const getMilestoneEdit = (name: string, field: "actualDate" | "note"): string => {
+    const edit = milestoneEdits.get(name);
+    if (edit) return edit[field];
+    const m = milestones.find((ms) => ms.name === name);
+    if (!m) return "";
+    if (field === "actualDate") return m.actualDate ? m.actualDate.toISOString().slice(0, 10) : "";
+    return m.note ?? "";
+  };
+
+  const setMilestoneEdit = (name: string, field: "actualDate" | "note", value: string) => {
+    setMilestoneEdits((prev) => {
+      const next = new Map(prev);
+      const current = next.get(name) ?? {
+        actualDate: (() => { const m = milestones.find((ms) => ms.name === name); return m?.actualDate ? m.actualDate.toISOString().slice(0, 10) : ""; })(),
+        note: (() => { const m = milestones.find((ms) => ms.name === name); return m?.note ?? ""; })(),
+      };
+      next.set(name, { ...current, [field]: value });
+      return next;
+    });
+  };
 
   const project = sampleProjectRows.find((r) => r.id === projectRowId);
   const dateRange = project
@@ -610,8 +576,15 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
 
   const actions = (
     <HeaderActions>
-      <Button variant="tertiary" size="sm" className="b_tertiary" icon={<ChevronDown size="sm" />}>
-        More
+      <Button
+        variant="tertiary"
+        size="sm"
+        className="b_tertiary"
+        icon={<Cog size="sm" />}
+        onClick={() => setConfigureOpen(true)}
+        aria-label="Configure milestone dates"
+      >
+        Configure
       </Button>
     </HeaderActions>
   );
@@ -636,28 +609,56 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
               projectEndDate={projectEnd!}
             />
           </TimelineWrap>
-          <DatesTable>
-            <DatesTableHeader>
-              <DatesHeaderCell>Name</DatesHeaderCell>
-              <DatesHeaderCell>Baseline Date</DatesHeaderCell>
-              <DatesHeaderCell>Actual Date</DatesHeaderCell>
-              <DatesHeaderCell>Variance</DatesHeaderCell>
-            </DatesTableHeader>
-            {pageItems.map((m, idx) => (
-              <DatesRow key={m.name} $even={idx % 2 === 0}>
-                <DatesNameCell title={m.name}>{m.name}</DatesNameCell>
-                <DatesDateCell>{formatDateMMDDYYYY(m.baselineDate.toISOString().slice(0, 10))}</DatesDateCell>
-                <DatesDateCell>
-                  {m.actualDate
-                    ? formatDateMMDDYYYY(m.actualDate.toISOString().slice(0, 10))
-                    : "—"}
-                </DatesDateCell>
-                <VarianceCell $late={m.varianceDays > 0} $early={m.varianceDays < 0}>
-                  {formatVariance(m.varianceDays, !!m.actualDate)}
-                </VarianceCell>
-              </DatesRow>
-            ))}
-          </DatesTable>
+          <HubCardTable columns="1fr 110px 110px 80px">
+            <HubCardTable.Header>
+              <HubCardTable.HeaderCell>Name</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell>Baseline Date</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell>Actual Date</HubCardTable.HeaderCell>
+              <HubCardTable.HeaderCell>Variance</HubCardTable.HeaderCell>
+            </HubCardTable.Header>
+            <HubCardTable.Body>
+              {pageItems.map((m, idx) => (
+                <HubCardTable.Row key={m.name} index={idx}>
+                  <HubCardTable.Cell style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, maxWidth: "100%", overflow: "hidden" }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={m.name}>{m.name}</span>
+                      {m.note && (
+                        <Tooltip
+                          trigger="hover"
+                          placement="top"
+                          overlay={
+                            <Tooltip.Content>
+                              <div style={{ maxWidth: 240, lineHeight: 1.45, whiteSpace: "normal" }}>
+                                <div style={{ fontWeight: 600, marginBottom: 2 }}>Note</div>
+                                <div>{m.note}</div>
+                              </div>
+                            </Tooltip.Content>
+                          }
+                        >
+                          <span style={{ display: "inline-flex", flexShrink: 0, cursor: "default" }}>
+                            <Info size="sm" style={{ width: 12, height: 12, color: "var(--color-text-secondary)" }} />
+                          </span>
+                        </Tooltip>
+                      )}
+                    </span>
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
+                    {formatDateMMDDYYYY(m.baselineDate.toISOString().slice(0, 10))}
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
+                    {m.actualDate
+                      ? formatDateMMDDYYYY(m.actualDate.toISOString().slice(0, 10))
+                      : "—"}
+                  </HubCardTable.Cell>
+                  <HubCardTable.Cell>
+                    <VarianceCell $late={m.varianceDays > 0} $early={m.varianceDays < 0}>
+                      {formatVariance(m.varianceDays, !!m.actualDate)}
+                    </VarianceCell>
+                  </HubCardTable.Cell>
+                </HubCardTable.Row>
+              ))}
+            </HubCardTable.Body>
+          </HubCardTable>
           {milestones.length > DATES_PAGE_SIZE && (
             <DatesPagination>
               <PageInfo>
@@ -688,11 +689,291 @@ export function ProjectDatesCard({ projectRowId }: CardProps) {
           )}
         </>
       )}
+      {/* Configure Modal */}
+      <Modal
+        open={configureOpen}
+        onClickOverlay={() => setConfigureOpen(false)}
+        aria-labelledby="configure-dates-modal-title"
+      >
+        <Modal.Header onClose={() => setConfigureOpen(false)}>
+          <span id="configure-dates-modal-title">Configure Milestone Dates</span>
+        </Modal.Header>
+        <Modal.Body>
+          <Typography intent="body" style={{ marginBottom: 16, color: "var(--color-text-secondary)" }}>
+            Update actual dates and add notes to explain any variance from the baseline.
+          </Typography>
+          {milestones.map((m) => {
+            const actualVal = getMilestoneEdit(m.name, "actualDate");
+            const noteVal = getMilestoneEdit(m.name, "note");
+            const hasActual = !!actualVal;
+            return (
+              <div
+                key={m.name}
+                style={{
+                  borderBottom: "1px solid var(--color-border-separator)",
+                  paddingBottom: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <Typography intent="h3" style={{ marginBottom: 10, fontSize: 13, fontWeight: 600 }}>
+                  {m.name}
+                </Typography>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+                  <div>
+                    <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                      Baseline Date
+                    </Typography>
+                    <TextInput
+                      type="date"
+                      value={m.baselineDate.toISOString().slice(0, 10)}
+                      disabled
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                      Actual Date
+                    </Typography>
+                    <TextInput
+                      type="date"
+                      value={actualVal}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setMilestoneEdit(m.name, "actualDate", e.target.value)
+                      }
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <Typography intent="label" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
+                    Notes{hasActual ? " (required)" : ""}
+                  </Typography>
+                  <TextArea
+                    value={noteVal}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setMilestoneEdit(m.name, "note", e.target.value)
+                    }
+                    placeholder={
+                      hasActual
+                        ? "Explain why the actual date differs from baseline…"
+                        : "Add a note about this milestone…"
+                    }
+                    style={{ width: "100%", minHeight: 64, resize: "vertical" }}
+                  />
+                  {hasActual && !noteVal && (
+                    <Typography intent="small" style={{ color: "var(--color-text-error)", marginTop: 2 }}>
+                      A note is required when an actual date is set.
+                    </Typography>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Modal.FooterButtons>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                setMilestoneEdits(new Map());
+                setConfigureOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                // Validate: all milestones with an actual date must have a note
+                const invalid = milestones.some((m) => {
+                  const actualVal = getMilestoneEdit(m.name, "actualDate");
+                  const noteVal = getMilestoneEdit(m.name, "note");
+                  return !!actualVal && !noteVal;
+                });
+                if (invalid) return; // prevent save if validation fails
+                setConfigureOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          </Modal.FooterButtons>
+        </Modal.Footer>
+      </Modal>
     </HubCardFrame>
   );
 }
 
-// ─── Milestone Timeline SVG ───────────────────────────────────────────────────
+// ─── Milestone Timeline (DOM-based, full width) ───────────────────────────────
+
+const TimelineOuter = styled.div`
+  position: relative;
+  width: 100%;
+  height: 52px;
+  overflow: visible;
+`;
+
+const TimelineTrack = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 6px;
+  background: var(--color-surface-tertiary, #e5e7eb);
+  border-radius: 3px;
+  overflow: hidden;
+`;
+
+const TimelineProgress = styled.div<{ $pct: number }>`
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: ${({ $pct }) => $pct}%;
+  background: var(--color-action-primary, #2563eb);
+  border-radius: 3px 0 0 3px;
+`;
+
+const TodayLine = styled.div<{ $pct: number }>`
+  position: absolute;
+  left: ${({ $pct }) => $pct}%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 1.5px;
+  height: 24px;
+  background: var(--color-action-primary, #2563eb);
+  pointer-events: none;
+`;
+
+const EndLabel = styled.div<{ $pct: number; $anchor: 'left' | 'right' }>`
+  position: absolute;
+  left: ${({ $pct, $anchor }) => $anchor === 'left' ? `${$pct}%` : 'auto'};
+  right: ${({ $pct, $anchor }) => $anchor === 'right' ? `${100 - $pct}%` : 'auto'};
+  bottom: 0;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transform: ${({ $anchor }) => $anchor === 'left' ? 'translateX(0)' : 'translateX(0)'};
+  pointer-events: none;
+`;
+
+const DiamondWrap = styled.div<{ $pct: number }>`
+  position: absolute;
+  left: ${({ $pct }) => $pct}%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 1000;
+  overflow: visible;
+`;
+
+const DiamondSvg = styled.svg`
+  display: block;
+  overflow: visible;
+`;
+
+const TooltipBox = styled.div<{ $side: 'left' | 'right' | 'center' }>`
+  position: absolute;
+  bottom: calc(100% + 14px);
+  ${({ $side }) =>
+    $side === 'left'
+      ? 'left: 0; transform: translateX(0);'
+      : $side === 'right'
+      ? 'right: 0; transform: translateX(0);'
+      : 'left: 50%; transform: translateX(-50%);'}
+  background: #1a1f2e;
+  color: #fff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  min-width: 160px;
+  max-width: 220px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+  z-index: 9999;
+
+  /* Arrow pointing down */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    ${({ $side }) =>
+      $side === 'left'
+        ? 'left: 14px;'
+        : $side === 'right'
+        ? 'right: 14px;'
+        : 'left: 50%; transform: translateX(-50%);'}
+    border: 6px solid transparent;
+    border-top-color: #1a1f2e;
+  }
+`;
+
+const TooltipName = styled.div`
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 2px;
+  color: #fff;
+`;
+
+const TooltipActual = styled.div`
+  font-size: 12px;
+  color: #fff;
+`;
+
+const TooltipBaselineLabel = styled.div`
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  margin-top: 4px;
+`;
+
+const TooltipBaseline = styled.div`
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+`;
+
+const PortalTooltip = styled.div<{ $side: 'left' | 'right' | 'center'; $x: number; $y: number }>`
+  position: fixed;
+  left: ${({ $side, $x }) =>
+    $side === 'left' ? `${$x}px` :
+    $side === 'right' ? `${$x}px` :
+    `${$x}px`};
+  top: ${({ $y }) => `${$y - 14}px`};
+  transform: ${({ $side }) =>
+    $side === 'left' ? 'translate(0, -100%)' :
+    $side === 'right' ? 'translate(-100%, -100%)' :
+    'translate(-50%, -100%)'};
+  background: #1a1f2e;
+  color: #fff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  min-width: 160px;
+  max-width: 220px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+  z-index: 9999;
+
+  /* Arrow pointing down */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    ${({ $side }) =>
+      $side === 'left'
+        ? 'left: 14px;'
+        : $side === 'right'
+        ? 'right: 14px;'
+        : 'left: 50%; transform: translateX(-50%);'}
+    border: 6px solid transparent;
+    border-top-color: #1a1f2e;
+  }
+`;
+
+const TODAY_DATE = new Date("2026-04-17");
 
 function MilestoneTimeline({
   milestones,
@@ -703,103 +984,118 @@ function MilestoneTimeline({
   projectStartDate: Date;
   projectEndDate: Date;
 }) {
-  const SVG_W = 500;
-  const SVG_H = 76;
-  const TRACK_Y = 38;
-  const DIAMOND_SIZE = 7;
-  const PAD = 52;
-  const TODAY_DATE = new Date("2026-04-17");
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const diamondRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const startT = projectStartDate.getTime();
   const endT = projectEndDate.getTime();
   const span = Math.max(endT - startT, 1);
-  const toX = (t: number) => PAD + ((t - startT) / span) * (SVG_W - 2 * PAD);
+  const toPct = (t: number) => Math.min(100, Math.max(0, ((t - startT) / span) * 100));
 
-  const todayT = TODAY_DATE.getTime();
-  const todayX = toX(todayT);
-  const showToday = todayT > startT && todayT < endT;
+  const todayPct = toPct(TODAY_DATE.getTime());
+  const showToday = TODAY_DATE.getTime() > startT && TODAY_DATE.getTime() < endT;
+
+  const handleMouseEnter = (idx: number) => {
+    const el = diamondRefs.current[idx];
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      setTooltipPos({
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+      });
+    }
+    setHoveredIdx(idx);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredIdx(null);
+    setTooltipPos(null);
+  };
+
+  const hoveredMilestone = hoveredIdx !== null ? milestones[hoveredIdx] : null;
+  const hoveredPct = hoveredMilestone
+    ? toPct((hoveredMilestone.actualDate ?? hoveredMilestone.baselineDate).getTime())
+    : 0;
+  const tooltipSide: 'left' | 'right' | 'center' =
+    hoveredPct < 20 ? 'left' : hoveredPct > 80 ? 'right' : 'center';
 
   return (
-    <TimelineSvgWrap>
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ width: "100%", height: SVG_H, display: "block" }}
-        aria-label="Project milestone timeline"
-      >
-        {/* Track */}
-        <line
-          x1={PAD} y1={TRACK_Y} x2={SVG_W - PAD} y2={TRACK_Y}
-          stroke="var(--color-border-default)" strokeWidth={2}
-        />
+    <TimelineOuter ref={containerRef}>
+      {/* Track */}
+      <TimelineTrack>
+        {showToday && <TimelineProgress $pct={todayPct} />}
+      </TimelineTrack>
 
-        {/* Start cap + date label */}
-        <line x1={PAD} y1={TRACK_Y - 5} x2={PAD} y2={TRACK_Y + 5}
-          stroke="var(--color-border-default)" strokeWidth={2} />
-        <text x={PAD} y={SVG_H - 3} textAnchor="start" fontSize={9}
-          fill="var(--color-text-secondary)">
-          {formatDateMMDDYYYY(projectStartDate.toISOString().slice(0, 10))}
-        </text>
+      {/* Today line (above/below track) */}
+      {showToday && <TodayLine $pct={todayPct} />}
 
-        {/* End cap + date label */}
-        <line x1={SVG_W - PAD} y1={TRACK_Y - 5} x2={SVG_W - PAD} y2={TRACK_Y + 5}
-          stroke="var(--color-border-default)" strokeWidth={2} />
-        <text x={SVG_W - PAD} y={SVG_H - 3} textAnchor="end" fontSize={9}
-          fill="var(--color-text-secondary)">
-          {formatDateMMDDYYYY(projectEndDate.toISOString().slice(0, 10))}
-        </text>
+      {/* Start / End labels */}
+      <EndLabel $pct={0} $anchor="left">
+        {formatDateMMDDYYYY(projectStartDate.toISOString().slice(0, 10))}
+      </EndLabel>
+      <EndLabel $pct={100} $anchor="right">
+        {formatDateMMDDYYYY(projectEndDate.toISOString().slice(0, 10))}
+      </EndLabel>
 
-        {/* Today marker */}
-        {showToday && (
-          <g>
-            <line
-              x1={todayX} y1={TRACK_Y - 16} x2={todayX} y2={TRACK_Y + 16}
-              stroke="var(--color-action-primary)" strokeWidth={1.5}
-              strokeDasharray="3,2"
-            />
-            <text x={todayX} y={9} textAnchor="middle" fontSize={8}
-              fill="var(--color-action-primary)" fontWeight="600">
-              Today
-            </text>
-          </g>
-        )}
+      {/* Milestone diamonds */}
+      {milestones.map((m, idx) => {
+        const displayDate = m.actualDate ?? m.baselineDate;
+        const pct = toPct(displayDate.getTime());
 
-        {/* Milestone diamonds */}
-        {milestones.map((m, idx) => {
-          const x = toX(m.baselineDate.getTime());
-          if (x < PAD - 4 || x > SVG_W - PAD + 4) return null;
+        if (pct < 0 || pct > 100) return null;
 
-          const hasActual = !!m.actualDate;
-          const isLate = m.varianceDays > 0;
-          const fill = hasActual
-            ? isLate
-              ? "var(--color-feedback-negative, #d92626)"
-              : "var(--color-feedback-positive, #1d7c40)"
-            : "var(--color-text-disabled, #9ca3af)";
+        const hasActual = !!m.actualDate;
+        const isLate = m.varianceDays > 0;
+        const fill = hasActual
+          ? isLate
+            ? "#d92626"
+            : "#1d7c40"
+          : "var(--color-text-disabled, #9ca3af)";
 
-          const abbrev = m.name.length > 15 ? m.name.slice(0, 14) + "…" : m.name;
-          const above = idx % 2 === 0;
-          const labelY = above
-            ? TRACK_Y - DIAMOND_SIZE - 5
-            : TRACK_Y + DIAMOND_SIZE + 13;
+        const DSIZE = 7;
 
-          return (
-            <g key={m.name}>
+        return (
+          <DiamondWrap
+            key={m.name}
+            $pct={pct}
+            ref={(el) => { diamondRefs.current[idx] = el; }}
+            onMouseEnter={() => handleMouseEnter(idx)}
+            onMouseLeave={handleMouseLeave}
+          >
+            <DiamondSvg width={DSIZE * 2 + 4} height={DSIZE * 2 + 4} style={{ overflow: 'visible' }}>
               <polygon
-                points={`${x},${TRACK_Y - DIAMOND_SIZE} ${x + DIAMOND_SIZE},${TRACK_Y} ${x},${TRACK_Y + DIAMOND_SIZE} ${x - DIAMOND_SIZE},${TRACK_Y}`}
+                points={`${DSIZE + 2},2 ${DSIZE * 2 + 2},${DSIZE + 2} ${DSIZE + 2},${DSIZE * 2 + 2} 2,${DSIZE + 2}`}
                 fill={fill}
                 stroke="white"
                 strokeWidth={1.5}
               />
-              <text x={x} y={labelY} textAnchor="middle" fontSize={9}
-                fill="var(--color-text-secondary)">
-                {abbrev}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </TimelineSvgWrap>
+            </DiamondSvg>
+          </DiamondWrap>
+        );
+      })}
+
+      {/* Tooltip rendered in portal to escape overflow:hidden containers */}
+      {hoveredIdx !== null && hoveredMilestone && tooltipPos &&
+        createPortal(
+          <PortalTooltip $side={tooltipSide} $x={tooltipPos.x} $y={tooltipPos.y}>
+            <TooltipName>{hoveredMilestone.name}</TooltipName>
+            {hoveredMilestone.actualDate ? (
+              <TooltipActual>
+                {formatDateMMDDYYYY(hoveredMilestone.actualDate.toISOString().slice(0, 10))}
+                {hoveredMilestone.varianceDays !== 0
+                  ? ` (${hoveredMilestone.varianceDays > 0 ? '+' : ''}${hoveredMilestone.varianceDays} days)`
+                  : ''}
+              </TooltipActual>
+            ) : null}
+            <TooltipBaselineLabel>Baseline</TooltipBaselineLabel>
+            <TooltipBaseline>{formatDateMMDDYYYY(hoveredMilestone.baselineDate.toISOString().slice(0, 10))}</TooltipBaseline>
+          </PortalTooltip>,
+          document.body
+        )
+      }
+    </TimelineOuter>
   );
 }
 
@@ -1052,36 +1348,9 @@ export function AllOpenItemsCard({ projectRowId }: CardProps) {
 
 // ─── 6. ProjectTeamCard ───────────────────────────────────────────────────────
 
-const TeamTable = styled.div`
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--color-border-separator);
-  border-radius: 8px;
-  overflow: hidden;
-`;
-
-const TeamRow = styled.div`
-  display: grid;
-  grid-template-columns: 180px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--color-surface-primary);
-  border-bottom: 1px solid var(--color-border-separator);
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:nth-child(even) {
-    background: var(--color-surface-secondary);
-  }
-`;
-
 const TeamRoleLabel = styled.span`
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
-  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1094,24 +1363,6 @@ const TeamNameLabel = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-`;
-
-const TeamHeader = styled.div`
-  display: grid;
-  grid-template-columns: 180px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: var(--color-surface-secondary);
-  border-bottom: 1px solid var(--color-border-separator);
-`;
-
-const TeamHeaderCell = styled.span`
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 export function ProjectTeamCard({ projectRowId }: CardProps) {
@@ -1155,22 +1406,26 @@ export function ProjectTeamCard({ projectRowId }: CardProps) {
           No team members assigned to this project.
         </div>
       ) : (
-        <TeamTable>
-          <TeamHeader>
-            <TeamHeaderCell>Role</TeamHeaderCell>
-            <TeamHeaderCell>Name</TeamHeaderCell>
-            <TeamHeaderCell />
-          </TeamHeader>
-          {teamMembers.map((member) => (
-            <TeamRow key={member.id}>
-              <TeamRoleLabel title={member.role}>{member.role}</TeamRoleLabel>
-              <TeamNameLabel>{member.name}</TeamNameLabel>
-              <Button variant="tertiary" size="sm" className="b_tertiary" icon={<ArrowRight size="sm" />}>
-                See Details
-              </Button>
-            </TeamRow>
-          ))}
-        </TeamTable>
+        <HubCardTable columns="160px 1fr auto">
+          <HubCardTable.Header>
+            <HubCardTable.HeaderCell>Role</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell>Name</HubCardTable.HeaderCell>
+            <HubCardTable.HeaderCell />
+          </HubCardTable.Header>
+          <HubCardTable.Body>
+            {teamMembers.map((member, idx) => (
+              <HubCardTable.Row key={member.id} index={idx}>
+                <HubCardTable.Cell><TeamRoleLabel title={member.role}>{member.role}</TeamRoleLabel></HubCardTable.Cell>
+                <HubCardTable.Cell><TeamNameLabel>{member.name}</TeamNameLabel></HubCardTable.Cell>
+                <HubCardTable.Cell>
+                  <Button variant="tertiary" size="sm" className="b_tertiary" icon={<ArrowRight size="sm" />}>
+                    See Details
+                  </Button>
+                </HubCardTable.Cell>
+              </HubCardTable.Row>
+            ))}
+          </HubCardTable.Body>
+        </HubCardTable>
       )}
     </HubCardFrame>
   );

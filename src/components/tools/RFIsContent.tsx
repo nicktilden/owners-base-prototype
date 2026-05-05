@@ -258,7 +258,7 @@ export default function RFIsContent({ projectId }: RFIsContentProps) {
 
   const breadcrumbs = [
     { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
+    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}/overview` }] : []),
   ];
 
   const draftCount = allProjectRfis.filter((r) => r.status === "Draft").length;

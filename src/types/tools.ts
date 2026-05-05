@@ -6,6 +6,7 @@ export type ToolLevel = 'portfolio' | 'project' | 'both' | 'global';
 
 export type ToolKey =
   | 'hubs'
+  | 'health'
   | 'documents'
   | 'schedule'
   | 'assets'
@@ -14,7 +15,6 @@ export type ToolKey =
   | 'capital_planning'
   | 'funding_source'
   | 'bidding'
-  | 'action_plans'
   | 'change_events'
   | 'change_orders'
   | 'invoicing'
@@ -25,12 +25,14 @@ export type ToolKey =
   | 'submittals'
   | 'observations'
   | 'correspondence'
-  | 'commitments';
+  | 'commitments'
+  | 'risk';
 
 export type ExportFormat = 'PDF' | 'CSV' | 'Excel';
 
 export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   hubs:               'both',
+  health:             'project',
   documents:          'both',
   schedule:           'both',
   assets:             'both',
@@ -39,7 +41,6 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   capital_planning:   'portfolio',
   funding_source:     'portfolio',
   bidding:            'project',
-  action_plans:       'project',
   change_events:      'project',
   change_orders:      'project',
   invoicing:          'project',
@@ -51,11 +52,13 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   observations:       'project',
   correspondence:     'project',
   commitments:        'project',
+  risk:               'project',
 };
 
 // Human-readable display names for tools in the nav
 export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   hubs:               'Home',
+  health:             'Risk Register',
   documents:          'Documents',
   schedule:           'Schedule',
   assets:             'Assets',
@@ -64,7 +67,6 @@ export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   capital_planning:   'Capital Planning',
   funding_source:     'Funding Source',
   bidding:            'Bidding',
-  action_plans:       'Action Plans',
   change_events:      'Change Events',
   change_orders:      'Change Orders',
   invoicing:          'Invoicing',
@@ -76,4 +78,5 @@ export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   observations:       'Observations',
   correspondence:     'Correspondence',
   commitments:        'Commitments',
+  risk:               'Risks',
 };

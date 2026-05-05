@@ -4,6 +4,7 @@
 
 import type { USState } from './shared';
 import type { ProjectConnection } from '@/data/procoreConnect';
+import type { HealthSnapshot, Risk } from './health';
 
 export type ProjectNumber = string; // /^[A-Z]{1,2}\d{4}$/
 
@@ -180,4 +181,38 @@ export interface Project {
   description: string;
   /** Procore Connect — populated when this project is linked to an upstream GC project. */
   procoreConnect?: ProjectConnection;
+  /** True when health data is sourced from a connected GC Procore account via Procore Connect. */
+  isConnected?: boolean;
+  /** Share level agreed with GC for this connected project. */
+  connectShareLevel?: 'summary' | 'detail';
+
+  // ── Health signal inputs (read by healthEngine; preferred from connected data) ──
+  /** Budget variance as % of budget (positive = over budget). Seed fallback when not connected. */
+  budgetVariancePct?: number;
+  /** Remaining contingency as % of budget. */
+  contingencyPct?: number;
+  /** Schedule variance in days (positive = behind schedule). */
+  scheduleVarianceDays?: number;
+  /** Number of overdue RFIs. */
+  overdueRFICount?: number;
+  /** Number of overdue submittals. */
+  overdueSubmittalCount?: number;
+  /** Number of open safety incidents. */
+  openIncidentCount?: number;
+  /** Highest open incident severity. */
+  incidentSeverity?: 'none' | 'low' | 'high';
+  /** Open punch list items. */
+  openPunchlistCount?: number;
+  /** Failed inspection rate as %. */
+  failedInspectionPct?: number;
+  /** Pending change event count. */
+  pendingChangeEventCount?: number;
+  /** Invoice overdue days (0 = current). */
+  invoiceOverdueDays?: number;
+  /** Milestone completion rate as % (0–100). */
+  milestoneCompletionRate?: number;
+  /** 90-day health score history for sparkline rendering. */
+  healthHistory?: HealthSnapshot[];
+  /** Structured risk records for forward-looking forecast. */
+  risks?: Risk[];
 }

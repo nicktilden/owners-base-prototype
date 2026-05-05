@@ -764,6 +764,7 @@
 html,
 body {
   font-family:
+    "Inter",
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
@@ -1220,7 +1221,7 @@ div.nextjs-toast {
   border-color: var(--color-text-primary) !important;
 }
 
-
+/* Segmented Controller - Not active (.dcJxLA) */
 [data-color-scheme="dark"] .b_radiogroup .cPdHyw,
 [data-theme="owner"] .b_radiogroup .cPdHyw,
 [data-theme="owner-alt1"] .b_radiogroup .cPdHyw,
@@ -1229,6 +1230,13 @@ div.nextjs-toast {
   color: var(--color-text-secondary) !important;
 }
 
+
+[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
+  background-color: var(--color-text-primary) !important;
+  color: var(--color-surface-primary) !important;
+}
+
+/* Segmented Controller - Active (.gSxFWX) */
 [data-color-scheme="dark"] .b_radiogroup .eLJGZn,
 [data-theme="owner"] .b_radiogroup .eLJGZn,
 [data-theme="owner-alt1"] .b_radiogroup .eLJGZn,
@@ -1240,11 +1248,6 @@ div.nextjs-toast {
 [data-theme="owner-alt2"] .b_radiogroup .cPdHyw {
   background-color: var(--color-surface-primary) !important;
   color: var(--color-text-secondary) !important;
-}
-
-[data-theme="owner-alt2"] .b_radiogroup .eLJGZn {
-  background-color: var(--color-text-primary) !important;
-  color: var(--color-surface-primary) !important;
 }
 
 /* Card and Menu containers */
@@ -1336,33 +1339,11 @@ div.nextjs-toast {
   overflow-x: auto;
 }
 
-/*
- * Capital Planning Settings → Columns: compact row density (default).
- * DS `Table.TextCell` applies vertical margin (`spacing.lg`); reset like `.capital-planning-table-scroll`.
- */
-.capital-planning-columns-settings-table thead tr th {
-  height: auto !important;
-  min-height: 0 !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
+/* Standard: core-react Table cell horizontal padding = 8px */
+[class*="StyledTableBodyCell"] {
+  padding: 16px !important;
 }
 
-.capital-planning-columns-settings-table tbody tr td {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-}
-
-.capital-planning-columns-settings-table tbody tr td [class*="StyledTableCellText"] {
-  margin: 0 !important;
-  min-height: 0;
-}
-
-.capital-planning-columns-settings-table tbody tr td .capital-planning-columns-drag-handle,
-.capital-planning-columns-settings-table tbody tr td:last-child button[type="button"] {
-  padding: 2px !important;
-}
 
 /* AG Grid */
 .ag-cell-inline-editing {

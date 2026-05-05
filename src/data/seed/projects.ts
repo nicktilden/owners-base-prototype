@@ -1,4 +1,16 @@
 import type { Project } from '@/types/project';
+import type { HealthSnapshot } from '@/types/health';
+
+// Helper to generate a health history array going back N days from today
+function makeHistory(days: number, scores: ('green' | 'yellow' | 'red')[]): HealthSnapshot[] {
+  const today = new Date('2026-04-20');
+  const step = Math.floor(days / scores.length);
+  return scores.map((score, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (days - i * step));
+    return { date: d.toISOString().split('T')[0], score };
+  });
+}
 
 // 35 Healthcare (Trinity Health) projects
 // Status: 14 active, 14 on_hold, 4 inactive, 3 cancelled
@@ -35,6 +47,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-09-01'),
     endDate: new Date('2026-12-31'),
     description: 'Eight-story patient tower addition adding 200 new beds, surgical suites, and an expanded emergency department to support growing regional demand.',
+    // ── Health signals: CRITICAL ──
+    budgetVariancePct: 13.4,
+    contingencyPct: 2.1,
+    scheduleVarianceDays: 38,
+    overdueRFICount: 11,
+    overdueSubmittalCount: 9,
+    openIncidentCount: 3,
+    incidentSeverity: 'high',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 8,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 62,
+    healthHistory: makeHistory(90, ['green', 'green', 'yellow', 'yellow', 'yellow', 'red', 'red', 'red', 'red']),
   },
   {
     id: 'proj-002',
@@ -62,6 +88,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-01-15'),
     endDate: new Date('2025-10-31'),
     description: 'New three-story outpatient pavilion consolidating oncology, cardiology, and orthopedic ambulatory services under one roof.',
+    // ── Health signals: CRITICAL ──
+    budgetVariancePct: 11.2,
+    contingencyPct: 3.8,
+    scheduleVarianceDays: 34,
+    overdueRFICount: 17,
+    overdueSubmittalCount: 12,
+    openIncidentCount: 1,
+    incidentSeverity: 'low',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 6,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 58,
+    healthHistory: makeHistory(90, ['yellow', 'yellow', 'yellow', 'red', 'red', 'red', 'red', 'red', 'red']),
   },
   {
     id: 'proj-003',
@@ -89,6 +129,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-11-01'),
     endDate: new Date('2025-08-31'),
     description: 'Second phase of the Mercy Hospital medical office campus, adding a six-story building with specialty physician offices and imaging services.',
+    // ── Health signals: AT RISK ──
+    budgetVariancePct: 8.6,
+    contingencyPct: 6.2,
+    scheduleVarianceDays: 21,
+    overdueRFICount: 5,
+    overdueSubmittalCount: 7,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 4,
+    pendingChangeEventCount: 4,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 71,
+    healthHistory: makeHistory(90, ['green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
   },
   {
     id: 'proj-004',
@@ -116,6 +170,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-06-01'),
     endDate: new Date('2026-03-31'),
     description: 'Full renovation of the existing 1970s patient wing, including updated HVAC, electrical systems, and patient room reconfiguration to meet modern care standards.',
+    // ── Health signals: AT RISK ──
+    budgetVariancePct: 6.8,
+    contingencyPct: 0,       // contingency fully consumed → red flag
+    scheduleVarianceDays: 18,
+    overdueRFICount: 4,
+    overdueSubmittalCount: 5,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 9,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 74,
+    healthHistory: makeHistory(90, ['green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
   },
   {
     id: 'proj-005',
@@ -143,6 +211,22 @@ export const projects: Project[] = [
     startDate: new Date('2023-07-01'),
     endDate: new Date('2025-11-30'),
     description: 'New 96-bed inpatient behavioral health facility designed to address the growing demand for mental health and substance use disorder treatment services.',
+    // ── Health signals: AT RISK ──
+    budgetVariancePct: 5.1,
+    contingencyPct: 7.4,
+    scheduleVarianceDays: 16,
+    overdueRFICount: 8,
+    overdueSubmittalCount: 23,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 3,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 77,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
+    isConnected: true,
+    connectShareLevel: 'summary',
   },
   {
     id: 'proj-006',
@@ -170,6 +254,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-03-01'),
     endDate: new Date('2027-06-30'),
     description: "Major hospital expansion adding a Level II trauma center, 150 new patient beds, and a dedicated women's and children's services wing.",
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 2.1,
+    contingencyPct: 14.8,
+    scheduleVarianceDays: 5,
+    overdueRFICount: 2,
+    overdueSubmittalCount: 3,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 2,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 88,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green', 'green']),
   },
   {
     id: 'proj-007',
@@ -197,6 +295,22 @@ export const projects: Project[] = [
     startDate: new Date('2023-04-01'),
     endDate: new Date('2025-04-30'),
     description: 'Complete gut renovation and modernization of the existing emergency department to increase capacity from 45,000 to 65,000 annual visits.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 3.2,
+    contingencyPct: 11.5,
+    scheduleVarianceDays: 8,
+    overdueRFICount: 1,
+    overdueSubmittalCount: 2,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 42,
+    failedInspectionPct: 2,
+    pendingChangeEventCount: 1,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 86,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green']),
+    isConnected: true,
+    connectShareLevel: 'detail',
   },
   {
     id: 'proj-008',
@@ -222,8 +336,22 @@ export const projects: Project[] = [
     favorite: false,
     photo: null,
     startDate: new Date('2024-09-01'),
-    endDate: new Date('2026-02-28'),
+    endDate: new Date('2026-09-30'),
     description: 'Four-story specialist office building consolidating cardiology, neurology, and endocrinology practices adjacent to the main hospital campus.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 0.4,
+    contingencyPct: 18.2,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 1,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 92,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-009',
@@ -251,6 +379,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-02-01'),
     endDate: new Date('2025-12-31'),
     description: 'Renovation and expansion of six existing operating rooms and addition of two robotic surgery suites to support minimally invasive surgical volumes.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 2.8,
+    contingencyPct: 12.1,
+    scheduleVarianceDays: 10,
+    overdueRFICount: 5,
+    overdueSubmittalCount: 4,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 1,
+    pendingChangeEventCount: 2,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 83,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'yellow', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-010',
@@ -278,6 +420,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-07-01'),
     endDate: new Date('2026-05-31'),
     description: 'Standalone outpatient clinic serving the Santa Maria valley with primary care, urgent care, and diagnostic imaging services.',
+    // ── Health signals: HEALTHY ──
+    budgetVariancePct: 0.8,
+    contingencyPct: 19.5,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 97,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
 
   // ── ON HOLD PROJECTS (4) ─────────────────────────────────────────────────
@@ -286,7 +442,7 @@ export const projects: Project[] = [
     number: 'NE1011',
     name: 'Mercy Health Research Institute',
     stage: 'feasibility',
-    status: 'on_hold',
+    status: 'active',
     program: null,
     estimatedBudget: 185000000,
     priority: 'medium',
@@ -307,6 +463,21 @@ export const projects: Project[] = [
     startDate: new Date('2023-01-15'),
     endDate: new Date('2027-12-31'),
     description: 'Proposed nine-story translational research institute on hold pending final board approval and federal grant award decisions.',
+    // ── Health signals: HEALTHY NOW → FORECAST AT RISK (key demo state) ──
+    // Currently clean across all KPIs, but high-probability risks not yet materializing
+    budgetVariancePct: 1.2,
+    contingencyPct: 18.0,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-012',
@@ -334,6 +505,8 @@ export const projects: Project[] = [
     startDate: new Date('2023-08-01'),
     endDate: new Date('2025-06-30'),
     description: 'New 600-space parking structure to replace surface lots removed during the main hospital expansion, placed on hold due to budget reallocation.',
+    // ── Health signals: DEGRADED / PARTIAL (intentional data gaps) ──
+    // No signal fields → engine returns IntegrityResult with issueType: 'data'
   },
   {
     id: 'proj-013',
@@ -361,6 +534,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-01-01'),
     endDate: new Date('2026-03-31'),
     description: 'Five-story medical office building on hold pending resolution of a zoning variance and environmental review for the proposed site.',
+    // ── Health signals: AT RISK (on hold, escalating costs) ──
+    budgetVariancePct: 7.3,
+    contingencyPct: 8.6,
+    scheduleVarianceDays: 90,   // project is months behind due to hold
+    overdueRFICount: 2,
+    overdueSubmittalCount: 3,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 2,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 65,
+    healthHistory: makeHistory(90, ['green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
   },
   {
     id: 'proj-014',
@@ -388,6 +575,9 @@ export const projects: Project[] = [
     startDate: new Date('2024-04-01'),
     endDate: new Date('2025-10-31'),
     description: 'Expansion of the radiology and imaging suite on hold while awaiting equipment procurement lead times for two new MRI machines.',
+    // ── Health signals: DEGRADED / PARTIAL (intentional data gaps) ──
+    // Only partial data — scheduleVarianceDays known, rest missing
+    scheduleVarianceDays: 45,
   },
 
   // ── INACTIVE PROJECTS (4) ────────────────────────────────────────────────
@@ -417,6 +607,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-02-01'),
     endDate: new Date('2024-06-30'),
     description: 'Completed renovation of the main hospital cafeteria and kitchen, now in closeout pending final punch list resolution and commissioning sign-off.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 2.4,
+    contingencyPct: 9.1,
+    scheduleVarianceDays: 4,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 14,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 3,
+    milestoneCompletionRate: 95,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green', 'green']),
   },
   {
     id: 'proj-016',
@@ -444,6 +648,20 @@ export const projects: Project[] = [
     startDate: new Date('2022-09-01'),
     endDate: new Date('2024-03-31'),
     description: 'Completed replacement of aging rooftop HVAC units across all four hospital towers with energy-efficient units meeting updated code requirements.',
+    // ── Health signals: HEALTHY ──
+    budgetVariancePct: 0.3,
+    contingencyPct: 21.4,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-017',
@@ -471,6 +689,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-03-01'),
     endDate: new Date('2024-09-30'),
     description: 'Full interior fit-out of three vacant floors in the existing MOB for new specialty physician practices, project currently in the handover phase.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 1.8,
+    contingencyPct: 13.7,
+    scheduleVarianceDays: 6,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 8,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 98,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-018',
@@ -498,6 +730,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-05-01'),
     endDate: new Date('2024-08-31'),
     description: 'Historic chapel restoration including structural repairs, stained glass restoration, and ADA-compliant upgrades to meet current accessibility requirements.',
+    // ── Health signals: ON TRACK ──
+    budgetVariancePct: 4.1,
+    contingencyPct: 8.8,
+    scheduleVarianceDays: 3,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 6,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
 
   // ── CANCELLED PROJECTS (2) ───────────────────────────────────────────────
@@ -527,6 +773,20 @@ export const projects: Project[] = [
     startDate: new Date('2023-10-01'),
     endDate: new Date('2024-12-31'),
     description: 'Proposed helipad expansion cancelled following FAA airspace review denial and concerns over proximity to the Camden hospital district flight path.',
+    // ── Health signals: N/A (cancelled) ──
+    budgetVariancePct: 0,
+    contingencyPct: 20,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-020',
@@ -554,6 +814,20 @@ export const projects: Project[] = [
     startDate: new Date('2024-01-01'),
     endDate: new Date('2025-06-30'),
     description: 'Satellite primary care clinic cancelled due to lease negotiations falling through on the proposed ground-floor retail conversion site.',
+    // ── Health signals: N/A (cancelled) ──
+    budgetVariancePct: 0,
+    contingencyPct: 20,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
 
   // ── EXPANDED PROGRAM (15) — aligns with capital_planning cp-021 … cp-035 ──
@@ -865,6 +1139,20 @@ export const projects: Project[] = [
     endDate: new Date('2026-08-31'),
     description:
       'Dedicated heart and vascular institute with hybrid ORs, advanced imaging, and structured parking podium below clinical levels.',
+    // ── Health signals: AT RISK (schedule pressure, moderate cost overrun) ──
+    budgetVariancePct: 4.8,
+    contingencyPct: 5.2,
+    scheduleVarianceDays: 14,
+    overdueRFICount: 6,
+    overdueSubmittalCount: 4,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 5,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 78,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']),
   },
   {
     id: 'proj-032',
@@ -893,6 +1181,20 @@ export const projects: Project[] = [
     endDate: new Date('2027-02-28'),
     description:
       'Outpatient diagnostics hub consolidating MRI, PET-CT, and cardiovascular testing with retail pharmacy frontage.',
+    // ── Health signals: ON TRACK (early stage, clean signals) ──
+    budgetVariancePct: 1.1,
+    contingencyPct: 14.3,
+    scheduleVarianceDays: 3,
+    overdueRFICount: 1,
+    overdueSubmittalCount: 2,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 1,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 92,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
   {
     id: 'proj-033',
@@ -921,6 +1223,20 @@ export const projects: Project[] = [
     endDate: new Date('2025-09-30'),
     description:
       'Steel-and-glass specialty pavilion anchoring the Navy Yard life sciences district with orthopedics and neurosciences clinics.',
+    // ── Health signals: CRITICAL (significant overrun, high overdue counts) ──
+    budgetVariancePct: 9.7,
+    contingencyPct: 1.4,
+    scheduleVarianceDays: 29,
+    overdueRFICount: 14,
+    overdueSubmittalCount: 18,
+    openIncidentCount: 1,
+    incidentSeverity: 'low',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 11,
+    invoiceOverdueDays: 22,
+    milestoneCompletionRate: 63,
+    healthHistory: makeHistory(90, ['green', 'yellow', 'yellow', 'red', 'red', 'red', 'red', 'red', 'red']),
   },
   {
     id: 'proj-034',
@@ -949,6 +1265,20 @@ export const projects: Project[] = [
     endDate: new Date('2025-06-30'),
     description:
       'Phased sterile processing department upgrade with temporary SPD trailer operations and new instrument automation line.',
+    // ── Health signals: ON TRACK (renovation nearing completion) ──
+    budgetVariancePct: 2.3,
+    contingencyPct: 11.8,
+    scheduleVarianceDays: 7,
+    overdueRFICount: 2,
+    overdueSubmittalCount: 1,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 22,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 2,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 88,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'yellow', 'green']),
   },
   {
     id: 'proj-035',
@@ -977,5 +1307,19 @@ export const projects: Project[] = [
     endDate: new Date('2026-12-15'),
     description:
       'Regional MOB development RFP covering shell, core, and tenant improvement allowances for ambulatory cardiology tenants.',
+    // ── Health signals: ON TRACK (bidding phase, minimal activity) ──
+    budgetVariancePct: 0.0,
+    contingencyPct: 18.5,
+    scheduleVarianceDays: 0,
+    overdueRFICount: 0,
+    overdueSubmittalCount: 0,
+    openIncidentCount: 0,
+    incidentSeverity: 'none',
+    openPunchlistCount: 0,
+    failedInspectionPct: 0,
+    pendingChangeEventCount: 0,
+    invoiceOverdueDays: 0,
+    milestoneCompletionRate: 100,
+    healthHistory: makeHistory(90, ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green']),
   },
 ];

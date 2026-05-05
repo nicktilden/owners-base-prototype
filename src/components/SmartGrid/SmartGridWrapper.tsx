@@ -76,6 +76,7 @@ export default function SmartGridWrapper<TData>({
     minWidth: 100,
     filter: true,
     headerComponent: ProcoreHeader,
+    cellStyle: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     ...defaultColDefOverride,
   }), [defaultColDefOverride]);
 

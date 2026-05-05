@@ -10,6 +10,8 @@ export const actionPlanTypes: ActionPlanType[] = [
   { id: 'apt-004', accountId: 'acc-001', name: 'Commissioning',          active: true, createdAt: new Date('2023-04-01'), updatedAt: new Date('2023-04-01') },
   { id: 'apt-005', accountId: 'acc-001', name: 'Project Close-out',      active: true, createdAt: new Date('2023-04-01'), updatedAt: new Date('2023-04-01') },
   { id: 'apt-006', accountId: 'acc-001', name: 'Design & Permitting',    active: true, createdAt: new Date('2023-04-01'), updatedAt: new Date('2023-04-01') },
+  { id: 'apt-007', accountId: 'acc-001', name: 'Risk Management',        active: true, createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01') },
+  { id: 'apt-008', accountId: 'acc-001', name: 'Quality Assurance',      active: true, createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01') },
 ];
 
 /**

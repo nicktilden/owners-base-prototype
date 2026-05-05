@@ -1,0 +1,47 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Configure Artifactory registry auth
+        run: |
+          printf 'registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
+          printf '@procore:registry=https://artifacts.procoretech.com/artifactory/api/npm/npm/\n' >> ~/.npmrc
+          printf '//artifacts.procoretech.com/artifactory/api/npm/npm/:_authToken=%s\n' "$ARTIFACTORY_NPM_TOKEN" >> ~/.npmrc
+          echo "Token length: ${#ARTIFACTORY_NPM_TOKEN}"
+          echo "Token prefix: ${ARTIFACTORY_NPM_TOKEN:0:10}..."
+          echo "npmrc contents (redacted):"
+          cat ~/.npmrc | sed 's/_authToken=.*/_authToken=REDACTED/'
+        env:
+          ARTIFACTORY_NPM_TOKEN: ${{ secrets.ARTIFACTORY_NPM_TOKEN }}
+
+      - name: Verify registry access
+        run: npm ping --registry https://artifacts.procoretech.com/artifactory/api/npm/npm/
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

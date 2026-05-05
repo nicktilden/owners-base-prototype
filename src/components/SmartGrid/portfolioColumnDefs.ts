@@ -12,6 +12,7 @@ import ActionsCellRenderer from "./ActionsCellRenderer";
 import ConnectedDataCellRenderer from "./ConnectedDataCellRenderer";
 import LocationCellRenderer from "./LocationCellRenderer";
 import PriorityCellRenderer from "./PriorityCellRenderer";
+import HealthPillCellRenderer from "./HealthPillCellRenderer";
 
 function fmtCurrency(n: number | null | undefined): string {
   if (n == null) return "—";
@@ -127,6 +128,16 @@ export const portfolioColumnDefs: ColDef<ProjectRow>[] = [
     },
   },
   {
+    colId: "projectHealth",
+    headerName: "Project Health",
+    width: 130,
+    minWidth: 120,
+    sortable: false,
+    filter: false,
+    suppressSizeToFit: true,
+    cellRenderer: HealthPillCellRenderer,
+  },
+  {
     field: "startDate",
     headerName: "Start Date",
     filter: "agDateColumnFilter",
@@ -203,16 +214,48 @@ export const portfolioColumnDefs: ColDef<ProjectRow>[] = [
     field: "originalBudget",
     headerName: "Original Budget",
     filter: "agNumberColumnFilter",
+    hide: true,
     editable: true,
     valueFormatter: (params: ValueFormatterParams<ProjectRow>) =>
       fmtCurrency(params.value),
   },
   {
-    field: "estimatedCostAtCompletion",
-    headerName: "Est. Cost at Completion",
+    field: "jobToDateCost",
+    headerName: "Spent to Date",
     filter: "agNumberColumnFilter",
+    hide: true,
     valueFormatter: (params: ValueFormatterParams<ProjectRow>) =>
       fmtCurrency(params.value),
+  },
+  {
+    field: "estimatedCostAtCompletion",
+    headerName: "Forecast EAC",
+    filter: "agNumberColumnFilter",
+    hide: true,
+    valueFormatter: (params: ValueFormatterParams<ProjectRow>) =>
+      fmtCurrency(params.value),
+  },
+  {
+    colId: "budgetVariance",
+    headerName: "Budget Variance",
+    filter: "agNumberColumnFilter",
+    hide: true,
+    valueGetter: (params: ValueGetterParams<ProjectRow>) => {
+      if (!params.data) return 0;
+      return params.data.originalBudget - params.data.estimatedCostAtCompletion;
+    },
+    valueFormatter: (params: ValueFormatterParams) => {
+      const n = params.value as number | null | undefined;
+      if (n == null) return "—";
+      const formatted = fmtCurrency(Math.abs(n));
+      return `${n >= 0 ? "+" : "-"}${formatted}`;
+    },
+    cellStyle: (params) => {
+      if (params.value == null) return null;
+      if (params.value > 0) return { color: "var(--color-icon-success)" };
+      if (params.value < 0) return { color: "var(--color-text-error)" };
+      return null;
+    },
   },
   {
     colId: "rfis",

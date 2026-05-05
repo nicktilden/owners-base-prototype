@@ -33,6 +33,9 @@ export default class MyDocument extends Document {
     return (
       <Html lang="en">
         <Head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
           <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=JSON.parse(localStorage.getItem('procore-theme-preference')||'{}');var t=p.theme||'owner';var c=p.colorScheme||'dark';var r=c;if(c==='system'){r=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}if(t!=='default'){document.documentElement.setAttribute('data-theme',t)}document.documentElement.setAttribute('data-color-scheme',r)}catch(e){}})()` }} />
         </Head>
         <body>

@@ -455,4 +455,143 @@ export const actionPlans: ActionPlan[] = [
         openItem('ap-020a-s3-i3','ap-020a-s3',2,'Board of Directors approval obtained',['user-001'],null,'user-008','2024-01-01'),
       ]},
     ], createdBy:'user-008', createdAt:d('2024-01-01'), updatedAt:d('2024-02-01') },
+
+  // ─── SUPPLEMENTARY PLANS: Risk & Quality Management ─────────────────────────
+  // A second set of action plans (Risk Assessment + Quality Checklist) per active project
+  // apt-007 = Risk Management, apt-008 = Quality Assurance (see action_plan_types)
+
+  // proj-001 · Risk Management Plan
+  { id:'ap-001e', accountId:'acc-001', projectId:'proj-001', number:5, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Ongoing risk register review and mitigation tracking for tower expansion.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-001','user-010'],
+    sections:[
+      { id:'ap-001e-s1', planId:'ap-001e', title:'Schedule Risk', order:0, createdAt:d('2024-01-01'), updatedAt:d('2025-03-15'), items:[
+        closedItem('ap-001e-s1-i1','ap-001e-s1',0,'Critical path delay risk assessed',['user-009','user-010'],'2025-01-01','2024-12-28','user-009','2024-01-01'),
+        closedItem('ap-001e-s1-i2','ap-001e-s1',1,'Long-lead equipment procurement verified',['user-011','user-009'],'2025-02-01','2025-01-30','user-009','2024-01-01'),
+        inProgressItem('ap-001e-s1-i3','ap-001e-s1',2,'Weather and seasonal risk mitigation plan active',['user-009','user-013'],'2026-06-30','user-009','2024-01-01'),
+        openItem('ap-001e-s1-i4','ap-001e-s1',3,'Final schedule risk review before substantial completion',['user-009'],null,'user-009','2024-01-01'),
+      ]},
+      { id:'ap-001e-s2', planId:'ap-001e', title:'Cost Risk', order:1, createdAt:d('2024-01-01'), updatedAt:d('2025-03-15'), items:[
+        closedItem('ap-001e-s2-i1','ap-001e-s2',0,'Owner contingency reviewed and approved',['user-003','user-004'],'2024-06-01','2024-05-25','user-009','2024-01-01'),
+        inProgressItem('ap-001e-s2-i2','ap-001e-s2',1,'Change order trend analysis current',['user-003','user-009'],'2026-06-30','user-009','2024-01-01'),
+        openItem('ap-001e-s2-i3','ap-001e-s2',2,'Cash flow forecast updated monthly',['user-003'],null,'user-009','2024-01-01'),
+      ]},
+      { id:'ap-001e-s3', planId:'ap-001e', title:'Regulatory & Safety Risk', order:2, createdAt:d('2024-01-01'), updatedAt:d('2025-03-15'), items:[
+        closedItem('ap-001e-s3-i1','ap-001e-s3',0,'ICRA compliance audits scheduled',['user-009','user-013'],'2024-09-01','2024-08-30','user-009','2024-01-01'),
+        inProgressItem('ap-001e-s3-i2','ap-001e-s3',1,'Fire and life safety risk review ongoing',['user-009'],'2026-06-30','user-009','2024-01-01'),
+        openItem('ap-001e-s3-i3','ap-001e-s3',2,'Final regulatory risk clearance before occupancy',['user-009','user-008'],null,'user-009','2024-01-01'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2024-01-01'), updatedAt:d('2025-03-15') },
+
+  // proj-001 · Quality Assurance Plan
+  { id:'ap-001f', accountId:'acc-001', projectId:'proj-001', number:6, title:'Quality Assurance & Inspection Checklist', typeId:'apt-008', status:'in_progress', private:false, locationId:null, description:'Quality inspection plan for structural, MEP, and envelope work on tower addition.', planManager:'user-012', approvers:['user-009'], completedReceivers:['user-008','user-010'],
+    sections:[
+      { id:'ap-001f-s1', planId:'ap-001f', title:'Structural Quality Inspections', order:0, createdAt:d('2023-09-01'), updatedAt:d('2025-03-15'), items:[
+        closedItem('ap-001f-s1-i1','ap-001f-s1',0,'Foundation concrete testing results accepted',['user-012','user-014'],'2024-03-01','2024-02-28','user-012','2023-09-01'),
+        closedItem('ap-001f-s1-i2','ap-001f-s1',1,'Structural steel weld inspection signed off',['user-012'],'2024-09-01','2024-08-25','user-012','2023-09-01'),
+        inProgressItem('ap-001f-s1-i3','ap-001f-s1',2,'Floor slab concrete testing — floors 8–12',['user-012','user-014'],'2026-04-30','user-012','2023-09-01'),
+      ]},
+      { id:'ap-001f-s2', planId:'ap-001f', title:'MEP Quality Inspections', order:1, createdAt:d('2023-09-01'), updatedAt:d('2025-03-15'), items:[
+        closedItem('ap-001f-s2-i1','ap-001f-s2',0,'Medical gas piping pressure test results accepted',['user-012','user-013'],'2025-01-01','2024-12-30','user-012','2023-09-01'),
+        inProgressItem('ap-001f-s2-i2','ap-001f-s2',1,'HVAC ductwork leakage test in progress',['user-012'],'2026-05-01','user-012','2023-09-01'),
+        openItem('ap-001f-s2-i3','ap-001f-s2',2,'Electrical grounding and bonding inspection',['user-012','user-015'],null,'user-012','2023-09-01'),
+      ]},
+    ], createdBy:'user-012', createdAt:d('2023-09-01'), updatedAt:d('2025-03-15') },
+
+  // proj-002 · Risk Management Plan
+  { id:'ap-002e', accountId:'acc-001', projectId:'proj-002', number:5, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Risk monitoring for Holy Cross Outpatient Pavilion — hot work permit delays noted.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-002e-s1', planId:'ap-002e', title:'Schedule Risk', order:0, createdAt:d('2024-01-15'), updatedAt:d('2026-04-02'), items:[
+        closedItem('ap-002e-s1-i1','ap-002e-s1',0,'Critical path delay risk assessed',['user-009','user-010'],'2024-06-01','2024-05-30','user-009','2024-01-15'),
+        inProgressItem('ap-002e-s1-i2','ap-002e-s1',1,'Hot work permit delay mitigation plan active',['user-009','user-015'],'2026-04-10','user-009','2024-01-15'),
+        openItem('ap-002e-s1-i3','ap-002e-s1',2,'Final schedule risk review before substantial completion',['user-009'],null,'user-009','2024-01-15'),
+      ]},
+      { id:'ap-002e-s2', planId:'ap-002e', title:'Regulatory Risk', order:1, createdAt:d('2024-01-15'), updatedAt:d('2026-04-02'), items:[
+        inProgressItem('ap-002e-s2-i1','ap-002e-s2',0,'ICRA compliance monitoring ongoing',['user-009','user-013'],'2026-04-05','user-009','2024-01-15'),
+        openItem('ap-002e-s2-i2','ap-002e-s2',1,'Final regulatory clearance checklist',['user-009','user-008'],null,'user-009','2024-01-15'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2024-01-15'), updatedAt:d('2026-04-02') },
+
+  // proj-003 · Risk Management Plan
+  { id:'ap-003e', accountId:'acc-001', projectId:'proj-003', number:5, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Active risk management for Mercy MOB Phase II construction.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-003e-s1', planId:'ap-003e', title:'Cost Risk', order:0, createdAt:d('2023-11-01'), updatedAt:d('2026-03-28'), items:[
+        closedItem('ap-003e-s1-i1','ap-003e-s1',0,'Contingency adequacy review completed',['user-003','user-009'],'2024-06-01','2024-05-25','user-009','2023-11-01'),
+        inProgressItem('ap-003e-s1-i2','ap-003e-s1',1,'Change order trend monitoring active',['user-003','user-009'],'2026-04-02','user-009','2023-11-01'),
+        openItem('ap-003e-s1-i3','ap-003e-s1',2,'Final cost risk review at substantial completion',['user-003'],null,'user-009','2023-11-01'),
+      ]},
+      { id:'ap-003e-s2', planId:'ap-003e', title:'Safety Risk', order:1, createdAt:d('2023-11-01'), updatedAt:d('2026-03-28'), items:[
+        closedItem('ap-003e-s2-i1','ap-003e-s2',0,'Safety audit Q4 2024 completed',['user-009','user-013'],'2024-12-15','2024-12-12','user-009','2023-11-01'),
+        inProgressItem('ap-003e-s2-i2','ap-003e-s2',1,'Q1 2026 safety audit in progress',['user-009','user-013'],'2026-04-05','user-009','2023-11-01'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2023-11-01'), updatedAt:d('2026-03-28') },
+
+  // proj-004 · Quality Assurance Plan
+  { id:'ap-004d', accountId:'acc-001', projectId:'proj-004', number:4, title:'Quality Assurance & Inspection Checklist', typeId:'apt-008', status:'draft', private:false, locationId:null, description:"Draft quality plan for St. Mary's patient wing renovation — to be activated at NTP.", planManager:'user-012', approvers:['user-009'], completedReceivers:['user-008'],
+    sections:[
+      { id:'ap-004d-s1', planId:'ap-004d', title:'Pre-Construction Quality Controls', order:0, createdAt:d('2024-04-15'), updatedAt:d('2024-04-15'), items:[
+        openItem('ap-004d-s1-i1','ap-004d-s1',0,'Mock-up inspection scope defined',['user-012'],'2026-05-01','user-012','2024-04-15'),
+        openItem('ap-004d-s1-i2','ap-004d-s1',1,'Special inspection schedule published',['user-014'],'2026-05-01','user-012','2024-04-15'),
+        openItem('ap-004d-s1-i3','ap-004d-s1',2,'Material testing protocol agreed with GC',['user-012','user-009'],'2026-05-01','user-012','2024-04-15'),
+      ]},
+    ], createdBy:'user-012', createdAt:d('2024-04-15'), updatedAt:d('2024-04-15') },
+
+  // proj-005 · Risk Management Plan
+  { id:'ap-005e', accountId:'acc-001', projectId:'proj-005', number:5, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Risk management plan for Loyola Behavioral Health — infection control delays tracked.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-005e-s1', planId:'ap-005e', title:'Infection Control Risk', order:0, createdAt:d('2023-07-01'), updatedAt:d('2026-04-04'), items:[
+        closedItem('ap-005e-s1-i1','ap-005e-s1',0,'ICRA Level III barriers installed and verified',['user-009','user-013'],'2023-09-01','2023-08-28','user-009','2023-07-01'),
+        delayedItem('ap-005e-s1-i2','ap-005e-s1',1,'HVAC isolation zones confirmed for occupied areas',['user-009','user-013'],'2026-04-07','user-009','2023-07-01'),
+        openItem('ap-005e-s1-i3','ap-005e-s1',2,'Final ICRA clearance walkthrough',['user-009'],null,'user-009','2023-07-01'),
+      ]},
+      { id:'ap-005e-s2', planId:'ap-005e', title:'Schedule Risk', order:1, createdAt:d('2023-07-01'), updatedAt:d('2026-04-04'), items:[
+        inProgressItem('ap-005e-s2-i1','ap-005e-s2',0,'Recovery schedule for infection control delay being tracked',['user-009','user-010'],'2026-04-07','user-009','2023-07-01'),
+        openItem('ap-005e-s2-i2','ap-005e-s2',1,'Revised substantial completion date confirmed',['user-009'],null,'user-009','2023-07-01'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2023-07-01'), updatedAt:d('2026-04-04') },
+
+  // proj-006 · Risk Management Plan
+  { id:'ap-006c', accountId:'acc-001', projectId:'proj-006', number:3, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Risk plan for Chandler Regional — permit timing and subcontractor availability tracked.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-006c-s1', planId:'ap-006c', title:'Permitting Risk', order:0, createdAt:d('2024-03-01'), updatedAt:d('2026-04-01'), items:[
+        inProgressItem('ap-006c-s1-i1','ap-006c-s1',0,'State health permit schedule tracked weekly',['user-009','user-008'],'2026-04-03','user-009','2024-03-01'),
+        openItem('ap-006c-s1-i2','ap-006c-s1',1,'Permit contingency plan documented',['user-009'],null,'user-009','2024-03-01'),
+      ]},
+      { id:'ap-006c-s2', planId:'ap-006c', title:'Market Risk', order:1, createdAt:d('2024-03-01'), updatedAt:d('2026-04-01'), items:[
+        inProgressItem('ap-006c-s2-i1','ap-006c-s2',0,'Material cost escalation reserve reviewed',['user-003','user-009'],'2026-04-05','user-009','2024-03-01'),
+        openItem('ap-006c-s2-i2','ap-006c-s2',1,'Labor market assessment for bid day',['user-009'],null,'user-009','2024-03-01'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2024-03-01'), updatedAt:d('2026-04-01') },
+
+  // proj-007 · Quality Assurance Plan (closeout phase)
+  { id:'ap-007f', accountId:'acc-001', projectId:'proj-007', number:6, title:'Quality Assurance & Commissioning Verification', typeId:'apt-008', status:'in_progress', private:false, locationId:null, description:'QA verification for St. Francis ED commissioning — punch list quality oversight.', planManager:'user-012', approvers:['user-009'], completedReceivers:['user-008'],
+    sections:[
+      { id:'ap-007f-s1', planId:'ap-007f', title:'Commissioning Quality', order:0, createdAt:d('2025-01-01'), updatedAt:d('2026-04-07'), items:[
+        closedItem('ap-007f-s1-i1','ap-007f-s1',0,'Nurse call system FAT documentation accepted',['user-012','user-017'],'2025-12-01','2025-11-28','user-012','2025-01-01'),
+        inProgressItem('ap-007f-s1-i2','ap-007f-s1',1,'HVAC TAB report review in progress',['user-012','user-009'],'2026-04-14','user-012','2025-01-01'),
+        openItem('ap-007f-s1-i3','ap-007f-s1',2,'Final QA sign-off before state inspection',['user-012','user-009'],null,'user-012','2025-01-01'),
+      ]},
+    ], createdBy:'user-012', createdAt:d('2025-01-01'), updatedAt:d('2026-04-07') },
+
+  // proj-008 · Risk Management Plan
+  { id:'ap-008d', accountId:'acc-001', projectId:'proj-008', number:4, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:'Risk plan for Trinity Columbus — bid day risks and site readiness risks tracked.', planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-008d-s1', planId:'ap-008d', title:'Bidding Risk', order:0, createdAt:d('2024-06-15'), updatedAt:d('2026-03-25'), items:[
+        closedItem('ap-008d-s1-i1','ap-008d-s1',0,'GMP risk allocation reviewed with legal',['user-006','user-009'],'2025-06-01','2025-05-28','user-009','2024-06-15'),
+        inProgressItem('ap-008d-s1-i2','ap-008d-s1',1,'Bid package completeness review active',['user-009','user-010'],'2026-03-28','user-009','2024-06-15'),
+        openItem('ap-008d-s1-i3','ap-008d-s1',2,'Post-bid interview risk evaluation',['user-009'],null,'user-009','2024-06-15'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2024-06-15'), updatedAt:d('2026-03-25') },
+
+  // proj-009 · Risk Management Plan
+  { id:'ap-009e', accountId:'acc-001', projectId:'proj-009', number:5, title:'Risk Assessment & Mitigation Plan', typeId:'apt-007', status:'in_progress', private:false, locationId:null, description:"Risk management for St. Vincent's Surgical — OR downtime and patient safety risks.", planManager:'user-009', approvers:['user-002','user-008'], completedReceivers:['user-010'],
+    sections:[
+      { id:'ap-009e-s1', planId:'ap-009e', title:'Clinical Operational Risk', order:0, createdAt:d('2024-02-01'), updatedAt:d('2026-04-03'), items:[
+        closedItem('ap-009e-s1-i1','ap-009e-s1',0,'OR downtime schedule reviewed with surgical department',['user-009','user-005'],'2024-06-01','2024-05-28','user-009','2024-02-01'),
+        inProgressItem('ap-009e-s1-i2','ap-009e-s1',1,'Interim OR phasing compliance checks ongoing',['user-009','user-013'],'2026-04-06','user-009','2024-02-01'),
+        openItem('ap-009e-s1-i3','ap-009e-s1',2,'Final OR handback checklist approval',['user-009'],null,'user-009','2024-02-01'),
+      ]},
+      { id:'ap-009e-s2', planId:'ap-009e', title:'Safety Risk', order:1, createdAt:d('2024-02-01'), updatedAt:d('2026-04-03'), items:[
+        closedItem('ap-009e-s2-i1','ap-009e-s2',0,'Sterile field protection protocol published',['user-009','user-013'],'2024-04-01','2024-03-30','user-009','2024-02-01'),
+        inProgressItem('ap-009e-s2-i2','ap-009e-s2',1,'Monthly safety audit compliance tracked',['user-009','user-013'],'2026-04-06','user-009','2024-02-01'),
+      ]},
+    ], createdBy:'user-009', createdAt:d('2024-02-01'), updatedAt:d('2026-04-03') },
 ];

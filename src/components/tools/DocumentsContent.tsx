@@ -7,15 +7,19 @@ import {
   Select,
   SplitViewCard,
   Tabs,
+  ToggleButton,
 } from "@procore/core-react";
 import {
   FileList as DocumentsIcon,
+  Filter,
   Plus,
+  Sliders,
 } from "@procore/core-icons";
 import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { documents } from "@/data/seed/documents";
 import { projects } from "@/data/seed/projects";
 import type { Document, DocumentStatus } from "@/types/documents";
@@ -65,6 +69,13 @@ const ToolbarLeft = styled.div`
   flex: 1;
 `;
 
+const ToolbarRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 const GridArea = styled.div`
   display: flex;
   height: 640px;
@@ -82,6 +93,17 @@ function DocStatusPillRenderer(params: ICellRendererParams) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+interface GroupByOption {
+  id: "type" | "format" | "status";
+  label: string;
+}
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { id: "type", label: "Type" },
+  { id: "format", label: "Format" },
+  { id: "status", label: "Status" },
+];
+
 type TabKey = "all" | "drawings" | "submittals";
 
 interface DocumentsContentProps {
@@ -94,6 +116,9 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const gridApiRef = useRef<GridApi<Document> | null>(null);
 
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
@@ -224,6 +249,51 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
     gridApiRef.current?.setGridOption("quickFilterText", "");
   }, []);
 
+  const handleFiltersToggle = useCallback(() => {
+    setFiltersOpen((prev) => { if (!prev) setConfigOpen(false); return !prev; });
+  }, []);
+
+  const handleFilterClear = useCallback(async () => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    await api.setFilterModel(null);
+    api.onFilterChanged();
+  }, []);
+
+  const handleConfigToggle = useCallback(() => {
+    setConfigOpen((prev) => { if (!prev) setFiltersOpen(false); return !prev; });
+  }, []);
+
+  const handleGroupBySelect = useCallback(
+    (selection: { item: unknown }) => {
+      const opt = selection.item as GroupByOption;
+      const prevId = groupBy?.id;
+      setGroupBy(opt);
+      const api = gridApiRef.current;
+      if (!api) return;
+      const state = api.getColumnState().map((col) => {
+        if (col.colId === opt.id) return { ...col, rowGroup: true, hide: true };
+        if (prevId && col.colId === prevId) return { ...col, rowGroup: false, hide: false };
+        return { ...col, rowGroup: false };
+      });
+      api.applyColumnState({ state });
+    },
+    [groupBy]
+  );
+
+  const handleGroupByClear = useCallback(() => {
+    const prevId = groupBy?.id;
+    setGroupBy(null);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBy]);
+
 
   const actions = (
     <>
@@ -269,6 +339,14 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                     onClear={handleSearchClear}
                   />
                 </div>
+                <ToggleButton
+                  selected={filtersOpen}
+                  className="b_toggle"
+                  icon={<Filter />}
+                  onClick={handleFiltersToggle}
+                >
+                  Filters
+                </ToggleButton>
                 {isPortfolio && (
                   <div style={{ width: 260 }}>
                     <Select
@@ -292,9 +370,43 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                   </div>
                 )}
               </ToolbarLeft>
+              <ToolbarRight>
+                <div style={{ width: 200 }}>
+                  <Select
+                    placeholder="Group by"
+                    label={groupBy ? `Group by: ${groupBy.label}` : undefined}
+                    onSelect={handleGroupBySelect}
+                    onClear={groupBy ? handleGroupByClear : undefined}
+                    block
+                  >
+                    {GROUP_BY_OPTIONS.map((opt) => (
+                      <Select.Option
+                        key={opt.id}
+                        value={opt}
+                        selected={groupBy?.id === opt.id}
+                      >
+                        {opt.label}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <ToggleButton
+                  selected={configOpen}
+                  className="b_toggle"
+                  icon={<Sliders />}
+                  onClick={handleConfigToggle}
+                >
+                  Configure
+                </ToggleButton>
+              </ToolbarRight>
             </ToolbarRow>
 
             <GridArea>
+              {filtersOpen && (
+                <div style={{ width: 240, borderRight: "1px solid var(--color-border-default)", padding: "16px 12px", background: "var(--color-surface-secondary)", flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Filters</span>
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <SmartGridWrapper<Document>
                   id="documents-grid"
@@ -303,6 +415,8 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                   rowData={rowData}
                   columnDefs={columnDefs}
                   getRowId={getRowId}
+                  groupDisplayType="groupRows"
+                  autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
                   onGridReady={(event) => {
                     gridApiRef.current = event.api;
@@ -315,6 +429,11 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
                   }}
                 />
               </div>
+              <ConfigureColumnsPanel
+                open={configOpen}
+                gridApi={gridApiRef.current}
+                onClose={() => setConfigOpen(false)}
+              />
             </GridArea>
           </SplitViewCard.Section>
         </SplitViewCard.Main>

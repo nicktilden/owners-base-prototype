@@ -18,6 +18,7 @@ import type { ActionPlan } from '@/types/action_plans';
 import type { Hub } from '@/types/hubs';
 import type { Rfi } from '@/types/rfis';
 import type { SpecificationDivision } from '@/types/specifications';
+import type { RiskTag, ManualRiskItem, ConnectedProjectHealth, HealthSnapshot } from '@/types/health';
 
 export interface SeedData {
   account: Account | null;
@@ -33,6 +34,10 @@ export interface SeedData {
   actionPlans: ActionPlan[];
   rfis: Rfi[];
   specifications: SpecificationDivision[];
+  riskTags: RiskTag[];
+  manualRiskItems: ManualRiskItem[];
+  connectedProjects: ConnectedProjectHealth[];
+  healthSnapshotsByProject: Record<string, HealthSnapshot[]>;
 }
 
 const defaultSeedData: SeedData = {
@@ -49,6 +54,10 @@ const defaultSeedData: SeedData = {
   actionPlans: [],
   rfis: [],
   specifications: [],
+  riskTags: [],
+  manualRiskItems: [],
+  connectedProjects: [],
+  healthSnapshotsByProject: {},
 };
 
 interface DataContextValue {

@@ -6,6 +6,7 @@
 
 import { PROJECT_CONNECTIONS } from "@/data/procoreConnect";
 import type { ProjectConnection } from "@/data/procoreConnect";
+import { PROJECT_ROW_COORDS } from "@/data/projectCoordinates";
 
 /**
  * Project stages in sequential order (1–11). Order is significant for workflow and approval gates;
@@ -63,6 +64,9 @@ export interface ProjectRow {
   priority: ProjectPriority;
   /** Procore Connect — populated when this project is linked to an upstream GC project. */
   procoreConnect?: ProjectConnection;
+  /** Geographic coordinates for map view. */
+  latitude?: number;
+  longitude?: number;
 }
 
 /**
@@ -155,9 +159,11 @@ export function getCurrentMilestoneLabelForProject(project: ProjectRow): string 
 export interface ProjectMilestone {
   name: ProjectMilestoneName;
   baselineDate: string;
-  /** Recorded actual date — null for milestones not yet reached. */
+  /** Recorded actual date — null for most milestones; only set for a subset (~1 in 3) of completed milestones. */
   actualDate: string | null;
   varianceDays: number;
+  /** Optional note — only present when actualDate is set and varianceDays !== 0. */
+  note?: string;
 }
 
 /** Add days to an ISO date string, return YYYY-MM-DD. */
@@ -213,11 +219,36 @@ function varianceDaysForMilestone(
   return projectVarianceDays + jitter;
 }
 
+/** Note phrases for milestones that ran late (positive variance). */
+const LATE_NOTES = [
+  "Delayed due to permit review",
+  "Site access issues caused delay",
+  "Material delivery postponed",
+  "Subcontractor schedule conflict",
+  "Design revisions required additional time",
+  "Weather-related delay",
+  "Regulatory approval pending longer than anticipated",
+  "Coordination with utility provider delayed start",
+] as const;
+
+/** Note phrases for milestones completed early (negative variance). */
+const EARLY_NOTES = [
+  "Completed ahead of schedule",
+  "Accelerated by additional crew deployment",
+  "Prefabrication reduced on-site time",
+  "Favorable weather conditions",
+  "Early approval from authority",
+  "Streamlined coordination with subcontractors",
+] as const;
+
 /**
  * Build milestone list for a project. Baseline dates are spread between startDate and endDate;
  * the project's primary variance applies to the current-stage block (with small jitter). Earlier
  * milestones use varied completed performance (on time / ahead / some late); later milestones use
  * light forecast variance.
+ *
+ * actualDate is sparse: only ~1 in 3 completed milestones receive an actual date, making variance
+ * data meaningful rather than ubiquitous.
  */
 export function getProjectMilestones(
   project: ProjectRow,
@@ -238,8 +269,17 @@ export function getProjectMilestones(
       return { name, baselineDate, actualDate: null, varianceDays: 0 };
     }
     const varianceDays = varianceDaysForMilestone(project, name, milestoneStage, stageOrder, projectVarianceDays);
-    const actualDate = addDaysToDate(baselineDate, varianceDays);
-    return { name, baselineDate, actualDate, varianceDays };
+    const h = milestoneVarianceHash(project.id, name);
+    // Only ~1 in 3 completed milestones get an actual date recorded
+    const hasActual = (h % 3) === 0;
+    const actualDate = hasActual ? addDaysToDate(baselineDate, varianceDays) : null;
+    let note: string | undefined;
+    if (hasActual && varianceDays > 0) {
+      note = LATE_NOTES[h % LATE_NOTES.length];
+    } else if (hasActual && varianceDays < 0) {
+      note = EARLY_NOTES[h % EARLY_NOTES.length];
+    }
+    return { name, baselineDate, actualDate, varianceDays, ...(note ? { note } : {}) };
   });
 
   if (followingMilestoneOverageDays > 0) {
@@ -443,6 +483,7 @@ export const sampleProjectRows: ProjectRow[] = SAMPLE_PROJECT_ROWS_BASE.map((row
   projectManager: PROJECT_MANAGERS[i],
   ...parseLocationCityState(row.location),
   procoreConnect: _connectionsById.get(row.id),
+  ...(PROJECT_ROW_COORDS[row.id] ?? {}),
 }));
 
 /** Currency columns that use dual-slider range filters on the Projects grid. */
@@ -654,6 +695,13 @@ export const projectDatesVarianceRows: ProjectDatesVarianceRow[] = topScheduleRi
 /** Variance axis bounds for Project Dates Variance card (days). Wider than sample extrema so markers aren't clamped at the rails. */
 export const VARIANCE_AXIS_MIN = -24;
 export const VARIANCE_AXIS_MAX = 32;
+
+/** Days remaining until a project's endDate (from today). Returns 0 if already past. */
+export function getDaysRemaining(endDate: string): number {
+  const end = new Date(endDate).getTime();
+  const now = Date.now();
+  return Math.max(0, Math.round((end - now) / (1000 * 60 * 60 * 24)));
+}
 
 /** Contact details for a project manager shown in tearsheet/detail views. */
 export interface ProjectManagerContact {

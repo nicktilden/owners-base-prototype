@@ -265,7 +265,7 @@ export default function AssetsContent({ projectId }: AssetsContentProps) {
 
   const breadcrumbs = [
     { label: "Portfolio", href: "/portfolio" },
-    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}` }] : []),
+    ...(projectId ? [{ label: projectLabel, href: `/project/${projectId}/overview` }] : []),
   ];
 
   const actions = (

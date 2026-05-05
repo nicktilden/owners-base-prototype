@@ -10,32 +10,40 @@ import { useHubFilters } from "@/context/HubFilterContext";
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px 24px;
+  gap: 12px;
   width: 100%;
-  height: 90%;
-  margin: 24px 0 0 0;
+`;
+
+const KpiTile = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-separator);
+  border-radius: 8px;
+  background: var(--color-surface-card);
 `;
 
 const KpiLabel = styled.div`
   font-size: 14px;
+  font-weight: 400;
   color: var(--color-text-primary);
   line-height: 20px;
   letter-spacing: 0.15px;
 `;
 
-const KpiValueRow = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 2px;
-`;
-
 const KpiValue = styled.div`
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 500;
   color: var(--color-text-primary);
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: 0.15px;
+`;
+
+const KpiTrendRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const InvoiceList = styled.div`
@@ -198,13 +206,16 @@ export function FinancialScorecardCard() {
     >
       <KpiGrid>
         {financialKpis.map((kpi) => (
-          <div key={kpi.label}>
+          <KpiTile key={kpi.label}>
             <KpiLabel>{kpi.label}</KpiLabel>
-            <KpiValueRow>
-              <KpiValue>{kpi.value}</KpiValue>
+            <KpiValue>{kpi.value}</KpiValue>
+            <KpiTrendRow>
               <KPIPill tone={kpi.tone} trendValue={kpi.trendValue} value={kpi.delta} />
-            </KpiValueRow>
-          </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                vs Prior Month
+              </span>
+            </KpiTrendRow>
+          </KpiTile>
         ))}
       </KpiGrid>
     </HubCardFrame>

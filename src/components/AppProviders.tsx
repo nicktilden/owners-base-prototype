@@ -12,9 +12,16 @@ import { LevelProvider } from '@/context/LevelContext';
 import { DataProvider, useData } from '@/context/DataContext';
 import { AiPanelProvider } from '@/context/AiPanelContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
+import { HubLoadingProvider } from '@/context/HubLoadingContext';
+import { HeaderActionsProvider } from '@/context/HeaderActionsContext';
+import { RiskTagsProvider } from '@/context/RiskTagsContext';
+import { ManualRiskItemsProvider } from '@/context/ManualRiskItemsContext';
+import { ConnectDataProvider } from '@/context/ConnectDataContext';
+import { HealthConfigProvider } from '@/context/HealthConfigContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
+const DevResetButton = dynamic(() => import('@/components/DevResetButton'), { ssr: false });
 
 const TearsheetAnimationOverride = createGlobalStyle`
   /* Tearsheet panel: use CSS transitions instead of keyframe animations */
@@ -55,6 +62,10 @@ import { assets } from '@/data/seed/assets';
 import { actionPlans } from '@/data/seed/action_plans';
 import { rfis } from '@/data/seed/rfis';
 import { specifications } from '@/data/seed/specifications';
+import { riskTags } from '@/data/seed/riskTags';
+import { manualRiskItems } from '@/data/seed/manualRiskItems';
+import { connectedProjects } from '@/data/seed/connectedProjects';
+import { healthSnapshotsByProject } from '@/data/seed/healthSnapshots';
 
 function SeedLoader({ children }: { children: React.ReactNode }) {
   const { setData } = useData();
@@ -75,6 +86,10 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
       actionPlans,
       rfis,
       specifications,
+      riskTags,
+      manualRiskItems,
+      connectedProjects,
+      healthSnapshotsByProject,
     });
     setUsers(users);
     setActiveUser(activeUser);
@@ -90,13 +105,26 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         <PersonaProvider>
           <LevelProvider>
             <ConnectionProvider>
+              <HealthConfigProvider>
+              <RiskTagsProvider>
+              <ManualRiskItemsProvider>
+              <ConnectDataProvider>
               <AiPanelProvider>
-                <TearsheetAnimationOverride />
-                <SeedLoader>
-                  {children}
-                  <AiChatPanel />
-                </SeedLoader>
+                <HeaderActionsProvider>
+                <HubLoadingProvider>
+                  <TearsheetAnimationOverride />
+                  <SeedLoader>
+                    {children}
+                    <AiChatPanel />
+                    <DevResetButton />
+                  </SeedLoader>
+                </HubLoadingProvider>
+                </HeaderActionsProvider>
               </AiPanelProvider>
+              </ConnectDataProvider>
+              </ManualRiskItemsProvider>
+              </RiskTagsProvider>
+              </HealthConfigProvider>
             </ConnectionProvider>
           </LevelProvider>
         </PersonaProvider>

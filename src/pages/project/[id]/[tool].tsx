@@ -10,7 +10,6 @@ const TasksContent      = dynamic(() => import('@/components/tools/TasksContent'
 const DocumentsContent  = dynamic(() => import('@/components/tools/DocumentsContent'),     { ssr: false });
 const ScheduleContent   = dynamic(() => import('@/components/tools/ScheduleContent'),      { ssr: false });
 const BudgetContent     = dynamic(() => import('@/components/tools/BudgetContent'),        { ssr: false });
-const ActionPlansContent    = dynamic(() => import('@/components/tools/ActionPlansContent'),    { ssr: false });
 const RFIsContent           = dynamic(() => import('@/components/tools/RFIsContent'),          { ssr: false });
 const SubmittalsContent     = dynamic(() => import('@/components/tools/SubmittalsContent'),    { ssr: false });
 const PunchListContent      = dynamic(() => import('@/components/tools/PunchListContent'),     { ssr: false });
@@ -23,6 +22,7 @@ const CorrespondenceContent = dynamic(() => import('@/components/tools/Correspon
 const CommitmentsContent    = dynamic(() => import('@/components/tools/CommitmentsContent'),   { ssr: false });
 const SpecificationsContent = dynamic(() => import('@/components/tools/SpecificationsContent'), { ssr: false });
 const BiddingContent        = dynamic(() => import('@/components/tools/BiddingContent'),       { ssr: false });
+const HealthContent         = dynamic(() => import('@/components/tools/HealthContent'),        { ssr: false });
 
 const GlobalHeader = dynamic(() => import('@/components/nav/GlobalHeader'), { ssr: false });
 const AppLayout    = dynamic(() => import('@/components/nav/AppLayout'),    { ssr: false });
@@ -30,8 +30,13 @@ const AppLayout    = dynamic(() => import('@/components/nav/AppLayout'),    { ss
 export default function ProjectToolPage() {
   const router = useRouter();
   const { id, tool } = router.query;
-  const projectId = typeof id   === 'string' ? id   : '';
+  const rawId = typeof id === 'string' ? id : '';
   const toolKey   = typeof tool === 'string' ? tool.replace(/-/g, '_') : '';
+
+  // If the URL uses a numeric id (e.g. /project/4/rfis from the portfolio table),
+  // resolve it to the corresponding seed project id (e.g. "proj-004").
+  const numeric = rawId !== '' && /^\d+$/.test(rawId) ? parseInt(rawId, 10) : null;
+  const projectId = numeric !== null ? `proj-${String(numeric).padStart(3, '0')}` : rawId;
 
   const { setProject } = useLevel();
   useEffect(() => {
@@ -41,6 +46,15 @@ export default function ProjectToolPage() {
   const toolName = TOOL_DISPLAY_NAMES[toolKey as keyof typeof TOOL_DISPLAY_NAMES] ?? tool;
 
   // ── Tool-specific pages ──────────────────────────────────────────────────
+  if (toolKey === 'health' && projectId) {
+    return (
+      <>
+        <Head><title>Risk Register — Owner Prototype</title></Head>
+        <HealthContent scope="project" projectId={projectId} />
+      </>
+    );
+  }
+
   if (toolKey === 'assets' && projectId) {
     return (
       <>
@@ -82,15 +96,6 @@ export default function ProjectToolPage() {
       <>
         <Head><title>Budget — Owner Prototype</title></Head>
         <BudgetContent projectId={projectId} />
-      </>
-    );
-  }
-
-  if (toolKey === 'action_plans' && projectId) {
-    return (
-      <>
-        <Head><title>Action Plans — Owner Prototype</title></Head>
-        <ActionPlansContent projectId={projectId} />
       </>
     );
   }

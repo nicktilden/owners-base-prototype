@@ -13,7 +13,7 @@ export default function ProjectNameCellRenderer(params: ICellRendererParams<Proj
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, height: "100%", overflow: "hidden" }}>
       <a
-        href={`/project/${params.data.id}`}
+        href={`/project/${params.data.id}/overview`}
         style={{
           overflow: "hidden",
           textOverflow: "ellipsis",

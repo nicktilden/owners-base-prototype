@@ -11,7 +11,7 @@ const Card = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 200px;
-  max-height: 420px;
+  max-height: 440px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -49,6 +49,73 @@ const Content = styled.div`
   overflow-y: auto;
   padding: 8px 16px 16px;
 `;
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+const EmptyStateWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  padding: 24px 16px;
+  text-align: center;
+`;
+
+const EmptyStateTitle = styled.h3`
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  max-width: 400px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const EmptyStateBody = styled.p`
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  max-width: 400px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const EmptyStateActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+interface HubCardEmptyStateProps {
+  title?: string;
+  body?: string;
+  actions?: React.ReactNode;
+}
+
+export function HubCardEmptyState({
+  title = "No Data to Display Right Now",
+  body = "There is nothing to show here yet. Data will appear once activity has been recorded for this project.",
+  actions,
+}: HubCardEmptyStateProps) {
+  return (
+    <EmptyStateWrap>
+      <EmptyStateTitle>{title}</EmptyStateTitle>
+      <EmptyStateBody>{body}</EmptyStateBody>
+      {actions ? <EmptyStateActions>{actions}</EmptyStateActions> : null}
+    </EmptyStateWrap>
+  );
+}
+
+// ─── Frame ────────────────────────────────────────────────────────────────────
 
 interface HubCardFrameProps {
   title: React.ReactNode;

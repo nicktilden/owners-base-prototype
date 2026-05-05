@@ -11,10 +11,11 @@ import type { ToolKey } from '@/types/tools';
 import type { UserRole } from '@/types/user';
 import { THEME_APPEARANCE_PRESETS, type ThemePresetId } from '@/constants/themeDisplay';
 
-const ProfileTearsheetWidth = createGlobalStyle`
-  /* Scope to this tearsheet only — unscoped rules steal width from every Tearsheet (e.g. HLBI). */
+// ─── Width override ────────────────────────────────────────────────────────────
+// /* Scope to this tearsheet only — unscoped rules steal width from every Tearsheet (e.g. HLBI). */
+const ProfileTearsheetWidth = createGlobalStyle` 
   [class*="StyledTearsheetBody"]:has(> .profile-settings-tearsheet-root) {
-    flex: 0 0 50vw !important;
+    flex: 0 0 60vw !important;
   }
 `;
 

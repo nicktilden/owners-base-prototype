@@ -3,9 +3,9 @@ import {
   DetailPage,
   Search,
   Select,
-  SegmentedController,
   ToggleButton,
 } from "@procore/core-react";
+import SegmentedControl from "@/components/SegmentedControl";
 import { Filter, Location, Sliders, ViewRows } from "@procore/core-icons";
 import type { GridApi } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
@@ -228,22 +228,20 @@ export default function CostManagementTableCard() {
                 ))}
               </Select>
             </div>
-            <SegmentedController className="b_radiogroup">
-              <SegmentedController.Segment
+            {/* <SegmentedControl>
+              <SegmentedControl.Segment
                 selected={viewMode === "rows"}
                 onClick={() => setViewMode("rows")}
+                icon={<ViewRows />}
                 tooltip="List view"
-              >
-                <ViewRows />
-              </SegmentedController.Segment>
-              <SegmentedController.Segment
+              />
+              <SegmentedControl.Segment
                 selected={viewMode === "map"}
                 onClick={() => setViewMode("map")}
+                icon={<Location />}
                 tooltip="Map view"
-              >
-                <Location />
-              </SegmentedController.Segment>
-            </SegmentedController>
+              />
+            </SegmentedControl> */}
             <ToggleButton
               selected={configOpen}
               icon={<Sliders />}
