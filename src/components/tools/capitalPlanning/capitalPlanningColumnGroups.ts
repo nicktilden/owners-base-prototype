@@ -71,7 +71,13 @@ export const DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY: CapitalPlanningColumnVi
   forecast: true,
 };
 
-export type CapitalPlanningProgramPageVariant = "default" | "next" | "future";
+export type CapitalPlanningProgramPageVariant =
+  | "default"
+  | "mvp"
+  | "next"
+  | "target_budget"
+  | "target_budget_2_0"
+  | "future";
 
 /**
  * Main Capital Plan program table: Now/Next show Priority; Future shows Prioritization Score
@@ -80,6 +86,14 @@ export type CapitalPlanningProgramPageVariant = "default" | "next" | "future";
 export function capitalPlanningProgramTableDefaultVisibility(
   pageVariant: CapitalPlanningProgramPageVariant
 ): CapitalPlanningColumnVisibility {
+  if (pageVariant === "mvp") {
+    return {
+      ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY,
+      projectPriority: true,
+      prioritizationScore: false,
+      originalBudget: false,
+    };
+  }
   if (pageVariant === "future") {
     return { ...DEFAULT_CAPITAL_PLANNING_COLUMN_VISIBILITY };
   }

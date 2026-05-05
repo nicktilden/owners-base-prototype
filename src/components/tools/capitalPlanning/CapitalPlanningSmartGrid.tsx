@@ -12,6 +12,7 @@ import {
 } from "@floating-ui/react";
 import {
   Button,
+  colors,
   DropdownFlyout,
   OverlayTrigger,
   Pill,
@@ -31,6 +32,11 @@ import {
   CaretsInVertical,
   CaretsOut,
   CaretsOutVertical,
+  Circle,
+  CirclesOpacity,
+  CircleStroked,
+  SquareStackDashed,
+  Warning,
 } from "@procore/core-icons";
 import {
   baselineCellClasses,
@@ -38,6 +44,7 @@ import {
   countVisibleBaselineDataColumns,
   isBaselineColumnVisible,
   type CapitalPlanningColumnVisibility,
+  type CapitalPlanningProgramPageVariant,
 } from "./capitalPlanningColumnGroups";
 import type {
   CapitalPlanningSampleRow,
@@ -71,7 +78,10 @@ import { ForecastManualCurveModal } from "./ForecastManualCurveModal";
 import {
   capitalPlanningGroupByCollapseNoun,
   capitalPlanningGroupByEmptyToolbarLabel,
-  effectiveCapitalPlanningGroupBy,
+  flattenDynamicHierarchyForTable,
+  flattenLocationHierarchyForTable,
+  groupProjectRowsByRegionCampusBuilding,
+  groupProjectRowsBySingleDimension,
   groupProjectRowsForCapitalPlanning,
   type CapitalPlanningGroupBy,
 } from "./capitalPlanningRowGrouping";
@@ -80,6 +90,14 @@ import {
   computePrioritizationScorePercent,
   formatPrioritizationScorePercent,
 } from "./capitalPlanningPrioritizationScore";
+import {
+  changeHistoryChangedField,
+  curveValueForChangeHistory,
+  formatChangeHistoryPlannedAmountValue,
+  isoDateToChangeHistoryField,
+  labelForPlannedAmountSourceHistory,
+  type CapitalPlanningChangeLogPayload,
+} from "./capitalPlanningChangeHistory";
 
 /** Criteria Builder columns: fixed width so every criterion column matches. */
 const CRITERIA_COLUMN_WIDTH_PX = 200;
@@ -284,6 +302,7 @@ import {
   CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS,
   CAPITAL_PLANNING_PROGRAM_FORECAST_QUARTERS,
   CAPITAL_PLANNING_PROGRAM_FY_COUNT,
+  fiscalQuarterMonthGlobalIndices,
   getDefaultForecastFqCollapsed,
   getDefaultFyYearSectionExpanded,
   getForecastAllocationBasisDollars,
@@ -308,8 +327,21 @@ import {
   isProgramForecastFq1PeriodEnded,
   programFiscalYearForGlobalMonthIndex,
   programForecastFyLabel,
+  sumProgramForecastQuarterMonthAmounts,
   type CapitalPlanningGanttBarTimeline,
 } from "./capitalPlanningForecast";
+import { DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH } from "@/utils/capitalPlanningFiscalSettings";
+import {
+  buildProgramQuarterLeafSlots,
+  programQuarterSlotsColspanForFq,
+  programQuarterSlotsColspanForFy,
+  type ProgramQuarterLeafSlot,
+} from "./capitalPlanningProgramQuarterLeafSlots";
+import {
+  enumerateTargetBudgetForecastColumns,
+  readTargetBudgetOverrideForCell,
+  targetBudgetCollapseKeysForAggregateRow,
+} from "./targetBudgetForecastColumnMeta";
 
 /** Leaf columns for one program FY given per-FQ rollup state (global `fqCollapsed` indices `fyIndex*4 + q`). */
 function quarterLeafColumnsForFy(fyIndex: number, fqCollapsed: readonly boolean[]): number {
@@ -332,14 +364,8 @@ function allFqCollapsedForFy(fyIndex: number, fqCollapsed: readonly boolean[]): 
   );
 }
 
-function sumQuarterMonthAmounts(monthAmounts: readonly number[], globalFqIndex: number): number {
-  const baseMonth = globalFqIndex * 3;
-  let sum = 0;
-  for (let k = 0; k < 3; k++) {
-    sum += monthAmounts[baseMonth + k] ?? 0;
-  }
-  return sum;
-}
+/** Stable empty map — when `readOnly`, forecast override state must not affect displayed dollars or totals. */
+const NO_FORECAST_OVERRIDES: Record<string, number> = {};
 
 function forecastOverrideStorageKey(
   rowId: string,
@@ -380,7 +406,7 @@ function resolvedForecastCellDollars(
 }
 
 /** Same aggregation as the footer row, for an arbitrary subset of project rows (e.g. one region group). */
-function computeCapitalPlanningGridTotals(
+export function computeCapitalPlanningGridTotals(
   rows: readonly CapitalPlanningSampleRow[],
   args: {
     showForecast: boolean;
@@ -396,11 +422,17 @@ function computeCapitalPlanningGridTotals(
     ganttProgramMonthGrid: boolean;
     /** Gantt + quarter: 24 program quarter rollup columns. */
     ganttProgramQuarterBands: boolean;
+    /** 0 = January … 11 = December — first month of FQ1 per program FY block (Capital Planning Settings). */
+    fiscalYearStartMonth: number;
     fyYearSectionExpanded: readonly boolean[];
     fqCollapsed: readonly boolean[];
     forecastLeafLabels: readonly string[];
     /** Prioritization / optional column: per-row override; falls back to {@link CapitalPlanningSampleRow.plannedAmount}. */
     estimatedBudgetByRowId?: Record<string, number>;
+    /** When set, quarter expanded grid walks these slots (including comparison sub-columns). */
+    programQuarterLeafSlots?: readonly ProgramQuarterLeafSlot[];
+    /** Comparison snapshot planned-amount multiplier vs grid values (prototype). */
+    forecastComparisonPlannedMultiplier?: number;
   }
 ): {
   planned: number;
@@ -441,7 +473,8 @@ function computeCapitalPlanningGridTotals(
         args.forecastLeafLabels.length,
         args.ganttFlatForecast,
         args.ganttProgramMonthGrid,
-        args.ganttProgramQuarterBands
+        args.ganttProgramQuarterBands,
+        args.fiscalYearStartMonth
       )
     );
 
@@ -453,24 +486,23 @@ function computeCapitalPlanningGridTotals(
       row,
       args.forecastOverrides,
       forecastBasisKey,
-      args.anchorDate
+      args.anchorDate,
+      args.fiscalYearStartMonth
     );
 
     let ci = 0;
 
     if (args.ganttProgramMonthGrid) {
       for (let fyIndex = 0; fyIndex < CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.length; fyIndex++) {
-        const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[fyIndex];
         for (let fqInFy = 0; fqInFy < 4; fqInFy++) {
-          const fqIndex = fyIndex * 4 + fqInFy;
-          const fq1ReadOnly = fqInFy === 0 && isProgramForecastFq1PeriodEnded(fyYear, args.anchorDate);
+          const fqMonthIdx = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, args.fiscalYearStartMonth);
           for (let k = 0; k < 3; k++) {
-            const monthIdx = fqIndex * 3 + k;
+            const monthIdx = fqMonthIdx[k]!;
             const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
             const monthFq1ReadOnly =
-              isGlobalMonthIndexInFq1(monthIdx) &&
+              isGlobalMonthIndexInFq1(monthIdx, args.fiscalYearStartMonth) &&
               fyForMonth !== undefined &&
-              isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate);
+              isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
             const comp = effectiveMonthAmounts[monthIdx] ?? 0;
             forecastSums[ci] += resolvedForecastCellDollars(
               monthFq1ReadOnly,
@@ -491,8 +523,14 @@ function computeCapitalPlanningGridTotals(
       for (let fqIndex = 0; fqIndex < CAPITAL_PLANNING_PROGRAM_FORECAST_QUARTERS; fqIndex++) {
         const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(fqIndex / 4)];
         const fq1ReadOnly =
-          fyYear !== undefined && fqIndex % 4 === 0 && isProgramForecastFq1PeriodEnded(fyYear, args.anchorDate);
-        const comp = sumQuarterMonthAmounts(effectiveMonthAmounts, fqIndex);
+          fyYear !== undefined &&
+          fqIndex % 4 === 0 &&
+          isProgramForecastFq1PeriodEnded(fyYear, args.anchorDate, args.fiscalYearStartMonth);
+        const comp = sumProgramForecastQuarterMonthAmounts(
+          effectiveMonthAmounts,
+          fqIndex,
+          args.fiscalYearStartMonth
+        );
         forecastSums[ci] += resolvedForecastCellDollars(
           fq1ReadOnly,
           row.id,
@@ -551,45 +589,54 @@ function computeCapitalPlanningGridTotals(
     }
 
     if (args.forecastGranularity === "quarter") {
-      for (let fyIndex = 0; fyIndex < CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.length; fyIndex++) {
-        const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[fyIndex];
-        if (!args.fyYearSectionExpanded[fyIndex]) {
-          const comp = effectiveMonthAmounts
-            .slice(fyIndex * 12, fyIndex * 12 + 12)
-            .reduce((a, b) => a + b, 0);
-          forecastSums[ci] += resolvedForecastCellDollars(
-            false,
-            row.id,
-            ["q", "y", fyIndex],
-            forecastBasisKey,
-            comp,
-            args.forecastOverrides
-          );
-          ci++;
-          continue;
-        }
-        for (let fqInFy = 0; fqInFy < 4; fqInFy++) {
-          const fqIndex = fyIndex * 4 + fqInFy;
-          const fq1ReadOnly = fqInFy === 0 && isProgramForecastFq1PeriodEnded(fyYear, args.anchorDate);
-          if (args.fqCollapsed[fqIndex]) {
-            const comp = sumQuarterMonthAmounts(effectiveMonthAmounts, fqIndex);
-            forecastSums[ci] += resolvedForecastCellDollars(
-              fq1ReadOnly,
-              row.id,
-              ["q", "r", fqIndex],
-              forecastBasisKey,
-              comp,
-              args.forecastOverrides
-            );
-            ci++;
-          } else {
-            for (let k = 0; k < 3; k++) {
-              const monthIdx = fqIndex * 3 + k;
+      const slots = args.programQuarterLeafSlots;
+      if (slots && slots.length > 0) {
+        const mult = args.forecastComparisonPlannedMultiplier ?? 1;
+        for (const slot of slots) {
+          switch (slot.kind) {
+            case "fy_year": {
+              const comp = effectiveMonthAmounts
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              forecastSums[ci] += resolvedForecastCellDollars(
+                false,
+                row.id,
+                ["q", "y", slot.fyIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fq_rollup": {
+              const fyYearForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+              const fq1ReadOnly =
+                slot.fqIndex % 4 === 0 &&
+                fyYearForFq !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyYearForFq, args.anchorDate, args.fiscalYearStartMonth);
+              const comp = sumProgramForecastQuarterMonthAmounts(
+                effectiveMonthAmounts,
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              forecastSums[ci] += resolvedForecastCellDollars(
+                fq1ReadOnly,
+                row.id,
+                ["q", "r", slot.fqIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "month_single":
+            case "cmp_current": {
+              const monthIdx = slot.monthIdx;
               const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
               const monthFq1ReadOnly =
-                isGlobalMonthIndexInFq1(monthIdx) &&
+                isGlobalMonthIndexInFq1(monthIdx, args.fiscalYearStartMonth) &&
                 fyForMonth !== undefined &&
-                isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate);
+                isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
               const comp = effectiveMonthAmounts[monthIdx] ?? 0;
               forecastSums[ci] += resolvedForecastCellDollars(
                 monthFq1ReadOnly,
@@ -599,7 +646,107 @@ function computeCapitalPlanningGridTotals(
                 comp,
                 args.forecastOverrides
               );
+              break;
+            }
+            case "cmp_snapshot": {
+              const monthIdx = slot.monthIdx;
+              const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
+              const monthFq1ReadOnly =
+                isGlobalMonthIndexInFq1(monthIdx, args.fiscalYearStartMonth) &&
+                fyForMonth !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
+              const base = effectiveMonthAmounts[monthIdx] ?? 0;
+              const comp = base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                monthFq1ReadOnly,
+                row.id,
+                ["q", "m", "cmp", monthIdx, "snap"],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "cmp_variance": {
+              const monthIdx = slot.monthIdx;
+              const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
+              const monthFq1ReadOnly =
+                isGlobalMonthIndexInFq1(monthIdx, args.fiscalYearStartMonth) &&
+                fyForMonth !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
+              const base = effectiveMonthAmounts[monthIdx] ?? 0;
+              const comp = base - base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                monthFq1ReadOnly,
+                row.id,
+                ["q", "m", "cmp", monthIdx, "var"],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+          }
+          ci++;
+        }
+      } else {
+        for (let fyIndex = 0; fyIndex < CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.length; fyIndex++) {
+          const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[fyIndex];
+          if (!args.fyYearSectionExpanded[fyIndex]) {
+            const comp = effectiveMonthAmounts
+              .slice(fyIndex * 12, fyIndex * 12 + 12)
+              .reduce((a, b) => a + b, 0);
+            forecastSums[ci] += resolvedForecastCellDollars(
+              false,
+              row.id,
+              ["q", "y", fyIndex],
+              forecastBasisKey,
+              comp,
+              args.forecastOverrides
+            );
+            ci++;
+            continue;
+          }
+          for (let fqInFy = 0; fqInFy < 4; fqInFy++) {
+            const fqIndex = fyIndex * 4 + fqInFy;
+            const fq1ReadOnly =
+              fqInFy === 0 &&
+              isProgramForecastFq1PeriodEnded(fyYear, args.anchorDate, args.fiscalYearStartMonth);
+            if (args.fqCollapsed[fqIndex]) {
+              const comp = sumProgramForecastQuarterMonthAmounts(
+                effectiveMonthAmounts,
+                fqIndex,
+                args.fiscalYearStartMonth
+              );
+              forecastSums[ci] += resolvedForecastCellDollars(
+                fq1ReadOnly,
+                row.id,
+                ["q", "r", fqIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
               ci++;
+            } else {
+              const fqMonthIdx = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, args.fiscalYearStartMonth);
+              for (let k = 0; k < 3; k++) {
+                const monthIdx = fqMonthIdx[k]!;
+                const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
+                const monthFq1ReadOnly =
+                  isGlobalMonthIndexInFq1(monthIdx, args.fiscalYearStartMonth) &&
+                  fyForMonth !== undefined &&
+                  isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
+                const comp = effectiveMonthAmounts[monthIdx] ?? 0;
+                forecastSums[ci] += resolvedForecastCellDollars(
+                  monthFq1ReadOnly,
+                  row.id,
+                  ["q", "m", monthIdx],
+                  forecastBasisKey,
+                  comp,
+                  args.forecastOverrides
+                );
+                ci++;
+              }
             }
           }
         }
@@ -644,6 +791,161 @@ const LUMP_SUM_USD_FORMAT = new Intl.NumberFormat("en-US", {
 
 function formatLumpSumUsdInput(n: number): string {
   return LUMP_SUM_USD_FORMAT.format(Number.isFinite(n) ? n : 0);
+}
+
+function formatUsdAccounting(value: number): string {
+  const safe = Number.isFinite(value) ? value : 0;
+  if (safe < 0) return `(${formatLumpSumUsdInput(Math.abs(safe))})`;
+  return formatLumpSumUsdInput(safe);
+}
+
+function parseCurrencyDraftToNumber(value: string): number {
+  const cleaned = value.replace(/,/g, "").replace(/[^0-9.]/g, "");
+  if (cleaned === "" || cleaned === ".") return 0;
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+}
+
+function toEditableCurrencyDraft(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return "";
+  const rounded = Math.round(value * 100) / 100;
+  return rounded % 1 === 0 ? String(Math.trunc(rounded)) : String(rounded);
+}
+
+function MvpBudgetInlineCurrency({
+  value,
+  onCommit,
+  ariaLabel,
+}: {
+  value: number;
+  onCommit: (next: number) => void;
+  ariaLabel: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState("");
+  const displayValue = focused ? draft : formatLumpSumUsdInput(value);
+  return (
+    <Table.InputCell
+      className="capital-planning-mvp-budget-inline-input"
+      size="block"
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      value={displayValue}
+      aria-label={ariaLabel}
+      onFocus={() => {
+        setFocused(true);
+        setDraft(toEditableCurrencyDraft(value));
+      }}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+        setDraft(e.currentTarget.value);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        onCommit(parseCurrencyDraftToNumber(draft));
+      }}
+    />
+  );
+}
+
+/** Hover content — matches {@link CapitalPlanningProjectGanttBar} popover padding & row spacing (globals.css). */
+function TargetBudgetExceededPopoverBody({
+  targetBudget,
+  forecastTotal,
+}: {
+  targetBudget: number;
+  forecastTotal: number;
+}) {
+  const t = Number.isFinite(targetBudget) ? targetBudget : 0;
+  const f = Number.isFinite(forecastTotal) ? forecastTotal : 0;
+  const varianceDollars = f - t;
+  const variancePct = t > 0 ? ((f - t) / t) * 100 : 0;
+  const pctDisplay = `${variancePct >= 0 ? "+" : ""}${variancePct.toFixed(1)}%`;
+
+  return (
+    <div className="capital-planning-target-budget-exceeded-popover-panel">
+      <div className="capital-planning-gantt-bar-popover-title">Target Budget Exceeded</div>
+      <p className="capital-planning-target-budget-exceeded-popover-intro">
+        Your forecasted cost is exceeding the target budget set for this timeframe.
+      </p>
+      <div className="capital-planning-gantt-bar-popover-rows">
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">Target Budget:</span>
+          <span className="capital-planning-gantt-bar-popover-value">{formatLumpSumUsdInput(t)}</span>
+        </div>
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">Forecasted Total:</span>
+          <span className="capital-planning-gantt-bar-popover-value">{formatLumpSumUsdInput(f)}</span>
+        </div>
+      </div>
+      <div className="capital-planning-target-budget-exceeded-popover-divider" aria-hidden />
+      <div className="capital-planning-gantt-bar-popover-rows">
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">Variance:</span>
+          <div className="capital-planning-target-budget-exceeded-popover-variance-values">
+            <span className="capital-planning-target-budget-exceeded-popover-variance-pct">{pctDisplay}</span>
+            <span className="capital-planning-target-budget-exceeded-popover-variance-usd">
+              {formatLumpSumUsdInput(varianceDollars)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Custom hover “popover” for target-budget warnings. Procore `Popover` + `Popover.Content` enforce a
+ * max width in some contexts, which clips this panel inside wide forecast table cells.
+ */
+function TargetBudgetExceededHoverPopover({
+  targetBudget,
+  forecastTotal,
+  children,
+}: {
+  targetBudget: number;
+  forecastTotal: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: "top",
+    middleware: [offset(10), flip(), shift({ padding: 12, limiter: limitShift() })],
+    whileElementsMounted: autoUpdate,
+  });
+  const hover = useHover(context, { move: false, delay: { open: 0, close: 120 } });
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+
+  return (
+    <>
+      <span
+        ref={refs.setReference}
+        {...getReferenceProps()}
+        role="img"
+        aria-label="Target budget exceeded. Hover for forecast vs target details."
+        style={{ display: "inline-flex", flexShrink: 0, lineHeight: 0, cursor: "default" }}
+      >
+        {children}
+      </span>
+      {open ? (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            className="capital-planning-target-budget-exceeded-popover-floating"
+            style={{
+              ...floatingStyles,
+              zIndex: 20000,
+            }}
+            {...getFloatingProps()}
+          >
+            <TargetBudgetExceededPopoverBody targetBudget={targetBudget} forecastTotal={forecastTotal} />
+          </div>
+        </FloatingPortal>
+      ) : null}
+    </>
+  );
 }
 
 /** Procore `Table.CurrencyCell` with `value={0}` renders empty — totals/subtotals must show `$0.00`. */
@@ -750,6 +1052,8 @@ function inclusiveDurationDaysLabel(startIso: string, endIso: string): string {
 /** Shown on the forecast timeline cell when both start and end are empty (Procore `Tooltip`, not the bar date popover). */
 const GANTT_EMPTY_SCHEDULE_TOOLTIP = "Click and drag to add start and end dates.";
 
+const GANTT_EMPTY_SCHEDULE_TOOLTIP_READONLY = "No start or end date scheduled.";
+
 type CapitalPlanningGanttBarDragSession =
   | {
       kind: "move";
@@ -789,6 +1093,7 @@ function CapitalPlanningProjectGanttBar({
   timeline,
   anchorDate,
   setRowDatesById,
+  readOnly = false,
 }: {
   rowId: string;
   /** Shown inside the bar and popover — same as the row project name. */
@@ -800,6 +1105,7 @@ function CapitalPlanningProjectGanttBar({
   setRowDatesById: React.Dispatch<
     React.SetStateAction<Record<string, { startDate: string; endDate: string }>>
   >;
+  readOnly?: boolean;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<CapitalPlanningGanttBarDragSession | null>(null);
@@ -859,7 +1165,10 @@ function CapitalPlanningProjectGanttBar({
 
   const hover = useHover(context, {
     enabled:
-      !bothDatesBlank && pointerSessionKind !== "move" && pointerSessionKind !== "createBar",
+      !readOnly &&
+      !bothDatesBlank &&
+      pointerSessionKind !== "move" &&
+      pointerSessionKind !== "createBar",
     move: false,
     delay: { close: 80 },
   });
@@ -941,6 +1250,7 @@ function CapitalPlanningProjectGanttBar({
 
   const onTrackCreatePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      if (readOnly) return;
       if (e.button !== 0) return;
       if (widthPct > 0) return;
       if (sTrim || eTrim) return;
@@ -964,7 +1274,7 @@ function CapitalPlanningProjectGanttBar({
       e.currentTarget.setPointerCapture(e.pointerId);
       e.preventDefault();
     },
-    [anchorDate, applyCreateBarDrag, eTrim, sTrim, timeline, widthPct]
+    [anchorDate, applyCreateBarDrag, eTrim, readOnly, sTrim, timeline, widthPct]
   );
 
   const onTrackCreatePointerMove = useCallback(
@@ -978,6 +1288,7 @@ function CapitalPlanningProjectGanttBar({
 
   const onSegmentPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      if (readOnly) return;
       if (e.button !== 0) return;
       const track = trackRef.current;
       if (!track) return;
@@ -990,7 +1301,7 @@ function CapitalPlanningProjectGanttBar({
       e.currentTarget.setPointerCapture(e.pointerId);
       e.preventDefault();
     },
-    [anchorDate, endIso, startIso, timeline]
+    [anchorDate, endIso, readOnly, startIso, timeline]
   );
 
   const onSegmentPointerMove = useCallback(
@@ -1004,6 +1315,7 @@ function CapitalPlanningProjectGanttBar({
 
   const onResizeEdgePointerDown = useCallback(
     (edge: "start" | "end", e: React.PointerEvent<HTMLDivElement>) => {
+      if (readOnly) return;
       if (e.button !== 0) return;
       e.stopPropagation();
       const track = trackRef.current;
@@ -1028,7 +1340,7 @@ function CapitalPlanningProjectGanttBar({
       e.currentTarget.setPointerCapture(e.pointerId);
       e.preventDefault();
     },
-    [anchorDate, endIso, startIso, timeline]
+    [anchorDate, endIso, readOnly, startIso, timeline]
   );
 
   const onResizePointerMove = useCallback(
@@ -1101,7 +1413,7 @@ function CapitalPlanningProjectGanttBar({
         .join(" ")}
       role="presentation"
       onPointerDown={(e) => {
-        if (bothDatesBlank && !showSegment) onTrackCreatePointerDown(e);
+        if (!readOnly && bothDatesBlank && !showSegment) onTrackCreatePointerDown(e);
       }}
       onPointerMove={onTrackCreatePointerMove}
       onPointerUp={(e) => {
@@ -1208,7 +1520,7 @@ function CapitalPlanningProjectGanttBar({
   );
 }
 
-function ForecastEditableNumberCell({
+export function ForecastEditableNumberCell({
   rowId,
   parts,
   forecastBasisKey,
@@ -1452,10 +1764,15 @@ function LumpSumPlannedAmountCurrencyInput({
   value,
   onChange,
   ariaLabel,
+  readOnly = false,
+  onCommittedChange,
 }: {
   value: number;
   onChange: (n: number) => void;
   ariaLabel: string;
+  readOnly?: boolean;
+  /** Fires on blur when the committed numeric value differs from the value at focus. */
+  onCommittedChange?: (previous: number, next: number) => void;
 }) {
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState("");
@@ -1468,9 +1785,12 @@ function LumpSumPlannedAmountCurrencyInput({
   const handleBlur = useCallback(() => {
     setFocused(false);
     const n = moneyStringToNumber(draft);
+    if (onCommittedChange && n !== value) {
+      onCommittedChange(value, n);
+    }
     onChange(n);
     setDraft("");
-  }, [draft, onChange]);
+  }, [draft, onChange, onCommittedChange, value]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1482,6 +1802,14 @@ function LumpSumPlannedAmountCurrencyInput({
   );
 
   const displayValue = focused ? draft : formatLumpSumUsdInput(value);
+
+  if (readOnly) {
+    const v = Number.isFinite(value) ? value : 0;
+    if (v === 0) {
+      return <Table.CurrencyCell aria-label={ariaLabel}>{formatLumpSumUsdInput(0)}</Table.CurrencyCell>;
+    }
+    return <Table.CurrencyCell value={v} aria-label={ariaLabel} />;
+  }
 
   return (
     <Table.InputCell
@@ -1504,6 +1832,7 @@ function ForecastFyGroupHeaderCell({
   colSpan,
   onToggle,
   readOnly = false,
+  showComparisonSnapshotButton = false,
 }: {
   expanded: boolean;
   fyLabel: string;
@@ -1511,6 +1840,8 @@ function ForecastFyGroupHeaderCell({
   onToggle: () => void;
   /** When true, omit expand/collapse control (e.g. Gantt month program layout). */
   readOnly?: boolean;
+  /** Comparison snapshot: only at the forecast master row when the block is still collapsed. */
+  showComparisonSnapshotButton?: boolean;
 }) {
   const labelOnly = fyLabel.trim() === "";
   return (
@@ -1527,6 +1858,20 @@ function ForecastFyGroupHeaderCell({
           .join(" ")}
       >
         {!labelOnly ? <span className="capital-planning-forecast-fy-label">{fyLabel}</span> : null}
+        {showComparisonSnapshotButton ? (
+          <Button
+            type="button"
+            variant="tertiary"
+            size="sm"
+            className="capital-planning-forecast-fy-toggle"
+            icon={<SquareStackDashed size="sm" />}
+            aria-label="Comparison snapshot"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          />
+        ) : null}
         {readOnly ? null : (
           <Button
             type="button"
@@ -1556,6 +1901,8 @@ function ForecastPeriodHeaderCell({
   toggleAriaLabel,
   fqMonthWidthHeader = false,
   readOnly = false,
+  showComparisonSnapshotButton = false,
+  rowSpan,
 }: {
   label: string;
   onToggle: () => void;
@@ -1566,9 +1913,13 @@ function ForecastPeriodHeaderCell({
   fqMonthWidthHeader?: boolean;
   /** When true, omit quarter expand/collapse (e.g. Gantt month program layout). */
   readOnly?: boolean;
+  /** Comparison snapshot: icon button between the period label and the expand/collapse control. */
+  showComparisonSnapshotButton?: boolean;
+  rowSpan?: number;
 }) {
   return (
     <Table.HeaderCell
+      rowSpan={rowSpan}
       colSpan={colSpan}
       className={[
         "capital-planning-forecast-period-header",
@@ -1579,6 +1930,20 @@ function ForecastPeriodHeaderCell({
     >
       <div className="capital-planning-forecast-period-header-inner">
         <span className="capital-planning-forecast-period-label">{label}</span>
+        {showComparisonSnapshotButton ? (
+          <Button
+            type="button"
+            variant="tertiary"
+            size="sm"
+            className="capital-planning-forecast-fy-toggle"
+            icon={<SquareStackDashed size="sm" />}
+            aria-label="Comparison snapshot"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          />
+        ) : null}
         {readOnly ? null : (
           <Button
             type="button"
@@ -1598,6 +1963,21 @@ function ForecastPeriodHeaderCell({
       </div>
     </Table.HeaderCell>
   );
+}
+
+/** Procore icons for month comparison leaf headers (Current / snapshot / Variance). */
+function ComparisonMonthSubheaderTrailingIcon({ kind }: { kind: ProgramQuarterLeafSlot["kind"] }) {
+  const iconProps = { size: "sm" as const, "aria-hidden": true as const };
+  switch (kind) {
+    case "cmp_current":
+      return <Circle {...iconProps} />;
+    case "cmp_snapshot":
+      return <CircleStroked {...iconProps} />;
+    case "cmp_variance":
+      return <CirclesOpacity {...iconProps} />;
+    default:
+      return null;
+  }
 }
 
 /** Criterion mapped from Criteria Builder for extra grid columns. */
@@ -1637,8 +2017,13 @@ export interface CapitalPlanningSmartGridProps {
   planView?: "grid" | "gantt";
   /** Persist High Level Budget Items line total into Planned Amount for the row. */
   onSaveHighLevelBudgetPlannedAmount: (rowId: string, plannedAmount: number) => void;
-  /** Table row grouping — `null` uses region grouping while the toolbar select shows placeholder. */
-  groupBy?: CapitalPlanningGroupBy | null;
+  /** Saved HLBI totals only — used so change history logs first save as None → $X (not seed planned amount). */
+  plannedAmountHighLevelBudgetByRowId?: Record<string, number>;
+  /**
+   * Ordered group-by dimensions (outer → inner). Empty or omitted: behave like placeholder (grid defaults to region).
+   * Two or more: nested hierarchy in project column. Next + exactly `["region"]` still uses campus/building prototype tree.
+   */
+  groupByDimensions?: readonly CapitalPlanningGroupBy[] | null;
   /** Dynamic criteria columns (Criteria Builder) — rendered after baseline columns, before forecast. */
   criteriaColumns?: CapitalPlanningCriteriaGridColumn[];
   criteriaValuesByProjectId?: Record<string, Record<string, string>>;
@@ -1653,12 +2038,40 @@ export interface CapitalPlanningSmartGridProps {
   renderCriteriaColumnsInGrid?: boolean;
   /** Prioritization tab: apply title case to visible column header labels. */
   titleCaseHeaders?: boolean;
+  /** Now / Next / Future portfolio route — Next enables region → campus → building hierarchy when grouped by region. */
+  programPageVariant?: CapitalPlanningProgramPageVariant;
+  /**
+   * When true, the grid is display-only: no forecast edits, Gantt drag, planned amount source / lump sum,
+   * dates, curve, priority, criteria inputs, or forecast column expand toggles.
+   */
+  readOnly?: boolean;
   /** When {@link CapitalPlanningColumnVisibility.estimatedBudget} is on: per-row dollar amount (defaults to row planned amount). */
   estimatedBudgetByRowId?: Record<string, number>;
   setEstimatedBudgetByRowId?: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   /** When {@link CapitalPlanningColumnVisibility.prioritizationStatus} is on: triage workflow state per row. */
   prioritizationStatusByRowId?: Record<string, string>;
   setPrioritizationStatusByRowId?: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  /** First calendar month of FQ1 for each program FY column (`0` = Jan … `11` = Dec). From Capital Planning Settings. */
+  fiscalYearStartMonth?: number;
+  /** Records edits made on the Capital Plan grid into Change History (prototype). */
+  onCapitalPlanningChange?: (payload: CapitalPlanningChangeLogPayload) => void;
+  /**
+   * Optional controlled row selection (project row ids). When both are passed, the parent owns selection state
+   * (e.g. bulk-action banner). When omitted, selection is internal to the grid.
+   */
+  selectedProjectIds?: ReadonlySet<string>;
+  setSelectedProjectIds?: React.Dispatch<React.SetStateAction<Set<string>>>;
+  /** Saved Target Budget amounts (period-keyed) — drives variance warning on hierarchy forecast rollups. */
+  targetBudgetForecastOverrides?: Record<string, number>;
+  /**
+   * When set, an extra forecast header row is shown (comparison snapshot) with this label and a stack icon
+   * at each leaf period column. When null/undefined, the row is omitted.
+   */
+  forecastComparisonSnapshotLabel?: string | null;
+  /** Column header for the primary snapshot in month comparison drill-down (e.g. Current or snapshot name). */
+  forecastPrimarySnapshotHeaderLabel?: string;
+  /** Planned-amount multiplier for the comparison snapshot column vs grid values (prototype). */
+  forecastComparisonPlannedMultiplier?: number;
 }
 
 /**
@@ -1690,17 +2103,28 @@ export function CapitalPlanningSmartGrid({
   forecastGranularity,
   planView = "grid",
   onSaveHighLevelBudgetPlannedAmount,
-  groupBy = null,
+  plannedAmountHighLevelBudgetByRowId = {},
+  groupByDimensions = null,
   criteriaColumns,
   criteriaValuesByProjectId,
   onCriteriaValueChange,
   showPrioritizationScoreColumn = false,
   renderCriteriaColumnsInGrid = true,
   titleCaseHeaders = false,
+  programPageVariant = "default",
+  readOnly = false,
   estimatedBudgetByRowId,
   setEstimatedBudgetByRowId,
   prioritizationStatusByRowId,
   setPrioritizationStatusByRowId,
+  fiscalYearStartMonth = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH,
+  onCapitalPlanningChange,
+  selectedProjectIds: selectedProjectIdsProp,
+  setSelectedProjectIds: setSelectedProjectIdsProp,
+  targetBudgetForecastOverrides,
+  forecastComparisonSnapshotLabel = null,
+  forecastPrimarySnapshotHeaderLabel = "Current",
+  forecastComparisonPlannedMultiplier = 1,
 }: CapitalPlanningSmartGridProps) {
   const formatHeaderLabel = useCallback(
     (text: string) => (titleCaseHeaders ? toHeaderTitleCase(text) : text),
@@ -1729,7 +2153,14 @@ export function CapitalPlanningSmartGrid({
   const [fyYearSectionExpanded, setFyYearSectionExpanded] = useState<boolean[]>(
     getDefaultFyYearSectionExpanded
   );
+  /** Global month indices (program horizon) with comparison Current / Snapshot / Variance columns open. */
+  const [comparisonMonthDetailOpen, setComparisonMonthDetailOpen] = useState<Set<number>>(() => new Set());
   const [forecastOverrides, setForecastOverrides] = useState<Record<string, number>>({});
+  const [mvpAggregateBudgetOverrides, setMvpAggregateBudgetOverrides] = useState<Record<string, number>>({});
+  const [mvpAggregateForecastBudgetOverrides, setMvpAggregateForecastBudgetOverrides] = useState<Record<string, number>>(
+    {}
+  );
+  const forecastOverridesForDisplay = readOnly ? NO_FORECAST_OVERRIDES : forecastOverrides;
 
   const closeForecastManualCurveModal = useCallback(() => {
     setForecastManualCurveModalRowId(null);
@@ -1737,19 +2168,41 @@ export function CapitalPlanningSmartGrid({
 
   const confirmForecastManualCurveUpdate = useCallback(
     (rowId: string) => {
+      const row = filteredProjectRows.find((r) => r.id === rowId);
+      const prevCurve = row?.curve ?? "";
       setCurvesByRowId((prev) => ({ ...prev, [rowId]: "Manual" }));
       setForecastManualCurveModalRowId(null);
+      if (row && onCapitalPlanningChange && prevCurve !== "Manual") {
+        onCapitalPlanningChange({
+          project: row.project,
+          description: prototypeProjectDescriptionFromName(row.project),
+          changed: changeHistoryChangedField.curve,
+          from: curveValueForChangeHistory(prevCurve),
+          to: curveValueForChangeHistory("Manual"),
+        });
+      }
     },
-    [setCurvesByRowId]
+    [filteredProjectRows, onCapitalPlanningChange, setCurvesByRowId]
   );
 
   const handleCurveChangeFromManualConfirm = useCallback(
     (rowId: string, nextCurve: ProjectCurve) => {
+      const row = filteredProjectRows.find((r) => r.id === rowId);
+      const prevCurve = row?.curve ?? "";
       clearForecastOverridesForRow(rowId, setForecastOverrides);
       setCurvesByRowId((prev) => ({ ...prev, [rowId]: nextCurve }));
       setCurveChangeFromManual(null);
+      if (row && onCapitalPlanningChange && prevCurve !== nextCurve) {
+        onCapitalPlanningChange({
+          project: row.project,
+          description: prototypeProjectDescriptionFromName(row.project),
+          changed: changeHistoryChangedField.curve,
+          from: curveValueForChangeHistory(prevCurve),
+          to: curveValueForChangeHistory(nextCurve),
+        });
+      }
     },
-    [setCurvesByRowId, setForecastOverrides]
+    [filteredProjectRows, onCapitalPlanningChange, setCurvesByRowId, setForecastOverrides]
   );
 
   /** Live row from the grid so Planned Amount (incl. HLBI saved total) matches the tearsheet — state snapshot can go stale. */
@@ -1821,15 +2274,62 @@ export function CapitalPlanningSmartGrid({
     }
   }, [forecastGranularity, ganttFlatForecast]);
 
+  const programQuarterGridUsesLeafSlots = useMemo(
+    () =>
+      show.forecast &&
+      forecastGranularity === "quarter" &&
+      forecastColumnsExpanded &&
+      !ganttFlatForecast &&
+      !ganttProgramMonthLayout &&
+      !ganttQuarterYearBands &&
+      !ganttYearRollingFlat,
+    [
+      show.forecast,
+      forecastGranularity,
+      forecastColumnsExpanded,
+      ganttFlatForecast,
+      ganttProgramMonthLayout,
+      ganttQuarterYearBands,
+      ganttYearRollingFlat,
+    ]
+  );
+
+  const programQuarterLeafSlots = useMemo(() => {
+    if (!programQuarterGridUsesLeafSlots) return null;
+    return buildProgramQuarterLeafSlots({
+      fyYearSectionExpanded,
+      fqCollapsed,
+      fiscalYearStartMonth,
+      comparisonMonthDetailOpen,
+      comparisonFeatureEnabled: forecastComparisonSnapshotLabel != null,
+    });
+  }, [
+    programQuarterGridUsesLeafSlots,
+    fyYearSectionExpanded,
+    fqCollapsed,
+    fiscalYearStartMonth,
+    comparisonMonthDetailOpen,
+    forecastComparisonSnapshotLabel,
+  ]);
+
+  useEffect(() => {
+    if (forecastComparisonSnapshotLabel == null) {
+      setComparisonMonthDetailOpen(new Set());
+    }
+  }, [forecastComparisonSnapshotLabel]);
+
   const quarterExpandedLeafColumns = useMemo(() => {
     if (ganttProgramMonthLayout) {
       return CAPITAL_PLANNING_PROGRAM_FY_COUNT * 12;
+    }
+    if (programQuarterLeafSlots) {
+      return programQuarterLeafSlots.length;
     }
     return CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.reduce((sum, _, fyIndex) => {
       if (!fyYearSectionExpanded[fyIndex]) return sum + 1;
       return sum + quarterLeafColumnsForFy(fyIndex, fqCollapsed);
     }, 0);
-  }, [ganttProgramMonthLayout, fyYearSectionExpanded, fqCollapsed]);
+  }, [ganttProgramMonthLayout, programQuarterLeafSlots, fyYearSectionExpanded, fqCollapsed]);
 
   const leafColumnCountForTable = useMemo(() => {
     if (ganttQuarterYearBands) {
@@ -1859,6 +2359,35 @@ export function CapitalPlanningSmartGrid({
     forecastGranularity,
     quarterExpandedLeafColumns,
     forecastLeafLabels.length,
+  ]);
+
+  /** Same leaf-column semantics as {@link computeCapitalPlanningGridTotals} for Target Budget period lookup. */
+  const leafForecastColumnMetasForTargetBudget = useMemo(() => {
+    if (!show.forecast || forecastGranularity !== "quarter" || ganttFlatForecast) {
+      return [];
+    }
+    return enumerateTargetBudgetForecastColumns({
+      forecastColumnsExpanded,
+      forecastGranularity: "quarter",
+      fyYearSectionExpanded,
+      fqCollapsed,
+      fiscalYearStartMonth,
+      forecastFqLabels: getProgramForecastFqLabels(),
+      forecastMonthLabels: forecastLeafLabels,
+      comparisonMonthDetailOpen,
+      forecastComparisonEnabled: forecastComparisonSnapshotLabel != null,
+    });
+  }, [
+    show.forecast,
+    forecastGranularity,
+    ganttFlatForecast,
+    forecastColumnsExpanded,
+    fyYearSectionExpanded,
+    fqCollapsed,
+    fiscalYearStartMonth,
+    forecastLeafLabels,
+    comparisonMonthDetailOpen,
+    forecastComparisonSnapshotLabel,
   ]);
 
   const baselineVisibleColumnCount = 1 + countVisibleBaselineDataColumns(columnVisibility);
@@ -1904,19 +2433,23 @@ export function CapitalPlanningSmartGrid({
               className={CRITERIA_COLUMN_CLASS}
               style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
             >
-              <Table.InputCell
-                size="block"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={val}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const next = e.target.value.replace(/[^\d.-]/g, "");
-                  onCriteriaValueChange?.(projectRowId, col.criterionId, next);
-                }}
-                aria-label={col.label}
-                placeholder="—"
-              />
+              {readOnly ? (
+                <Table.TextCell aria-label={col.label}>{val.trim() === "" ? "—" : val}</Table.TextCell>
+              ) : (
+                <Table.InputCell
+                  size="block"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={val}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const next = e.target.value.replace(/[^\d.-]/g, "");
+                    onCriteriaValueChange?.(projectRowId, col.criterionId, next);
+                  }}
+                  aria-label={col.label}
+                  placeholder="—"
+                />
+              )}
             </Table.BodyCell>
           );
         }
@@ -1940,44 +2473,62 @@ export function CapitalPlanningSmartGrid({
             className={CRITERIA_COLUMN_CLASS}
             style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
           >
-            <div style={{ minWidth: 0, width: "100%" }}>
-              <Select
-                block
-                label={labelShown}
-                placeholder="Select"
-                aria-label={col.label}
-                onSelect={(s) => {
-                  if (s.action !== "selected") return;
-                  onCriteriaValueChange?.(projectRowId, col.criterionId, String(s.item));
-                }}
-              >
-                {col.selectOptions.map((o) => (
-                  <Select.Option key={o.optionId} value={o.optionId} selected={val === o.optionId}>
-                    {o.label}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
+            {readOnly ? (
+              <Table.TextCell aria-label={col.label}>{labelShown || "—"}</Table.TextCell>
+            ) : (
+              <div style={{ minWidth: 0, width: "100%" }}>
+                <Select
+                  block
+                  label={labelShown}
+                  placeholder="Select"
+                  aria-label={col.label}
+                  onSelect={(s) => {
+                    if (s.action !== "selected") return;
+                    onCriteriaValueChange?.(projectRowId, col.criterionId, String(s.item));
+                  }}
+                >
+                  {col.selectOptions.map((o) => (
+                    <Select.Option key={o.optionId} value={o.optionId} selected={val === o.optionId}>
+                      {o.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            )}
           </Table.BodyCell>
         );
       });
     },
-    [criteriaColumns, criteriaValuesByProjectId, onCriteriaValueChange, renderCriteriaColumnsInGrid]
+    [criteriaColumns, criteriaValuesByProjectId, onCriteriaValueChange, readOnly, renderCriteriaColumnsInGrid]
   );
 
-  const resolvedGroupBy = effectiveCapitalPlanningGroupBy(groupBy);
+  const normalizedGroupByDimensions = useMemo((): CapitalPlanningGroupBy[] => {
+    const raw = groupByDimensions?.filter(Boolean) ?? [];
+    if (raw.length) return [...raw];
+    /** Now page: empty Group by → flat program table (no default region buckets). Next/Future keep region grouping. */
+    if (programPageVariant === "default") return [];
+    return ["region"];
+  }, [groupByDimensions, programPageVariant]);
 
-  const rowsGroupedByRegion = useMemo(
-    () => groupProjectRowsForCapitalPlanning(filteredProjectRows, groupBy),
-    [filteredProjectRows, groupBy]
-  );
+  const resolvedGroupBy = normalizedGroupByDimensions[0] ?? "region";
+
+  const isFlatUngroupedProgramTable = normalizedGroupByDimensions.length === 0;
+
+  const rowsGroupedByRegion = useMemo(() => {
+    if (normalizedGroupByDimensions.length !== 1) {
+      return [];
+    }
+    return groupProjectRowsForCapitalPlanning(filteredProjectRows, normalizedGroupByDimensions[0]!);
+  }, [filteredProjectRows, normalizedGroupByDimensions]);
 
   /** When `true`, that region section’s project rows are hidden (group header stays visible). */
   const [regionGroupCollapsed, setRegionGroupCollapsed] = useState<Partial<Record<string, boolean>>>({});
 
+  const groupByDimensionsResetKey = normalizedGroupByDimensions.join("|");
+
   useEffect(() => {
     setRegionGroupCollapsed({});
-  }, [groupBy]);
+  }, [groupByDimensionsResetKey]);
 
   const toggleRegionGroupCollapsed = useCallback((key: string) => {
     setRegionGroupCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -2010,6 +2561,174 @@ export function CapitalPlanningSmartGrid({
     });
   }, [rowsGroupedByRegion]);
 
+  const [internalSelectedProjectIds, setInternalSelectedProjectIds] = useState<Set<string>>(() => new Set());
+  const selectionControlled =
+    selectedProjectIdsProp !== undefined && setSelectedProjectIdsProp !== undefined;
+  const selectedProjectIds = selectionControlled ? selectedProjectIdsProp : internalSelectedProjectIds;
+  const setSelectedProjectIds = selectionControlled ? setSelectedProjectIdsProp : setInternalSelectedProjectIds;
+
+  const visibleProjectIds = useMemo(() => filteredProjectRows.map((r) => r.id), [filteredProjectRows]);
+
+  const headerSelectAllChecked =
+    visibleProjectIds.length > 0 && visibleProjectIds.every((id) => selectedProjectIds.has(id));
+  const headerSelectAllIndeterminate =
+    visibleProjectIds.some((id) => selectedProjectIds.has(id)) && !headerSelectAllChecked;
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedProjectIds((prev) => {
+      if (visibleProjectIds.length === 0) return prev;
+      const allSelected = visibleProjectIds.every((id) => prev.has(id));
+      if (allSelected) return new Set<string>();
+      return new Set(visibleProjectIds);
+    });
+  }, [visibleProjectIds]);
+
+  const toggleProjectSelected = useCallback((projectRowId: string) => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectRowId)) next.delete(projectRowId);
+      else next.add(projectRowId);
+      return next;
+    });
+  }, []);
+
+  const toggleGroupProjectSelection = useCallback((rowIds: readonly string[]) => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = rowIds.length > 0 && rowIds.every((id) => next.has(id));
+      if (allSelected) {
+        rowIds.forEach((id) => next.delete(id));
+      } else {
+        rowIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }, []);
+
+  /** Row-selection checkboxes — Future portfolio route only (Now / Next use spacers for alignment). */
+  const showSelectionCheckboxes = programPageVariant === "future";
+
+  const showDynamicMultiHierarchy = normalizedGroupByDimensions.length >= 2;
+
+  const showRegionCampusBuildingHierarchy =
+    (programPageVariant === "next" ||
+      programPageVariant === "target_budget" ||
+      programPageVariant === "target_budget_2_0") &&
+    normalizedGroupByDimensions.length === 1 &&
+    normalizedGroupByDimensions[0] === "region";
+
+  const locationHierarchyTree = useMemo(
+    () => (showRegionCampusBuildingHierarchy ? groupProjectRowsByRegionCampusBuilding(filteredProjectRows) : null),
+    [showRegionCampusBuildingHierarchy, filteredProjectRows]
+  );
+
+  const [locationHierarchyCollapsed, setLocationHierarchyCollapsed] = useState<Record<string, boolean>>({});
+
+  const [dynamicHierarchyCollapsed, setDynamicHierarchyCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setLocationHierarchyCollapsed({});
+    setDynamicHierarchyCollapsed({});
+  }, [groupByDimensionsResetKey, programPageVariant]);
+
+  const locationHierarchyRenderList = useMemo(
+    () =>
+      locationHierarchyTree
+        ? flattenLocationHierarchyForTable(locationHierarchyTree, locationHierarchyCollapsed)
+        : [],
+    [locationHierarchyTree, locationHierarchyCollapsed]
+  );
+
+  const dynamicHierarchyRenderList = useMemo(
+    () =>
+      showDynamicMultiHierarchy
+        ? flattenDynamicHierarchyForTable(
+            filteredProjectRows,
+            normalizedGroupByDimensions,
+            dynamicHierarchyCollapsed
+          )
+        : [],
+    [showDynamicMultiHierarchy, filteredProjectRows, normalizedGroupByDimensions, dynamicHierarchyCollapsed]
+  );
+
+  const topLevelDynamicCollapseKeys = useMemo(() => {
+    if (!showDynamicMultiHierarchy || !normalizedGroupByDimensions[0]) return [];
+    const dim = normalizedGroupByDimensions[0]!;
+    return groupProjectRowsBySingleDimension(filteredProjectRows, dim).map((g) => `${dim}:${g.key}`);
+  }, [showDynamicMultiHierarchy, normalizedGroupByDimensions, filteredProjectRows]);
+
+  const toggleLocationHierarchyCollapsed = useCallback((key: string) => {
+    setLocationHierarchyCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const toggleDynamicHierarchyCollapsed = useCallback((key: string) => {
+    setDynamicHierarchyCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const allLocationHierarchyRegionsExpanded = useMemo(() => {
+    if (!locationHierarchyTree?.length) return false;
+    return locationHierarchyTree.every((r) => !locationHierarchyCollapsed[`r:${r.key}`]);
+  }, [locationHierarchyTree, locationHierarchyCollapsed]);
+
+  const allLocationHierarchyRegionsCollapsed = useMemo(() => {
+    if (!locationHierarchyTree?.length) return false;
+    return locationHierarchyTree.every((r) => Boolean(locationHierarchyCollapsed[`r:${r.key}`]));
+  }, [locationHierarchyTree, locationHierarchyCollapsed]);
+
+  const toggleAllLocationHierarchyRegions = useCallback(() => {
+    if (!locationHierarchyTree?.length) return;
+    setLocationHierarchyCollapsed((prev) => {
+      const collapseAll = locationHierarchyTree.every((r) => !prev[`r:${r.key}`]);
+      const next = { ...prev };
+      for (const r of locationHierarchyTree) {
+        next[`r:${r.key}`] = collapseAll;
+      }
+      return next;
+    });
+  }, [locationHierarchyTree]);
+
+  const allDynamicTopLevelExpanded = useMemo(
+    () =>
+      topLevelDynamicCollapseKeys.length > 0 &&
+      topLevelDynamicCollapseKeys.every((k) => !dynamicHierarchyCollapsed[k]),
+    [topLevelDynamicCollapseKeys, dynamicHierarchyCollapsed]
+  );
+
+  const allDynamicTopLevelCollapsed = useMemo(
+    () =>
+      topLevelDynamicCollapseKeys.length > 0 &&
+      topLevelDynamicCollapseKeys.every((k) => Boolean(dynamicHierarchyCollapsed[k])),
+    [topLevelDynamicCollapseKeys, dynamicHierarchyCollapsed]
+  );
+
+  const toggleAllDynamicTopLevel = useCallback(() => {
+    if (topLevelDynamicCollapseKeys.length === 0) return;
+    setDynamicHierarchyCollapsed((prev) => {
+      const collapseAll = topLevelDynamicCollapseKeys.every((k) => !prev[k]);
+      const next = { ...prev };
+      for (const k of topLevelDynamicCollapseKeys) {
+        next[k] = collapseAll;
+      }
+      return next;
+    });
+  }, [topLevelDynamicCollapseKeys]);
+
+  const toolbarHasGroups = showRegionCampusBuildingHierarchy
+    ? Boolean(locationHierarchyTree?.length)
+    : showDynamicMultiHierarchy
+      ? topLevelDynamicCollapseKeys.length > 0
+      : rowsGroupedByRegion.length > 0;
+  const toolbarAllGroupsExpanded = showRegionCampusBuildingHierarchy
+    ? allLocationHierarchyRegionsExpanded
+    : showDynamicMultiHierarchy
+      ? allDynamicTopLevelExpanded
+      : allRegionGroupsExpanded;
+  const toolbarAllGroupsCollapsed = showRegionCampusBuildingHierarchy
+    ? allLocationHierarchyRegionsCollapsed
+    : showDynamicMultiHierarchy
+      ? allDynamicTopLevelCollapsed
+      : allRegionGroupsCollapsed;
+
   const forecastMasterHeaderLabel = useMemo(() => {
     if (forecastGranularity === "quarter") return "";
     if (forecastGranularity === "year") return "Forecast (calendar years)";
@@ -2021,6 +2740,34 @@ export function CapitalPlanningSmartGrid({
    */
   const quarterThreeRowForecastHeader =
     (forecastGranularity === "quarter" && !ganttFlatForecast) || ganttProgramMonthLayout;
+  /** Comparison snapshot strip: same forecast layouts as FY/FQ/month stack (not Gantt flat quarter/year bands). */
+  const showComparisonForecastHeaderRow = useMemo(() => {
+    if (forecastComparisonSnapshotLabel == null) return false;
+    if (!show.forecast) return false;
+    if (ganttQuarterYearBands || ganttYearRollingFlat) return false;
+    if (ganttFlatForecast && !ganttProgramMonthLayout) return false;
+    return quarterThreeRowForecastHeader;
+  }, [
+    forecastComparisonSnapshotLabel,
+    show.forecast,
+    ganttQuarterYearBands,
+    ganttYearRollingFlat,
+    ganttFlatForecast,
+    ganttProgramMonthLayout,
+    quarterThreeRowForecastHeader,
+  ]);
+
+  const comparisonMonthSubHeaderRow =
+    programQuarterGridUsesLeafSlots &&
+    forecastComparisonSnapshotLabel != null &&
+    comparisonMonthDetailOpen.size > 0;
+
+  /** Sub-leaf headers under each expanded month — non-empty even if parent passes empty/undefined labels. */
+  const comparisonMonthSubheaderPrimaryLabel =
+    (forecastPrimarySnapshotHeaderLabel ?? "").trim() || "Current";
+  const comparisonMonthSubheaderSnapshotLabel =
+    (forecastComparisonSnapshotLabel ?? "").trim() || "Snapshot";
+
   /** Must match the number of `<Table.HeaderRow>` rows under the forecast so month/FQ cells align after the baseline columns. */
   const headerBaseRowSpan = useMemo(() => {
     if (!show.forecast) return 1;
@@ -2029,7 +2776,9 @@ export function CapitalPlanningSmartGrid({
     if (ganttYearRollingFlat) return 1;
     if (ganttFlatForecast) return 1;
     if (!quarterThreeRowForecastHeader) return 2;
-    if (forecastGranularity === "quarter" && forecastColumnsExpanded) return 4;
+    if (forecastGranularity === "quarter" && forecastColumnsExpanded) {
+      return comparisonMonthSubHeaderRow ? 5 : 4;
+    }
     return 3;
   }, [
     show.forecast,
@@ -2040,7 +2789,17 @@ export function CapitalPlanningSmartGrid({
     quarterThreeRowForecastHeader,
     forecastGranularity,
     forecastColumnsExpanded,
+    comparisonMonthSubHeaderRow,
   ]);
+
+  const toggleComparisonMonthDetail = useCallback((monthIdx: number) => {
+    setComparisonMonthDetailOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(monthIdx)) next.delete(monthIdx);
+      else next.add(monthIdx);
+      return next;
+    });
+  }, []);
 
   const handleForecastBlockToggle = useCallback(() => {
     setForecastColumnsExpanded((v) => {
@@ -2048,6 +2807,8 @@ export function CapitalPlanningSmartGrid({
       if (next) {
         setFqCollapsed(getDefaultForecastFqCollapsed());
         setFyYearSectionExpanded(getDefaultFyYearSectionExpanded());
+      } else {
+        setComparisonMonthDetailOpen(new Set());
       }
       return next;
     });
@@ -2059,7 +2820,7 @@ export function CapitalPlanningSmartGrid({
     () => ({
       showForecast: show.forecast,
       leafColumnCountForTable,
-      forecastOverrides,
+      forecastOverrides: forecastOverridesForDisplay,
       anchorDate,
       forecastGranularity,
       forecastColumnsExpanded,
@@ -2071,11 +2832,14 @@ export function CapitalPlanningSmartGrid({
       fqCollapsed,
       forecastLeafLabels,
       estimatedBudgetByRowId,
+      fiscalYearStartMonth,
+      programQuarterLeafSlots: programQuarterLeafSlots ?? undefined,
+      forecastComparisonPlannedMultiplier,
     }),
     [
       show.forecast,
       leafColumnCountForTable,
-      forecastOverrides,
+      forecastOverridesForDisplay,
       anchorDate,
       forecastGranularity,
       forecastColumnsExpanded,
@@ -2087,6 +2851,9 @@ export function CapitalPlanningSmartGrid({
       fqCollapsed,
       forecastLeafLabels,
       estimatedBudgetByRowId,
+      fiscalYearStartMonth,
+      programQuarterLeafSlots,
+      forecastComparisonPlannedMultiplier,
     ]
   );
 
@@ -2115,11 +2882,1453 @@ export function CapitalPlanningSmartGrid({
 
   const showFooterRow = configShowEmpty && filteredProjectRows.length > 0;
 
+  const renderProgramGroupAggregateRow = (
+    depth: number,
+    aggregateKey: string,
+    aggregateLabel: string,
+    aggregateRows: readonly CapitalPlanningSampleRow[],
+    aggregateExpanded: boolean,
+    onAggregateToggle: () => void
+  ) => {
+    const aggregateGroupTotals = computeCapitalPlanningGridTotals(aggregateRows, totalsAggregationArgs);
+    const showMvpPlannedAmountBreakout = programPageVariant === "mvp";
+    const mvpBudget = mvpAggregateBudgetOverrides[aggregateKey] ?? aggregateGroupTotals.estimatedBudget;
+    const mvpRollup = aggregateGroupTotals.planned;
+    const mvpVariance = mvpBudget - mvpRollup;
+    const mvpVarianceDisplay =
+      mvpVariance > 0
+        ? `+${formatLumpSumUsdInput(mvpVariance)}`
+        : mvpVariance === 0
+          ? formatLumpSumUsdInput(0)
+          : formatUsdAccounting(mvpVariance);
+    const aggregateForecastMonthRollups = showMvpPlannedAmountBreakout
+      ? (() => {
+          const monthTotals = Array.from({ length: CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS }, () => 0);
+          for (const row of aggregateRows) {
+            const forecastBasisKey = `${row.curve}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
+            const monthAmounts = getEffectiveProgramForecastMonthAmounts(
+              row,
+              forecastOverridesForDisplay,
+              forecastBasisKey,
+              anchorDate,
+              fiscalYearStartMonth
+            );
+            for (let monthIdx = 0; monthIdx < CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS; monthIdx++) {
+              monthTotals[monthIdx] += monthAmounts[monthIdx] ?? 0;
+            }
+          }
+          return monthTotals;
+        })()
+      : null;
+    const mvpForecastMonthBudgetForIndex = (monthIdx: number): number => {
+      const overrideKey = `${aggregateKey}|m|${monthIdx}`;
+      const defaultFromRollup =
+        mvpRollup > 0
+          ? ((aggregateForecastMonthRollups?.[monthIdx] ?? 0) * mvpBudget) / mvpRollup
+          : 0;
+      return mvpAggregateForecastBudgetOverrides[overrideKey] ?? defaultFromRollup;
+    };
+    const mvpForecastBudgetTimelineTotal = showMvpPlannedAmountBreakout
+      ? Array.from({ length: CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS }, (_, monthIdx) =>
+          mvpForecastMonthBudgetForIndex(monthIdx)
+        ).reduce((sum, value) => sum + value, 0)
+      : 0;
+    const mvpBudgetRemaining = mvpBudget - mvpForecastBudgetTimelineTotal;
+    return (
+                <Table.BodyRow
+                  key={`region-group-${aggregateKey}`}
+                  className={[
+                    "capital-planning-table-status-group",
+                    showMvpPlannedAmountBreakout ? "capital-planning-mvp-group-row" : "",
+                    depth > 0 ? "capital-planning-program-hierarchy-aggregate" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={
+                    depth > 0
+                      ? ({ ["--cp-program-hierarchy-rails" as string]: depth } as React.CSSProperties)
+                      : undefined
+                  }
+                >
+                  <Table.BodyCell
+                    className={[
+                      baselineCellClasses("project", columnVisibility),
+                      "capital-planning-table-status-group-header-label-cell",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <Table.TextCell className="capital-planning-status-group-header-text-cell">
+                      <div className="capital-planning-project-select-cell-inner">
+                        <span className="capital-planning-project-checkbox-slot">
+                          {showSelectionCheckboxes ? (
+                            <Table.Checkbox
+                              className="capital-planning-project-checkbox"
+                              aria-label={`Select all projects in ${aggregateLabel}`}
+                              disabled={readOnly}
+                              checked={
+                                aggregateRows.length > 0 &&
+                                aggregateRows.every((r) => selectedProjectIds.has(r.id))
+                              }
+                              indeterminate={
+                                aggregateRows.some((r) => selectedProjectIds.has(r.id)) &&
+                                !aggregateRows.every((r) => selectedProjectIds.has(r.id))
+                              }
+                              onChange={() =>
+                                toggleGroupProjectSelection(aggregateRows.map((r) => r.id))
+                              }
+                            />
+                          ) : (
+                            <span className="capital-planning-project-checkbox-spacer" aria-hidden />
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          className="capital-planning-status-group-header-toggle"
+                          aria-expanded={aggregateExpanded}
+                          aria-label={
+                            aggregateExpanded
+                              ? `Collapse ${aggregateLabel} (${aggregateRows.length} projects)`
+                              : `Expand ${aggregateLabel} (${aggregateRows.length} projects)`
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onAggregateToggle();
+                          }}
+                        >
+                          <span className="capital-planning-status-group-header-chevron" aria-hidden>
+                            {aggregateExpanded ? <CaretDown size="sm" /> : <CaretRight size="sm" />}
+                          </span>
+                          <Typography
+                            intent="small"
+                            weight="semibold"
+                            as="span"
+                            className="capital-planning-status-group-header-title"
+                          >
+                            {aggregateLabel}
+                          </Typography>
+                        </button>
+                      </div>
+                    </Table.TextCell>
+                  </Table.BodyCell>
+                  {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("projectDescription", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("estimatedBudget", columnVisibility)}>
+                      {currencyTotalCell(aggregateGroupTotals.estimatedBudget, {
+                        className: "capital-planning-planned-amount-value",
+                        style: FOOTER_TOTAL_BOLD_STYLE,
+                      })}
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("prioritizationStatus", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("prioritizationStatus", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("plannedAmount", columnVisibility) ? (
+                    <Table.BodyCell
+                      className={[
+                        baselineCellClasses("plannedAmount", columnVisibility),
+                        showMvpPlannedAmountBreakout ? "capital-planning-mvp-planned-amount-cell" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {showMvpPlannedAmountBreakout ? (
+                        <div className="capital-planning-mvp-planned-amount-breakout">
+                          <div className="capital-planning-mvp-planned-amount-breakout-row">
+                            <span className="capital-planning-mvp-planned-amount-breakout-label">Budget</span>
+                            <span className="capital-planning-mvp-planned-amount-breakout-value">
+                              <MvpBudgetInlineCurrency
+                                value={mvpBudget}
+                                ariaLabel={`${aggregateLabel} budget`}
+                                onCommit={(next) => {
+                                  setMvpAggregateBudgetOverrides((prev) => ({
+                                    ...prev,
+                                    [aggregateKey]: next,
+                                  }));
+                                }}
+                              />
+                            </span>
+                          </div>
+                          <div className="capital-planning-mvp-planned-amount-breakout-row">
+                            <span className="capital-planning-mvp-planned-amount-breakout-label">Rollup</span>
+                            <span className="capital-planning-mvp-planned-amount-breakout-value">
+                              {formatLumpSumUsdInput(mvpRollup)}
+                            </span>
+                          </div>
+                          <div className="capital-planning-mvp-planned-amount-breakout-row">
+                            <span className="capital-planning-mvp-planned-amount-breakout-label">Variance</span>
+                            <span
+                              className={[
+                                "capital-planning-mvp-planned-amount-breakout-value",
+                                "capital-planning-mvp-planned-amount-breakout-variance",
+                                mvpVariance >= 0
+                                  ? "capital-planning-mvp-planned-amount-breakout-variance--positive"
+                                  : "capital-planning-mvp-planned-amount-breakout-variance--negative",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            >
+                              {mvpVarianceDisplay}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        currencyTotalCell(aggregateGroupTotals.planned, {
+                          className: "capital-planning-planned-amount-value",
+                          style: FOOTER_TOTAL_BOLD_STYLE,
+                        })
+                      )}
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("status", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("status", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("projectPriority", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("projectPriority", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("prioritizationScore", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("originalBudget", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("originalBudget", columnVisibility)}>
+                      {currencyTotalCell(aggregateGroupTotals.original, { style: FOOTER_TOTAL_BOLD_STYLE })}
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("revisedBudget", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("revisedBudget", columnVisibility)}>
+                      {currencyTotalCell(aggregateGroupTotals.revised, { style: FOOTER_TOTAL_BOLD_STYLE })}
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("jobToDate", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("jobToDate", columnVisibility)}>
+                      {currencyTotalCell(aggregateGroupTotals.jtd, { style: FOOTER_TOTAL_BOLD_STYLE })}
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("startDate", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("startDate", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("endDate", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("endDate", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("curve", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("curve", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("remaining", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("remaining", columnVisibility)}>
+                      {showMvpPlannedAmountBreakout ? (
+                        <div className="capital-planning-mvp-remaining-breakout">
+                          <div className="capital-planning-mvp-remaining-breakout-row">
+                            <Table.TextCell
+                              style={{
+                                textAlign: "right",
+                                fontVariantNumeric: "tabular-nums",
+                                ...FOOTER_TOTAL_BOLD_STYLE,
+                              }}
+                            >
+                              {mvpBudgetRemaining > 0
+                                ? `+${formatLumpSumUsdInput(mvpBudgetRemaining)}`
+                                : mvpBudgetRemaining === 0
+                                  ? formatLumpSumUsdInput(0)
+                                  : formatUsdAccounting(mvpBudgetRemaining)}
+                            </Table.TextCell>
+                          </div>
+                          <div className="capital-planning-mvp-remaining-breakout-row">
+                            <Table.TextCell
+                              style={{
+                                textAlign: "right",
+                                fontVariantNumeric: "tabular-nums",
+                                ...FOOTER_TOTAL_BOLD_STYLE,
+                              }}
+                            >
+                              {formatRemainingToForecastCurrency(aggregateGroupTotals.remaining)}
+                            </Table.TextCell>
+                          </div>
+                          <div className="capital-planning-mvp-remaining-breakout-row">
+                            <Table.TextCell
+                              style={{
+                                textAlign: "right",
+                                fontVariantNumeric: "tabular-nums",
+                                ...FOOTER_TOTAL_BOLD_STYLE,
+                              }}
+                            >
+                              {" "}
+                            </Table.TextCell>
+                          </div>
+                        </div>
+                      ) : (
+                        <Table.TextCell
+                          style={{
+                            textAlign: "right",
+                            fontVariantNumeric: "tabular-nums",
+                            ...FOOTER_TOTAL_BOLD_STYLE,
+                          }}
+                        >
+                          {formatRemainingToForecastCurrency(aggregateGroupTotals.remaining)}
+                        </Table.TextCell>
+                      )}
+                    </Table.BodyCell>
+                  ) : null}
+                  {renderCriteriaColumnsInGrid
+                    ? criteriaColumns?.map((col) => (
+                        <Table.BodyCell
+                          key={`region-group-${aggregateKey}-crit-${col.criterionId}`}
+                          className={CRITERIA_COLUMN_CLASS}
+                          style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
+                        >
+                          <Table.TextCell />
+                        </Table.BodyCell>
+                      )) ?? null
+                    : null}
+                  {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
+                    <Table.BodyCell
+                      key={`region-group-${aggregateKey}-prio-score`}
+                      className={prioritizationScoreStickyColClass}
+                    >
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {show.forecast
+                    ? aggregateGroupTotals.forecast.map((v, idx) => {
+                        const forecastSlot = programQuarterLeafSlots?.[idx];
+                        const forecastSlotMonthIndices: number[] =
+                          forecastSlot == null
+                            ? []
+                            : forecastSlot.kind === "month_single" ||
+                                forecastSlot.kind === "cmp_current" ||
+                                forecastSlot.kind === "cmp_snapshot" ||
+                                forecastSlot.kind === "cmp_variance"
+                              ? [forecastSlot.monthIdx]
+                              : forecastSlot.kind === "fq_rollup"
+                                ? fiscalQuarterMonthGlobalIndices(
+                                    Math.floor(forecastSlot.fqIndex / 4),
+                                    forecastSlot.fqIndex % 4,
+                                    fiscalYearStartMonth
+                                  )
+                                : Array.from({ length: 12 }, (_, monthOffset) => forecastSlot.fyIndex * 12 + monthOffset);
+                        const targetBudgetKeys = targetBudgetCollapseKeysForAggregateRow(aggregateKey);
+                        const leafMeta = leafForecastColumnMetasForTargetBudget.find((m) => m.columnIndex === idx);
+                        const targetCap = readTargetBudgetOverrideForCell(
+                          targetBudgetKeys,
+                          leafMeta,
+                          idx,
+                          targetBudgetForecastOverrides ?? {},
+                          fiscalYearStartMonth
+                        );
+                        const showTargetVarianceWarning = targetCap > 0 && v > targetCap;
+                        return (
+                          <Table.BodyCell
+                            key={`region-group-${aggregateKey}-fc-${idx}`}
+                            className={[
+                              "capital-planning-table-footer-forecast-cell",
+                              showMvpPlannedAmountBreakout ? "capital-planning-mvp-forecast-cell" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            {showMvpPlannedAmountBreakout ? (
+                              (() => {
+                                const monthBackedBudget =
+                                  forecastSlotMonthIndices.length > 0
+                                    ? forecastSlotMonthIndices.reduce(
+                                        (sum, monthIdx) => sum + mvpForecastMonthBudgetForIndex(monthIdx),
+                                        0
+                                      )
+                                    : null;
+                                const fallbackBudgetOverrideKey = `${aggregateKey}|${idx}`;
+                                const fallbackBudget =
+                                  mvpAggregateForecastBudgetOverrides[fallbackBudgetOverrideKey] ??
+                                  (mvpRollup > 0 ? (v * mvpBudget) / mvpRollup : 0);
+                                const forecastBudget = monthBackedBudget ?? fallbackBudget;
+                                const isMonthEditable =
+                                  forecastSlot == null ||
+                                  forecastSlot.kind === "month_single" ||
+                                  forecastSlot.kind === "cmp_current";
+                                const forecastVariance = forecastBudget - v;
+                                const forecastVarianceDisplay =
+                                  forecastVariance > 0
+                                    ? `+${formatLumpSumUsdInput(forecastVariance)}`
+                                    : forecastVariance === 0
+                                      ? formatLumpSumUsdInput(0)
+                                      : formatUsdAccounting(forecastVariance);
+                                return (
+                                  <div className="capital-planning-mvp-forecast-breakout">
+                                    <div className="capital-planning-mvp-forecast-breakout-row">
+                                      {isMonthEditable ? (
+                                        <MvpBudgetInlineCurrency
+                                          value={forecastBudget}
+                                          ariaLabel={`${aggregateLabel} forecast budget ${idx + 1}`}
+                                          onCommit={(next) => {
+                                            if (forecastSlotMonthIndices.length === 1) {
+                                              const monthOverrideKey = `${aggregateKey}|m|${forecastSlotMonthIndices[0]}`;
+                                              setMvpAggregateForecastBudgetOverrides((prev) => ({
+                                                ...prev,
+                                                [monthOverrideKey]: next,
+                                              }));
+                                              return;
+                                            }
+                                            setMvpAggregateForecastBudgetOverrides((prev) => ({
+                                              ...prev,
+                                              [fallbackBudgetOverrideKey]: next,
+                                            }));
+                                          }}
+                                        />
+                                      ) : (
+                                        <Table.TextCell
+                                          style={{
+                                            textAlign: "right",
+                                            fontVariantNumeric: "tabular-nums",
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          {formatLumpSumUsdInput(forecastBudget)}
+                                        </Table.TextCell>
+                                      )}
+                                    </div>
+                                    <div className="capital-planning-mvp-forecast-breakout-row">
+                                      {currencyTotalCell(v, { style: FOOTER_TOTAL_BOLD_STYLE })}
+                                    </div>
+                                    <div
+                                      className={[
+                                        "capital-planning-mvp-forecast-breakout-row",
+                                        "capital-planning-mvp-forecast-breakout-variance",
+                                        forecastVariance >= 0
+                                          ? "capital-planning-mvp-forecast-breakout-variance--positive"
+                                          : "capital-planning-mvp-forecast-breakout-variance--negative",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(" ")}
+                                    >
+                                      <Table.TextCell
+                                        style={{
+                                          textAlign: "right",
+                                          fontVariantNumeric: "tabular-nums",
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {forecastVarianceDisplay}
+                                      </Table.TextCell>
+                                    </div>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <div className="capital-planning-target-budget-forecast-warning-cell-inner">
+                                <div className="capital-planning-target-budget-forecast-warning-cell-inner__icon">
+                                  {showTargetVarianceWarning ? (
+                                    <TargetBudgetExceededHoverPopover targetBudget={targetCap} forecastTotal={v}>
+                                      <Warning
+                                        size="sm"
+                                        aria-hidden
+                                        style={{ color: colors.yellow40, display: "block" }}
+                                      />
+                                    </TargetBudgetExceededHoverPopover>
+                                  ) : null}
+                                </div>
+                                <div className="capital-planning-target-budget-forecast-warning-cell-inner__amount">
+                                  {currencyTotalCell(v, { style: FOOTER_TOTAL_BOLD_STYLE })}
+                                </div>
+                              </div>
+                            )}
+                          </Table.BodyCell>
+                        );
+                      })
+                    : null}
+                </Table.BodyRow>
+    );
+  };
+
+  const renderProgramProjectBodyRow = (
+    row: CapitalPlanningSampleRow,
+    options?: { hierarchyLeafRailCount?: number }
+  ) => {
+              const forecastBasisKey = `${row.curve}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
+              const manualForecastDateExpand =
+                row.curve === "Manual"
+                  ? (parts: (string | number)[], dollars: number) =>
+                      expandProjectDatesForManualForecast(row.id, row.startDate, row.endDate, parts, dollars)
+                  : undefined;
+              const effectiveMonthAmounts = getEffectiveProgramForecastMonthAmounts(
+                row,
+                forecastOverridesForDisplay,
+                forecastBasisKey,
+                anchorDate,
+                fiscalYearStartMonth
+              );
+              const plannedSource = plannedAmountSourceByRowId[row.id];
+              const isLumpSumPlannedAmount = isLumpSumPlannedAmountSource(plannedSource);
+              const isHighLevelBudgetItemsPlannedAmount =
+                plannedSource === HIGH_LEVEL_BUDGET_ITEMS_SOURCE;
+              const projectBudgetPlannedAmountTooltip =
+                plannedSource === PROJECT_BUDGET_ORIGINAL_SOURCE
+                  ? "Original Budget"
+                  : plannedSource === PROJECT_BUDGET_REVISED_SOURCE
+                    ? "Revised Budget"
+                    : null;
+              const projectDescription = prototypeProjectDescriptionFromName(row.project);
+              const flatHierarchyRow = options?.hierarchyLeafRailCount === 0;
+              return (
+              <Table.BodyRow
+                key={row.id}
+                className={[
+                  "capital-planning-table-status-group-child",
+                  flatHierarchyRow ? "capital-planning-table-body-row--flat-hierarchy" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={
+                  options?.hierarchyLeafRailCount != null
+                    ? ({
+                        ["--cp-hierarchy-leaf-rails" as string]: options.hierarchyLeafRailCount,
+                      } as React.CSSProperties)
+                    : undefined
+                }
+              >
+                <Table.BodyCell className={baselineCellClasses("project", columnVisibility)}>
+                  <div className="capital-planning-project-select-cell-inner">
+                    <span className="capital-planning-project-checkbox-slot">
+                      {showSelectionCheckboxes ? (
+                        <Table.Checkbox
+                          className="capital-planning-project-checkbox"
+                          aria-label={`Select ${row.project}`}
+                          disabled={readOnly}
+                          checked={selectedProjectIds.has(row.id)}
+                          onChange={() => toggleProjectSelected(row.id)}
+                        />
+                      ) : (
+                        <span className="capital-planning-project-checkbox-spacer" aria-hidden />
+                      )}
+                    </span>
+                    <div className="capital-planning-project-link-wrap">
+                      <Table.LinkCell href={`/project/${row.projectId}`}>{row.project}</Table.LinkCell>
+                    </div>
+                  </div>
+                </Table.BodyCell>
+                {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
+                  <Table.BodyCell
+                    className={baselineCellClasses("projectDescription", columnVisibility)}
+                    style={{ verticalAlign: "middle" }}
+                  >
+                    <Table.TextCell title={projectDescription}>{projectDescription}</Table.TextCell>
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
+                  <Table.BodyCell
+                    className={baselineCellClasses("estimatedBudget", columnVisibility)}
+                    style={{ verticalAlign: "middle" }}
+                  >
+                    <div
+                      className="capital-planning-planned-amount-cell capital-planning-planned-amount-cell--lump-sum"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
+                        gap: 8,
+                        width: "100%",
+                        minWidth: 0,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div
+                        style={{
+                          flex: "1 1 auto",
+                          minWidth: 0,
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "stretch",
+                          alignItems: "center",
+                        }}
+                      >
+                        {setEstimatedBudgetByRowId && !readOnly ? (
+                          <div
+                            className="capital-planning-planned-amount-input-wrap"
+                            style={{
+                              flex: "1 1 auto",
+                              minWidth: 0,
+                              width: "100%",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            <LumpSumPlannedAmountCurrencyInput
+                              value={
+                                estimatedBudgetByRowId?.[row.id] ??
+                                (Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0)
+                              }
+                              onChange={(n) => {
+                                setEstimatedBudgetByRowId((prev) => ({
+                                  ...prev,
+                                  [row.id]: n,
+                                }));
+                              }}
+                              ariaLabel={`Estimated Budget for ${row.project}`}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              flex: "1 1 auto",
+                              minWidth: 0,
+                              width: "100%",
+                              display: "flex",
+                              justifyContent: "flex-end",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Table.CurrencyCell
+                              className="capital-planning-planned-amount-value"
+                              value={
+                                estimatedBudgetByRowId?.[row.id] ??
+                                (Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0)
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("prioritizationStatus", columnVisibility) ? (
+                  <Table.BodyCell
+                    className={baselineCellClasses("prioritizationStatus", columnVisibility)}
+                    style={{ verticalAlign: "middle" }}
+                  >
+                    {setPrioritizationStatusByRowId && !readOnly ? (
+                      <Table.SelectCell
+                        key={`capital-planning-prio-status-${row.id}-${normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}`}
+                        block
+                        label={
+                          <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])]}>
+                            {normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}
+                          </Pill>
+                        }
+                        aria-label={`Prioritization status for ${row.project}`}
+                        onSelect={(s) => {
+                          if (s.action !== "selected") return;
+                          const next = String(s.item);
+                          setPrioritizationStatusByRowId((prev) => ({ ...prev, [row.id]: next }));
+                        }}
+                      >
+                        {PRIORITIZATION_STATUS_OPTIONS.map((opt) => (
+                          <Select.Option key={opt} value={opt} selected={normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id]) === opt}>
+                            <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[opt]}>{opt}</Pill>
+                          </Select.Option>
+                        ))}
+                      </Table.SelectCell>
+                    ) : (
+                      <Table.TextCell>
+                        <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])]}>
+                          {normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}
+                        </Pill>
+                      </Table.TextCell>
+                    )}
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("plannedAmount", columnVisibility) ? (
+                <Table.BodyCell
+                  className={baselineCellClasses("plannedAmount", columnVisibility)}
+                  style={{ verticalAlign: "middle" }}
+                >
+                  <div
+                    className={[
+                      "capital-planning-planned-amount-cell",
+                      isLumpSumPlannedAmount ? "capital-planning-planned-amount-cell--lump-sum" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-start",
+                      gap: 8,
+                      width: "100%",
+                      minWidth: 0,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {readOnly ? (
+                      <div
+                        style={{
+                          flex: "1 1 auto",
+                          minWidth: 0,
+                          width: "100%",
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          alignItems: "center",
+                        }}
+                      >
+                        {projectBudgetPlannedAmountTooltip ? (
+                          <Tooltip
+                            trigger="hover"
+                            placement="top"
+                            overlay={
+                              <Tooltip.Content>{projectBudgetPlannedAmountTooltip}</Tooltip.Content>
+                            }
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                width: "100%",
+                                justifyContent: "flex-end",
+                                minWidth: 0,
+                              }}
+                            >
+                              <Table.CurrencyCell
+                                className="capital-planning-planned-amount-value"
+                                value={row.plannedAmount}
+                              />
+                            </span>
+                          </Tooltip>
+                        ) : (
+                          <Table.CurrencyCell
+                            className="capital-planning-planned-amount-value"
+                            value={
+                              isLumpSumPlannedAmount
+                                ? plannedAmountManualByRowId[row.id] ?? row.plannedAmount
+                                : row.plannedAmount
+                            }
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <DropdownFlyout
+                          variant="secondary"
+                          size="sm"
+                          icon={<CaretDown />}
+                          aria-label={`Planned Amount Options For ${row.project}`}
+                          placement="bottom-left"
+                          options={plannedAmountSourceOptionsForRow(row)}
+                          optionRenderer={(opt) =>
+                            renderPlannedAmountSourceOption(opt, plannedAmountSourceByRowId[row.id])
+                          }
+                          onClick={(option: DropdownFlyoutOption) => {
+                            if ((option as PlannedAmountSourceOption).disabled) {
+                              return;
+                            }
+                            const value = String(option.value);
+                            if (value === PLANNED_AMOUNT_FLYOUT_CAPTION_VALUE) {
+                              return;
+                            }
+                            const prevSource = plannedAmountSourceByRowId[row.id];
+                            if (prevSource === value) {
+                              return;
+                            }
+                            if (onCapitalPlanningChange) {
+                              onCapitalPlanningChange({
+                                project: row.project,
+                                description: prototypeProjectDescriptionFromName(row.project),
+                                changed: changeHistoryChangedField.plannedAmount,
+                                from: labelForPlannedAmountSourceHistory(prevSource),
+                                to: labelForPlannedAmountSourceHistory(value),
+                              });
+                            }
+                            setPlannedAmountSourceByRowId((prev) => ({
+                              ...prev,
+                              [row.id]: value,
+                            }));
+                            if (value === LUMP_SUM_PLANNED_AMOUNT_SOURCE) {
+                              setPlannedAmountManualByRowId((prev) => ({
+                                ...prev,
+                                [row.id]: prev[row.id] ?? row.plannedAmount,
+                              }));
+                            } else {
+                              setPlannedAmountManualByRowId((prev) => {
+                                const next = { ...prev };
+                                delete next[row.id];
+                                return next;
+                              });
+                            }
+                            if (value === HIGH_LEVEL_BUDGET_ITEMS_SOURCE) {
+                              setHighLevelBudgetItemsRow(row);
+                            }
+                          }}
+                        />
+                        <div
+                          style={{
+                            flex: "1 1 auto",
+                            minWidth: 0,
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: isLumpSumPlannedAmount ? "stretch" : "flex-end",
+                            alignItems: "center",
+                          }}
+                        >
+                          {isLumpSumPlannedAmount ? (
+                            <div
+                              className="capital-planning-planned-amount-input-wrap"
+                              style={{ flex: "1 1 auto", minWidth: 0, width: "100%", maxWidth: "100%" }}
+                            >
+                              <LumpSumPlannedAmountCurrencyInput
+                                value={plannedAmountManualByRowId[row.id] ?? row.plannedAmount}
+                                onChange={(n) => {
+                                  setPlannedAmountManualByRowId((prev) => ({
+                                    ...prev,
+                                    [row.id]: n,
+                                  }));
+                                }}
+                                onCommittedChange={(previous, next) => {
+                                  if (!onCapitalPlanningChange || previous === next) {
+                                    return;
+                                  }
+                                  onCapitalPlanningChange({
+                                    project: row.project,
+                                    description: prototypeProjectDescriptionFromName(row.project),
+                                    changed: changeHistoryChangedField.plannedAmount,
+                                    from: formatChangeHistoryPlannedAmountValue(previous),
+                                    to: formatChangeHistoryPlannedAmountValue(next),
+                                  });
+                                }}
+                                ariaLabel={`Planned Amount For ${row.project}`}
+                              />
+                            </div>
+                          ) : isHighLevelBudgetItemsPlannedAmount ? (
+                            <Table.CurrencyCell className="capital-planning-planned-amount-value capital-planning-planned-amount-high-level-link">
+                              <Table.LinkCell
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setHighLevelBudgetItemsRow(row);
+                                }}
+                                aria-label={`Open High Level Budget Items for ${row.project}`}
+                              >
+                                {formatLumpSumUsdInput(
+                                  Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0
+                                )}
+                              </Table.LinkCell>
+                            </Table.CurrencyCell>
+                          ) : projectBudgetPlannedAmountTooltip ? (
+                            <Tooltip
+                              trigger="hover"
+                              placement="top"
+                              overlay={
+                                <Tooltip.Content>{projectBudgetPlannedAmountTooltip}</Tooltip.Content>
+                              }
+                            >
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  width: "100%",
+                                  justifyContent: "flex-end",
+                                  minWidth: 0,
+                                }}
+                              >
+                                <Table.CurrencyCell
+                                  className="capital-planning-planned-amount-value"
+                                  value={row.plannedAmount}
+                                />
+                              </span>
+                            </Tooltip>
+                          ) : (
+                            <Table.CurrencyCell
+                              className="capital-planning-planned-amount-value"
+                              value={row.plannedAmount}
+                            />
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("status", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("status", columnVisibility)}>
+                  <Pill color={STATUS_PILL_COLOR[row.status]}>{row.status}</Pill>
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("projectPriority", columnVisibility) ? (
+                  <Table.BodyCell
+                    className={baselineCellClasses("projectPriority", columnVisibility)}
+                    style={{ verticalAlign: "middle" }}
+                  >
+                    {setPrioritiesByRowId && !readOnly ? (
+                      <Table.SelectCell
+                        key={`capital-planning-priority-${row.id}-${row.priority}`}
+                        block
+                        label={row.priority}
+                        aria-label={`Priority For ${row.project}`}
+                        onSelect={(s) => {
+                          if (s.action !== "selected") return;
+                          const next = s.item as ProjectPriority;
+                          if (next === row.priority) return;
+                          setPrioritiesByRowId((prev) => ({ ...prev, [row.id]: next }));
+                        }}
+                      >
+                        {PRIORITY_OPTIONS.map((p) => (
+                          <Select.Option key={p} value={p} selected={row.priority === p}>
+                            {p}
+                          </Select.Option>
+                        ))}
+                      </Table.SelectCell>
+                    ) : (
+                      <Table.TextCell>{row.priority}</Table.TextCell>
+                    )}
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
+                  <Table.BodyCell
+                    className={baselineCellClasses("prioritizationScore", columnVisibility)}
+                    style={{ verticalAlign: "middle", textAlign: "right" }}
+                  >
+                    <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {formatPrioritizationScorePercent(
+                        prioritizationScoresByRowId?.[row.id] ?? null
+                      )}
+                    </Typography>
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("originalBudget", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("originalBudget", columnVisibility)}>
+                  {budgetMetricCurrencyCell(row.originalBudget)}
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("revisedBudget", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("revisedBudget", columnVisibility)}>
+                  {budgetMetricCurrencyCell(row.revisedBudget)}
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("jobToDate", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("jobToDate", columnVisibility)}>
+                  {budgetMetricCurrencyCell(row.jobToDateCosts)}
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("startDate", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("startDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
+                  <Table.DateSelectCell
+                    disabled={readOnly}
+                    value={optionalIsoStringToDate(row.startDate)}
+                    onChange={(d) => {
+                      const prevStart = row.startDate?.trim() ?? "";
+                      const nextStart = d ? dateToIsoString(d) : "";
+                      if (prevStart === nextStart) {
+                        return;
+                      }
+                      if (onCapitalPlanningChange) {
+                        onCapitalPlanningChange({
+                          project: row.project,
+                          description: prototypeProjectDescriptionFromName(row.project),
+                          changed: changeHistoryChangedField.startDate,
+                          from: isoDateToChangeHistoryField(prevStart),
+                          to: isoDateToChangeHistoryField(nextStart),
+                        });
+                      }
+                      setRowDatesById((prev) => {
+                        const cur = prev[row.id] ?? {
+                          startDate: row.startDate,
+                          endDate: row.endDate,
+                        };
+                        if (!d) {
+                          return {
+                            ...prev,
+                            [row.id]: { ...cur, startDate: "" },
+                          };
+                        }
+                        const ns = dateToIsoString(d);
+                        const end = cur.endDate ?? "";
+                        const nextEnd = end.trim() !== "" && ns > end ? ns : end;
+                        return {
+                          ...prev,
+                          [row.id]: {
+                            ...cur,
+                            startDate: ns,
+                            endDate: nextEnd,
+                          },
+                        };
+                      });
+                    }}
+                    disabledDate={(candidate) => {
+                      const end = row.endDate?.trim() ?? "";
+                      if (!end) return false;
+                      return dateToIsoString(candidate) > end;
+                    }}
+                    aria-label={`Start Date For ${row.project}`}
+                  />
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("endDate", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("endDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
+                  <Table.DateSelectCell
+                    disabled={readOnly}
+                    value={optionalIsoStringToDate(row.endDate)}
+                    onChange={(d) => {
+                      const prevEnd = row.endDate?.trim() ?? "";
+                      const nextEndIso = d ? dateToIsoString(d) : "";
+                      if (prevEnd === nextEndIso) {
+                        return;
+                      }
+                      if (onCapitalPlanningChange) {
+                        onCapitalPlanningChange({
+                          project: row.project,
+                          description: prototypeProjectDescriptionFromName(row.project),
+                          changed: changeHistoryChangedField.endDate,
+                          from: isoDateToChangeHistoryField(prevEnd),
+                          to: isoDateToChangeHistoryField(nextEndIso),
+                        });
+                      }
+                      setRowDatesById((prev) => {
+                        const cur = prev[row.id] ?? {
+                          startDate: row.startDate,
+                          endDate: row.endDate,
+                        };
+                        if (!d) {
+                          return {
+                            ...prev,
+                            [row.id]: { ...cur, endDate: "" },
+                          };
+                        }
+                        const ne = dateToIsoString(d);
+                        return {
+                          ...prev,
+                          [row.id]: { ...cur, endDate: ne },
+                        };
+                      });
+                    }}
+                    disabledDate={(candidate) => {
+                      const start = row.startDate?.trim() ?? "";
+                      if (!start) return false;
+                      return dateToIsoString(candidate) < start;
+                    }}
+                    aria-label={`End Date For ${row.project}`}
+                  />
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("curve", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("curve", columnVisibility)} style={{ verticalAlign: "middle" }}>
+                  {readOnly ? (
+                    <Table.TextCell aria-label={`Curve For ${row.project}`}>
+                      {row.curve === "" ? CURVE_SELECT_PLACEHOLDER_LABEL : row.curve}
+                    </Table.TextCell>
+                  ) : (
+                    <Table.SelectCell
+                      key={`capital-planning-curve-${row.id}-${row.curve}`}
+                      block
+                      label={
+                        row.curve === "" ? (
+                          <span className="capital-planning-curve-placeholder">{CURVE_SELECT_PLACEHOLDER_LABEL}</span>
+                        ) : (
+                          row.curve
+                        )
+                      }
+                      aria-label={`Curve For ${row.project}`}
+                      onSelect={(s) => {
+                        if (s.action !== "selected") return;
+                        const next = s.item as ProjectCurve;
+                        if (next === "" || next === row.curve) return;
+                        if (row.curve === "Manual" && next !== "Manual") {
+                          setCurveChangeFromManual({
+                            rowId: row.id,
+                            nextCurve: next,
+                          });
+                          return;
+                        }
+                        if (onCapitalPlanningChange) {
+                          onCapitalPlanningChange({
+                            project: row.project,
+                            description: prototypeProjectDescriptionFromName(row.project),
+                            changed: changeHistoryChangedField.curve,
+                            from: curveValueForChangeHistory(row.curve),
+                            to: curveValueForChangeHistory(next),
+                          });
+                        }
+                        setCurvesByRowId((prev) => ({ ...prev, [row.id]: next }));
+                      }}
+                    >
+                      {CURVE_OPTIONS.map((c) => (
+                        <Select.Option key={c} value={c} selected={row.curve === c}>
+                          {c}
+                        </Select.Option>
+                      ))}
+                    </Table.SelectCell>
+                  )}
+                </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("remaining", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("remaining", columnVisibility)}>
+                  <Table.TextCell
+                    style={{
+                      textAlign: "right",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {formatRemainingToForecastCurrency(
+                      getRemainingToForecast(
+                        getForecastAllocationBasisDollars(row),
+                        getTotalAllocatedForecastDollars(
+                          row,
+                          forecastOverridesForDisplay,
+                          forecastBasisKey,
+                          anchorDate,
+                          forecastGranularity,
+                          forecastColumnsExpanded,
+                          forecastLeafLabels.length,
+                          ganttFlatForecast,
+                          ganttProgramMonthLayout,
+                          ganttQuarterYearBands,
+                          fiscalYearStartMonth
+                        )
+                      )
+                    )}
+                  </Table.TextCell>
+                </Table.BodyCell>
+                ) : null}
+                {renderProjectCriteriaCells(row.id)}
+                {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
+                  <Table.BodyCell
+                    key={`${row.id}-prio-score`}
+                    className={prioritizationScoreStickyColClass}
+                    style={{ verticalAlign: "middle" }}
+                  >
+                    <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {formatPrioritizationScorePercent(
+                        prioritizationScoresByRowId?.[row.id] ?? null
+                      )}
+                    </Typography>
+                  </Table.BodyCell>
+                ) : null}
+                {show.forecast ? (
+                  ganttFlatForecast ? (
+                    <Table.BodyCell
+                      key={`${row.id}-gantt-timeline`}
+                      colSpan={leafColumnCountForTable}
+                      className="capital-planning-gantt-row-timeline-cell"
+                    >
+                      {/*
+                        Keep Tooltip + Gantt in one stable tree. If we only wrapped the empty-date case,
+                        the first create-bar paint would swap branches, unmount the bar, and drop pointer capture
+                        so click-drag could not resize in one gesture.
+                      */}
+                      <Tooltip
+                        trigger="hover"
+                        placement="top"
+                        beforeShow={() => {
+                          const hasStart = Boolean(String(row.startDate ?? "").trim());
+                          const hasEnd = Boolean(String(row.endDate ?? "").trim());
+                          if (hasStart && hasEnd) return false;
+                          return undefined;
+                        }}
+                        overlay={
+                          <Tooltip.Content>
+                            {readOnly ? GANTT_EMPTY_SCHEDULE_TOOLTIP_READONLY : GANTT_EMPTY_SCHEDULE_TOOLTIP}
+                          </Tooltip.Content>
+                        }
+                      >
+                        <div className="capital-planning-gantt-forecast-tooltip-target">
+                          <div className="capital-planning-gantt-row-bar-wrap">
+                            <CapitalPlanningProjectGanttBar
+                              rowId={row.id}
+                              barTitle={row.project}
+                              startIso={row.startDate ?? ""}
+                              endIso={row.endDate ?? ""}
+                              timeline={ganttYearRollingFlat ? "rollingYear" : "program"}
+                              anchorDate={anchorDate}
+                              setRowDatesById={setRowDatesById}
+                              readOnly={readOnly}
+                            />
+                          </div>
+                        </div>
+                      </Tooltip>
+                    </Table.BodyCell>
+                  ) : forecastColumnsExpanded ? (
+                  forecastGranularity === "quarter" && programQuarterLeafSlots ? (
+                    programQuarterLeafSlots.map((slot, slotIndex) => {
+                      const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[slot.fyIndex];
+                      if (slot.kind === "fy_year") {
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fy-${slot.fyIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "y", slot.fyIndex]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={effectiveMonthAmounts
+                                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                                .reduce((a, b) => a + b, 0)}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly}
+                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} total for ${row.project}`}
+                            />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "fq_rollup") {
+                        const fqLabel = forecastFqLabels[slot.fqIndex];
+                        const fyForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+                        const fq1ReadOnly =
+                          slot.fqIndex % 4 === 0 &&
+                          fyForFq !== undefined &&
+                          isProgramForecastFq1PeriodEnded(fyForFq, anchorDate, fiscalYearStartMonth);
+                        const comp = sumProgramForecastQuarterMonthAmounts(
+                          effectiveMonthAmounts,
+                          slot.fqIndex,
+                          fiscalYearStartMonth
+                        );
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fq-${slot.fqIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "r", slot.fqIndex]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={comp}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly || fq1ReadOnly}
+                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} ${fqLabel} total for ${row.project}`}
+                            />
+                          </Table.BodyCell>
+                        );
+                      }
+                      const monthIdx = slot.monthIdx;
+                      const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
+                      const monthFq1ReadOnly =
+                        isGlobalMonthIndexInFq1(monthIdx, fiscalYearStartMonth) &&
+                        fyForMonth !== undefined &&
+                        isProgramForecastFq1PeriodEnded(fyForMonth, anchorDate, fiscalYearStartMonth);
+                      const base = effectiveMonthAmounts[monthIdx] ?? 0;
+                      if (slot.kind === "month_single" || slot.kind === "cmp_current") {
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-m-${monthIdx}-${slot.kind}`}
+                            className="capital-planning-forecast-month-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "m", monthIdx]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={base}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly || monthFq1ReadOnly}
+                              ariaLabel={`Forecast ${forecastLeafLabels[monthIdx]} (${programForecastFyLabel(fyYear)}) for ${row.project}`}
+                            />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "cmp_snapshot") {
+                        const snap = base * forecastComparisonPlannedMultiplier;
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-snap-${monthIdx}`}
+                            className="capital-planning-forecast-month-cell"
+                          >
+                            <Table.CurrencyCell value={snap} />
+                          </Table.BodyCell>
+                        );
+                      }
+                      const varianceD = base - base * forecastComparisonPlannedMultiplier;
+                      return (
+                        <Table.BodyCell
+                          key={`${row.id}-pq-slot-${slotIndex}-var-${monthIdx}`}
+                          className="capital-planning-forecast-month-cell"
+                        >
+                          <Table.CurrencyCell value={varianceD} />
+                        </Table.BodyCell>
+                      );
+                    })
+                  ) : forecastGranularity === "quarter" ? (
+                    CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((fyYear, fyIndex) => {
+                      if (!fyYearSectionExpanded[fyIndex]) {
+                        return [
+                          <Table.BodyCell
+                            key={`${row.id}-fy-year-rollup-${fyIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "y", fyIndex]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={effectiveMonthAmounts
+                                .slice(fyIndex * 12, fyIndex * 12 + 12)
+                                .reduce((a, b) => a + b, 0)}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly}
+                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} total for ${row.project}`}
+                            />
+                          </Table.BodyCell>,
+                        ];
+                      }
+                      return [0, 1, 2, 3].flatMap((fqInFy) => {
+                        const fqIndex = fyIndex * 4 + fqInFy;
+                        const fqLabel = forecastFqLabels[fqIndex];
+                        const fq1ReadOnly =
+                          fqInFy === 0 &&
+                          isProgramForecastFq1PeriodEnded(fyYear, anchorDate, fiscalYearStartMonth);
+                        const fqMonthIndices = fiscalQuarterMonthGlobalIndices(
+                          fyIndex,
+                          fqInFy,
+                          fiscalYearStartMonth
+                        );
+                        return fqCollapsed[fqIndex]
+                          ? [
+                              <Table.BodyCell
+                                key={`${row.id}-fq-rollup-${fqIndex}`}
+                                className="capital-planning-forecast-fq-rollup-cell"
+                              >
+                                <ForecastEditableNumberCell
+                                  rowId={row.id}
+                                  parts={["q", "r", fqIndex]}
+                                  forecastBasisKey={forecastBasisKey}
+                                  computedValue={sumProgramForecastQuarterMonthAmounts(
+                                    effectiveMonthAmounts,
+                                    fqIndex,
+                                    fiscalYearStartMonth
+                                  )}
+                                  overrides={forecastOverridesForDisplay}
+                                  setOverrides={setForecastOverrides}
+                                  curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                                  onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                                  onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                                  readOnly={readOnly || fq1ReadOnly}
+                                  ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} ${fqLabel} total for ${row.project}`}
+                                />
+                              </Table.BodyCell>,
+                            ]
+                          : [0, 1, 2].map((k) => {
+                              const monthIdx = fqMonthIndices[k]!;
+                              const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
+                              const monthFq1ReadOnly =
+                                isGlobalMonthIndexInFq1(monthIdx, fiscalYearStartMonth) &&
+                                fyForMonth !== undefined &&
+                                isProgramForecastFq1PeriodEnded(fyForMonth, anchorDate, fiscalYearStartMonth);
+                              return (
+                                <Table.BodyCell
+                                  key={`${row.id}-forecast-m-${fqIndex}-${k}`}
+                                  className="capital-planning-forecast-month-cell"
+                                >
+                                  <ForecastEditableNumberCell
+                                    rowId={row.id}
+                                    parts={["q", "m", monthIdx]}
+                                    forecastBasisKey={forecastBasisKey}
+                                    computedValue={effectiveMonthAmounts[monthIdx] ?? 0}
+                                    overrides={forecastOverridesForDisplay}
+                                    setOverrides={setForecastOverrides}
+                                    curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                                    onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                                    onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                                    readOnly={readOnly || monthFq1ReadOnly}
+                                    ariaLabel={`Forecast ${forecastLeafLabels[monthIdx]} (${programForecastFyLabel(fyYear)}) for ${row.project}`}
+                                  />
+                                </Table.BodyCell>
+                              );
+                            });
+                      });
+                    })
+                  ) : (
+                    forecastLeafLabels.map((label, i) => (
+                      <Table.BodyCell
+                        key={`${row.id}-forecast-leaf-${i}-${label}`}
+                        className="capital-planning-forecast-period-cell"
+                      >
+                        <ForecastEditableNumberCell
+                          rowId={row.id}
+                          parts={["x", forecastGranularity, "e", i]}
+                          forecastBasisKey={forecastBasisKey}
+                          computedValue={getForecastLeafDollarAmount(
+                            row,
+                            i,
+                            forecastGranularity,
+                            anchorDate
+                          )}
+                          overrides={forecastOverridesForDisplay}
+                          setOverrides={setForecastOverrides}
+                          curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                          onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                          onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                          readOnly={readOnly}
+                          ariaLabel={`Forecast ${label} for ${row.project}`}
+                        />
+                      </Table.BodyCell>
+                    ))
+                  )
+                ) : forecastGranularity === "quarter" ? (
+                  <Table.BodyCell className="capital-planning-forecast-fq-rollup-cell">
+                    <ForecastEditableNumberCell
+                      rowId={row.id}
+                      parts={["q", "fy"]}
+                      forecastBasisKey={forecastBasisKey}
+                      computedValue={effectiveMonthAmounts.reduce((a, b) => a + b, 0)}
+                      overrides={forecastOverridesForDisplay}
+                      setOverrides={setForecastOverrides}
+                      curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                      onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                      onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                      readOnly={readOnly}
+                      ariaLabel={`Forecast ${getProgramForecastHeaderTitle()} total for ${row.project}`}
+                    />
+                  </Table.BodyCell>
+                ) : (
+                  forecastLeafLabels.map((label, i) => (
+                    <Table.BodyCell
+                      key={`${row.id}-fy-collapsed-leaf-${i}-${label}`}
+                      className="capital-planning-forecast-fq-rollup-cell"
+                    >
+                      <ForecastEditableNumberCell
+                        rowId={row.id}
+                        parts={["x", forecastGranularity, "c", i]}
+                        forecastBasisKey={forecastBasisKey}
+                        computedValue={getForecastLeafDollarAmount(
+                          row,
+                          i,
+                          forecastGranularity,
+                          anchorDate
+                        )}
+                        overrides={forecastOverridesForDisplay}
+                        setOverrides={setForecastOverrides}
+                        curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                        onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                        onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                        readOnly={readOnly}
+                        ariaLabel={`Forecast ${label} for ${row.project}`}
+                      />
+                    </Table.BodyCell>
+                  ))
+                )
+                ) : null}
+              </Table.BodyRow>
+              );
+  };
+
   return (
     <>
     <Table.Container
       className={[
         "capital-planning-table-scroll",
+        showSelectionCheckboxes ? "" : "capital-planning-no-row-selection",
         ganttFlatForecast ? "capital-planning--gantt-forecast" : "",
         ganttYearRollingFlat ? "capital-planning--gantt-forecast-rolling-year" : "",
         show.forecast && ganttQuarterYearBands ? "capital-planning--gantt-forecast-quarter-bands" : "",
@@ -2135,30 +4344,52 @@ export function CapitalPlanningSmartGrid({
           <Table.HeaderRow>
             <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("project", columnVisibility)}>
               <div className="capital-planning-project-header-inner">
+                <span className="capital-planning-project-checkbox-slot">
+                  {showSelectionCheckboxes ? (
+                    <Table.Checkbox
+                      className="capital-planning-project-checkbox"
+                      aria-label="Select all visible projects"
+                      disabled={readOnly}
+                      checked={headerSelectAllChecked}
+                      indeterminate={headerSelectAllIndeterminate}
+                      onChange={toggleSelectAllVisible}
+                    />
+                  ) : (
+                    <span className="capital-planning-project-checkbox-spacer" aria-hidden />
+                  )}
+                </span>
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   className="capital-planning-forecast-fy-toggle capital-planning-project-header-region-toggle"
                   icon={
-                    allRegionGroupsCollapsed ? (
+                    toolbarAllGroupsCollapsed ? (
                       <CaretsOutVertical size="sm" />
                     ) : (
                       <CaretsInVertical size="sm" />
                     )
                   }
-                  disabled={rowsGroupedByRegion.length === 0}
+                  disabled={!toolbarHasGroups}
                   aria-label={
-                    rowsGroupedByRegion.length === 0
-                      ? capitalPlanningGroupByEmptyToolbarLabel(resolvedGroupBy)
-                      : allRegionGroupsExpanded
+                    !toolbarHasGroups
+                      ? isFlatUngroupedProgramTable
+                        ? "Select Group by to show grouped sections"
+                        : capitalPlanningGroupByEmptyToolbarLabel(resolvedGroupBy)
+                      : toolbarAllGroupsExpanded
                         ? `Collapse all ${capitalPlanningGroupByCollapseNoun(resolvedGroupBy)}`
                         : `Expand all ${capitalPlanningGroupByCollapseNoun(resolvedGroupBy)}`
                   }
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    toggleAllRegionGroups();
+                    if (showRegionCampusBuildingHierarchy) {
+                      toggleAllLocationHierarchyRegions();
+                    } else if (showDynamicMultiHierarchy) {
+                      toggleAllDynamicTopLevel();
+                    } else {
+                      toggleAllRegionGroups();
+                    }
                   }}
                 />
                 <span className="capital-planning-project-header-label">{formatHeaderLabel("Project")}</span>
@@ -2397,6 +4628,7 @@ export function CapitalPlanningSmartGrid({
                 fyLabel={forecastMasterHeaderLabel}
                 colSpan={forecastColumnsExpanded ? leafColumnCountForTable : 1}
                 onToggle={handleForecastBlockToggle}
+                showComparisonSnapshotButton={showComparisonForecastHeaderRow && !forecastColumnsExpanded}
               />
             ) : null}
             {show.forecast && ganttQuarterYearBands
@@ -2480,9 +4712,11 @@ export function CapitalPlanningSmartGrid({
                   <Table.HeaderCell
                     key={`forecast-fy-sub-${fyYear}`}
                     colSpan={
-                      fyYearSectionExpanded[fyIndex]
-                        ? quarterLeafColumnsForFy(fyIndex, fqCollapsed)
-                        : 1
+                      programQuarterLeafSlots
+                        ? programQuarterSlotsColspanForFy(programQuarterLeafSlots, fyIndex)
+                        : fyYearSectionExpanded[fyIndex]
+                          ? quarterLeafColumnsForFy(fyIndex, fqCollapsed)
+                          : 1
                     }
                     className="capital-planning-forecast-fy-subheader"
                   >
@@ -2490,6 +4724,20 @@ export function CapitalPlanningSmartGrid({
                       <span className="capital-planning-forecast-fy-subheader-label">
                         {programForecastFyLabel(fyYear)}
                       </span>
+                      {showComparisonForecastHeaderRow && !fyYearSectionExpanded[fyIndex] ? (
+                        <Button
+                          type="button"
+                          variant="tertiary"
+                          size="sm"
+                          className="capital-planning-forecast-fy-toggle"
+                          icon={<SquareStackDashed size="sm" />}
+                          aria-label="Comparison snapshot"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        />
+                      ) : null}
                       <Button
                         type="button"
                         variant="secondary"
@@ -2579,12 +4827,19 @@ export function CapitalPlanningSmartGrid({
                         expanded
                         toggleAriaLabel=""
                         onToggle={() => {}}
+                        showComparisonSnapshotButton={false}
                       />
                     ) : (
                       <ForecastPeriodHeaderCell
                         key={`forecast-fq-${i}-${label}-${fyYear}`}
                         label={label}
-                        colSpan={fqCollapsed[i] ? 1 : 3}
+                        colSpan={
+                          programQuarterLeafSlots
+                            ? programQuarterSlotsColspanForFq(programQuarterLeafSlots, i)
+                            : fqCollapsed[i]
+                              ? 1
+                              : 3
+                        }
                         fqMonthWidthHeader={fqCollapsed[i]}
                         expanded={!fqCollapsed[i]}
                         toggleAriaLabel={
@@ -2599,6 +4854,11 @@ export function CapitalPlanningSmartGrid({
                             return next;
                           })
                         }
+                        showComparisonSnapshotButton={
+                          showComparisonForecastHeaderRow &&
+                          fyYearSectionExpanded[fyIndex] &&
+                          fqCollapsed[i]
+                        }
                       />
                     );
                   });
@@ -2611,6 +4871,7 @@ export function CapitalPlanningSmartGrid({
                     expanded
                     toggleAriaLabel={`Collapse forecast columns (${label})`}
                     onToggle={() => setForecastColumnsExpanded(false)}
+                    showComparisonSnapshotButton={showComparisonForecastHeaderRow}
                   />
                 ))
               )
@@ -2635,28 +4896,58 @@ export function CapitalPlanningSmartGrid({
                   expanded={false}
                   toggleAriaLabel={`Expand forecast columns (${label})`}
                   onToggle={() => setForecastColumnsExpanded(true)}
+                  showComparisonSnapshotButton={showComparisonForecastHeaderRow}
                 />
               ))
             )}
           </Table.HeaderRow>
           ) : null}
           {show.forecast && quarterThreeRowForecastHeader ? (
+            <>
             <Table.HeaderRow>
               {forecastColumnsExpanded || ganttProgramMonthLayout ? (
                 ganttProgramMonthLayout ? (
                   CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((_fyYear, fyIndex) =>
                     [0, 1, 2, 3].flatMap((fqInFy) => {
                       const fqIndex = fyIndex * 4 + fqInFy;
+                      const fqMonthIndices = fiscalQuarterMonthGlobalIndices(
+                        fyIndex,
+                        fqInFy,
+                        fiscalYearStartMonth
+                      );
                       return ([0, 1, 2] as const).map((k) => {
-                        const monthIdx = fqIndex * 3 + k;
+                        const monthIdx = fqMonthIndices[k]!;
                         const label = forecastLeafLabels[monthIdx] ?? "";
                         return (
                           <Table.HeaderCell
                             key={`gantt-mo-m-${fqIndex}-${k}-${monthIdx}`}
-                            className="capital-planning-forecast-month-header"
+                            className={[
+                              "capital-planning-forecast-month-header",
+                              showComparisonForecastHeaderRow
+                                ? "capital-planning-forecast-month-band-row--comparison"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
                             scope="col"
                           >
-                            {label}
+                            <div className="capital-planning-forecast-month-header-inner">
+                              <span className="capital-planning-forecast-month-header-label">{label}</span>
+                              {showComparisonForecastHeaderRow ? (
+                                <Button
+                                  type="button"
+                                  variant="tertiary"
+                                  size="sm"
+                                  className="capital-planning-forecast-fy-toggle"
+                                  icon={<SquareStackDashed size="sm" />}
+                                  aria-label="Comparison snapshot"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                />
+                              ) : null}
+                            </div>
                           </Table.HeaderCell>
                         );
                       });
@@ -2668,7 +4959,15 @@ export function CapitalPlanningSmartGrid({
                     return [
                       <th
                         key={`forecast-month-fy-collapsed-${fyYear}`}
-                        className="capital-planning-forecast-fq-rollup-header"
+                        rowSpan={comparisonMonthSubHeaderRow ? 2 : undefined}
+                        className={[
+                          "capital-planning-forecast-fq-rollup-header",
+                          showComparisonForecastHeaderRow
+                            ? "capital-planning-forecast-month-band-row--comparison"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         role="columnheader"
                         aria-hidden
                       >
@@ -2678,11 +4977,24 @@ export function CapitalPlanningSmartGrid({
                   }
                   return [0, 1, 2, 3].flatMap((fqInFy) => {
                     const fqIndex = fyIndex * 4 + fqInFy;
+                    const fqMonthIndices = fiscalQuarterMonthGlobalIndices(
+                      fyIndex,
+                      fqInFy,
+                      fiscalYearStartMonth
+                    );
                     return fqCollapsed[fqIndex]
                       ? [
                           <th
                             key={`forecast-fq-rollup-h-${fqIndex}`}
-                            className="capital-planning-forecast-fq-rollup-header"
+                            rowSpan={comparisonMonthSubHeaderRow ? 2 : undefined}
+                            className={[
+                              "capital-planning-forecast-fq-rollup-header",
+                              showComparisonForecastHeaderRow
+                                ? "capital-planning-forecast-month-band-row--comparison"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
                             role="columnheader"
                             aria-hidden
                           >
@@ -2690,15 +5002,59 @@ export function CapitalPlanningSmartGrid({
                           </th>,
                         ]
                       : ([0, 1, 2] as const).map((k) => {
-                          const monthIdx = fqIndex * 3 + k;
+                          const monthIdx = fqMonthIndices[k]!;
                           const label = forecastLeafLabels[monthIdx] ?? "";
+                          const monthComparisonOpen =
+                            showComparisonForecastHeaderRow &&
+                            !fqCollapsed[fqIndex] &&
+                            comparisonMonthDetailOpen.has(monthIdx);
                           return (
                             <Table.HeaderCell
                               key={`forecast-m-${fqIndex}-${k}-${monthIdx}`}
-                              className="capital-planning-forecast-month-header"
+                              rowSpan={
+                                comparisonMonthSubHeaderRow && !monthComparisonOpen ? 2 : undefined
+                              }
+                              colSpan={monthComparisonOpen ? 3 : 1}
+                              className={[
+                                "capital-planning-forecast-month-header",
+                                showComparisonForecastHeaderRow
+                                  ? "capital-planning-forecast-month-band-row--comparison"
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                               scope="col"
                             >
-                              {label}
+                              <div className="capital-planning-forecast-month-header-inner">
+                                <span className="capital-planning-forecast-month-header-label">{label}</span>
+                                {showComparisonForecastHeaderRow && !fqCollapsed[fqIndex] ? (
+                                  <Button
+                                    type="button"
+                                    variant="tertiary"
+                                    size="sm"
+                                    className={[
+                                      "capital-planning-forecast-fy-toggle",
+                                      monthComparisonOpen
+                                        ? "capital-planning-forecast-month-comparison-toggle--active"
+                                        : "",
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")}
+                                    icon={<SquareStackDashed size="sm" />}
+                                    aria-label={
+                                      monthComparisonOpen
+                                        ? "Collapse snapshot comparison columns"
+                                        : "Expand snapshot comparison columns"
+                                    }
+                                    aria-pressed={monthComparisonOpen}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      toggleComparisonMonthDetail(monthIdx);
+                                    }}
+                                  />
+                                ) : null}
+                              </div>
                             </Table.HeaderCell>
                           );
                         });
@@ -2707,13 +5063,77 @@ export function CapitalPlanningSmartGrid({
                 )
               ) : (
                 <Table.HeaderCell
-                  className="capital-planning-forecast-fq-rollup-header"
+                  className={[
+                    "capital-planning-forecast-fq-rollup-header",
+                    showComparisonForecastHeaderRow
+                      ? "capital-planning-forecast-month-band-row--comparison"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   aria-hidden
                 >
                   {"\u00a0"}
                 </Table.HeaderCell>
               )}
             </Table.HeaderRow>
+            {comparisonMonthSubHeaderRow && programQuarterLeafSlots ? (
+              <Table.HeaderRow>
+                {programQuarterLeafSlots.map((slot, slotIndex) => {
+                  const subLabel = (() => {
+                    switch (slot.kind) {
+                      case "fy_year":
+                      case "fq_rollup":
+                      case "month_single":
+                        return null;
+                      case "cmp_current":
+                        return formatHeaderLabel(comparisonMonthSubheaderPrimaryLabel);
+                      case "cmp_snapshot":
+                        return formatHeaderLabel(comparisonMonthSubheaderSnapshotLabel);
+                      case "cmp_variance":
+                        return formatHeaderLabel("Variance");
+                    }
+                  })();
+                  return (
+                    <Table.HeaderCell
+                      key={`forecast-cmp-sub-${slotIndex}-${slot.kind}-${
+                        "monthIdx" in slot ? slot.monthIdx : slot.kind
+                      }`}
+                      className={[
+                        "capital-planning-forecast-month-comparison-subheader",
+                        slot.kind === "cmp_current" ||
+                        slot.kind === "cmp_snapshot" ||
+                        slot.kind === "cmp_variance"
+                          ? "capital-planning-forecast-month-comparison-subheader--labeled"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      scope="col"
+                    >
+                      {subLabel != null ? (
+                        <div className="capital-planning-forecast-month-comparison-subheader-inner">
+                          <Typography
+                            intent="small"
+                            weight="semibold"
+                            as="span"
+                            className="capital-planning-forecast-month-comparison-subheader-label"
+                          >
+                            {subLabel}
+                          </Typography>
+                          <span className="capital-planning-forecast-month-comparison-subheader-icon">
+                            <ComparisonMonthSubheaderTrailingIcon kind={slot.kind} />
+                          </span>
+                        </div>
+                      ) : (
+                        "\u00a0"
+                      )}
+                    </Table.HeaderCell>
+                  );
+                })}
+              </Table.HeaderRow>
+            ) : null}
+            </>
           ) : null}
         </Table.Header>
         <Table.Body>
@@ -2731,850 +5151,51 @@ export function CapitalPlanningSmartGrid({
                 <Table.TextCell>{`No Projects Match "${search.trim()}".`}</Table.TextCell>
               </Table.BodyCell>
             </Table.BodyRow>
+          ) : isFlatUngroupedProgramTable ? (
+            filteredProjectRows.map((row) => renderProgramProjectBodyRow(row, { hierarchyLeafRailCount: 0 }))
+          ) : showRegionCampusBuildingHierarchy ? (
+            locationHierarchyRenderList.map((item) =>
+              item.kind === "aggregate"
+                ? renderProgramGroupAggregateRow(
+                    item.depth,
+                    item.collapseKey,
+                    item.label,
+                    item.rows,
+                    !locationHierarchyCollapsed[item.collapseKey],
+                    () => toggleLocationHierarchyCollapsed(item.collapseKey)
+                  )
+                : renderProgramProjectBodyRow(item.row, { hierarchyLeafRailCount: item.leafRailCount })
+            )
+          ) : showDynamicMultiHierarchy ? (
+            dynamicHierarchyRenderList.map((item) =>
+              item.kind === "aggregate"
+                ? renderProgramGroupAggregateRow(
+                    item.depth,
+                    item.collapseKey,
+                    item.label,
+                    item.rows,
+                    !dynamicHierarchyCollapsed[item.collapseKey],
+                    () => toggleDynamicHierarchyCollapsed(item.collapseKey)
+                  )
+                : renderProgramProjectBodyRow(item.row, { hierarchyLeafRailCount: item.leafRailCount })
+            )
           ) : (
             rowsGroupedByRegion.flatMap((group) => {
               const groupExpanded = !regionGroupCollapsed[group.key];
-              const groupTotals = computeCapitalPlanningGridTotals(group.rows, totalsAggregationArgs);
-              const groupHeader = (
-                <Table.BodyRow key={`region-group-${group.key}`} className="capital-planning-table-status-group">
-                  <Table.BodyCell
-                    className={[
-                      baselineCellClasses("project", columnVisibility),
-                      "capital-planning-table-status-group-header-label-cell",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    <Table.TextCell className="capital-planning-status-group-header-text-cell">
-                      <button
-                        type="button"
-                        className="capital-planning-status-group-header-toggle"
-                        aria-expanded={groupExpanded}
-                        aria-label={
-                          groupExpanded
-                            ? `Collapse ${group.label} (${group.rows.length} projects)`
-                            : `Expand ${group.label} (${group.rows.length} projects)`
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleRegionGroupCollapsed(group.key);
-                        }}
-                      >
-                        <span className="capital-planning-status-group-header-chevron" aria-hidden>
-                          {groupExpanded ? <CaretDown size="sm" /> : <CaretRight size="sm" />}
-                        </span>
-                        <Typography
-                          intent="small"
-                          weight="semibold"
-                          as="span"
-                          className="capital-planning-status-group-header-title"
-                        >
-                          {group.label}
-                        </Typography>
-                      </button>
-                    </Table.TextCell>
-                  </Table.BodyCell>
-                  {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("projectDescription", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("estimatedBudget", columnVisibility)}>
-                      {currencyTotalCell(groupTotals.estimatedBudget, {
-                        className: "capital-planning-planned-amount-value",
-                        style: FOOTER_TOTAL_BOLD_STYLE,
-                      })}
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("prioritizationStatus", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("prioritizationStatus", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("plannedAmount", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("plannedAmount", columnVisibility)}>
-                      {currencyTotalCell(groupTotals.planned, {
-                        className: "capital-planning-planned-amount-value",
-                        style: FOOTER_TOTAL_BOLD_STYLE,
-                      })}
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("status", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("status", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("projectPriority", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("projectPriority", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("prioritizationScore", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("originalBudget", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("originalBudget", columnVisibility)}>
-                      {currencyTotalCell(groupTotals.original, { style: FOOTER_TOTAL_BOLD_STYLE })}
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("revisedBudget", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("revisedBudget", columnVisibility)}>
-                      {currencyTotalCell(groupTotals.revised, { style: FOOTER_TOTAL_BOLD_STYLE })}
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("jobToDate", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("jobToDate", columnVisibility)}>
-                      {currencyTotalCell(groupTotals.jtd, { style: FOOTER_TOTAL_BOLD_STYLE })}
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("startDate", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("startDate", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("endDate", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("endDate", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("curve", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("curve", columnVisibility)}>
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {isBaselineColumnVisible("remaining", columnVisibility) ? (
-                    <Table.BodyCell className={baselineCellClasses("remaining", columnVisibility)}>
-                      <Table.TextCell
-                        style={{
-                          textAlign: "right",
-                          fontVariantNumeric: "tabular-nums",
-                          ...FOOTER_TOTAL_BOLD_STYLE,
-                        }}
-                      >
-                        {formatRemainingToForecastCurrency(groupTotals.remaining)}
-                      </Table.TextCell>
-                    </Table.BodyCell>
-                  ) : null}
-                  {renderCriteriaColumnsInGrid
-                    ? criteriaColumns?.map((col) => (
-                        <Table.BodyCell
-                          key={`region-group-${group.key}-crit-${col.criterionId}`}
-                          className={CRITERIA_COLUMN_CLASS}
-                          style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
-                        >
-                          <Table.TextCell />
-                        </Table.BodyCell>
-                      )) ?? null
-                    : null}
-                  {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-                    <Table.BodyCell
-                      key={`region-group-${group.key}-prio-score`}
-                      className={prioritizationScoreStickyColClass}
-                    >
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
-                  {show.forecast
-                    ? groupTotals.forecast.map((v, idx) => (
-                        <Table.BodyCell
-                          key={`region-group-${group.key}-fc-${idx}`}
-                          className="capital-planning-table-footer-forecast-cell"
-                        >
-                          {currencyTotalCell(v, { style: FOOTER_TOTAL_BOLD_STYLE })}
-                        </Table.BodyCell>
-                      ))
-                    : null}
-                </Table.BodyRow>
+              const groupHeader = renderProgramGroupAggregateRow(
+                0,
+                group.key,
+                group.label,
+                group.rows,
+                groupExpanded,
+                () => toggleRegionGroupCollapsed(group.key)
               );
               if (!groupExpanded) {
                 return [groupHeader];
               }
               return [
                 groupHeader,
-                ...group.rows.map((row) => {
-              const forecastBasisKey = `${row.curve}|${row.plannedAmount}|jtd:${row.jobToDateCosts ?? ""}`;
-              const manualForecastDateExpand =
-                row.curve === "Manual"
-                  ? (parts: (string | number)[], dollars: number) =>
-                      expandProjectDatesForManualForecast(row.id, row.startDate, row.endDate, parts, dollars)
-                  : undefined;
-              const effectiveMonthAmounts = getEffectiveProgramForecastMonthAmounts(
-                row,
-                forecastOverrides,
-                forecastBasisKey,
-                anchorDate
-              );
-              const plannedSource = plannedAmountSourceByRowId[row.id];
-              const isLumpSumPlannedAmount = isLumpSumPlannedAmountSource(plannedSource);
-              const isHighLevelBudgetItemsPlannedAmount =
-                plannedSource === HIGH_LEVEL_BUDGET_ITEMS_SOURCE;
-              const projectBudgetPlannedAmountTooltip =
-                plannedSource === PROJECT_BUDGET_ORIGINAL_SOURCE
-                  ? "Original Budget"
-                  : plannedSource === PROJECT_BUDGET_REVISED_SOURCE
-                    ? "Revised Budget"
-                    : null;
-              const projectDescription = prototypeProjectDescriptionFromName(row.project);
-              return (
-              <Table.BodyRow key={row.id} className="capital-planning-table-status-group-child">
-                <Table.BodyCell className={baselineCellClasses("project", columnVisibility)}>
-                  <Table.LinkCell href={`/project/${row.projectId}`}>{row.project}</Table.LinkCell>
-                </Table.BodyCell>
-                {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("projectDescription", columnVisibility)}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    <Table.TextCell title={projectDescription}>{projectDescription}</Table.TextCell>
-                  </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("estimatedBudget", columnVisibility)}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    <div
-                      className="capital-planning-planned-amount-cell capital-planning-planned-amount-cell--lump-sum"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-start",
-                        gap: 8,
-                        width: "100%",
-                        minWidth: 0,
-                        boxSizing: "border-box",
-                      }}
-                    >
-                      <div
-                        style={{
-                          flex: "1 1 auto",
-                          minWidth: 0,
-                          width: "100%",
-                          display: "flex",
-                          justifyContent: "stretch",
-                          alignItems: "center",
-                        }}
-                      >
-                        {setEstimatedBudgetByRowId ? (
-                          <div
-                            className="capital-planning-planned-amount-input-wrap"
-                            style={{
-                              flex: "1 1 auto",
-                              minWidth: 0,
-                              width: "100%",
-                              maxWidth: "100%",
-                            }}
-                          >
-                            <LumpSumPlannedAmountCurrencyInput
-                              value={
-                                estimatedBudgetByRowId?.[row.id] ??
-                                (Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0)
-                              }
-                              onChange={(n) => {
-                                setEstimatedBudgetByRowId((prev) => ({
-                                  ...prev,
-                                  [row.id]: n,
-                                }));
-                              }}
-                              ariaLabel={`Estimated Budget for ${row.project}`}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              flex: "1 1 auto",
-                              minWidth: 0,
-                              width: "100%",
-                              display: "flex",
-                              justifyContent: "flex-end",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Table.CurrencyCell
-                              className="capital-planning-planned-amount-value"
-                              value={
-                                estimatedBudgetByRowId?.[row.id] ??
-                                (Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0)
-                              }
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("prioritizationStatus", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("prioritizationStatus", columnVisibility)}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    {setPrioritizationStatusByRowId ? (
-                      <Table.SelectCell
-                        key={`capital-planning-prio-status-${row.id}-${normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}`}
-                        block
-                        label={
-                          <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])]}>
-                            {normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}
-                          </Pill>
-                        }
-                        aria-label={`Prioritization status for ${row.project}`}
-                        onSelect={(s) => {
-                          if (s.action !== "selected") return;
-                          const next = String(s.item);
-                          setPrioritizationStatusByRowId((prev) => ({ ...prev, [row.id]: next }));
-                        }}
-                      >
-                        {PRIORITIZATION_STATUS_OPTIONS.map((opt) => (
-                          <Select.Option key={opt} value={opt} selected={normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id]) === opt}>
-                            <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[opt]}>{opt}</Pill>
-                          </Select.Option>
-                        ))}
-                      </Table.SelectCell>
-                    ) : (
-                      <Table.TextCell>
-                        <Pill color={PRIORITIZATION_STATUS_PILL_COLOR[normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])]}>
-                          {normalizePrioritizationStatus(prioritizationStatusByRowId?.[row.id])}
-                        </Pill>
-                      </Table.TextCell>
-                    )}
-                  </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("plannedAmount", columnVisibility) ? (
-                <Table.BodyCell
-                  className={baselineCellClasses("plannedAmount", columnVisibility)}
-                  style={{ verticalAlign: "middle" }}
-                >
-                  <div
-                    className={[
-                      "capital-planning-planned-amount-cell",
-                      isLumpSumPlannedAmount ? "capital-planning-planned-amount-cell--lump-sum" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-start",
-                      gap: 8,
-                      width: "100%",
-                      minWidth: 0,
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <DropdownFlyout
-                      variant="secondary"
-                      size="sm"
-                      icon={<CaretDown />}
-                      aria-label={`Planned Amount Options For ${row.project}`}
-                      placement="bottom-left"
-                      options={plannedAmountSourceOptionsForRow(row)}
-                      optionRenderer={(opt) => renderPlannedAmountSourceOption(opt, plannedAmountSourceByRowId[row.id])}
-                      onClick={(option: DropdownFlyoutOption) => {
-                        if ((option as PlannedAmountSourceOption).disabled) {
-                          return;
-                        }
-                        const value = String(option.value);
-                        if (value === PLANNED_AMOUNT_FLYOUT_CAPTION_VALUE) {
-                          return;
-                        }
-                        setPlannedAmountSourceByRowId((prev) => ({
-                          ...prev,
-                          [row.id]: value,
-                        }));
-                        if (value === LUMP_SUM_PLANNED_AMOUNT_SOURCE) {
-                          setPlannedAmountManualByRowId((prev) => ({
-                            ...prev,
-                            [row.id]: prev[row.id] ?? row.plannedAmount,
-                          }));
-                        } else {
-                          setPlannedAmountManualByRowId((prev) => {
-                            const next = { ...prev };
-                            delete next[row.id];
-                            return next;
-                          });
-                        }
-                        if (value === HIGH_LEVEL_BUDGET_ITEMS_SOURCE) {
-                          setHighLevelBudgetItemsRow(row);
-                        }
-                      }}
-                    />
-                    <div
-                      style={{
-                        flex: "1 1 auto",
-                        minWidth: 0,
-                        width: "100%",
-                        display: "flex",
-                        justifyContent: isLumpSumPlannedAmount ? "stretch" : "flex-end",
-                        alignItems: "center",
-                      }}
-                    >
-                      {isLumpSumPlannedAmount ? (
-                        <div
-                          className="capital-planning-planned-amount-input-wrap"
-                          style={{ flex: "1 1 auto", minWidth: 0, width: "100%", maxWidth: "100%" }}
-                        >
-                          <LumpSumPlannedAmountCurrencyInput
-                            value={plannedAmountManualByRowId[row.id] ?? row.plannedAmount}
-                            onChange={(n) => {
-                              setPlannedAmountManualByRowId((prev) => ({
-                                ...prev,
-                                [row.id]: n,
-                              }));
-                            }}
-                            ariaLabel={`Planned Amount For ${row.project}`}
-                          />
-                        </div>
-                      ) : isHighLevelBudgetItemsPlannedAmount ? (
-                        <Table.CurrencyCell className="capital-planning-planned-amount-value capital-planning-planned-amount-high-level-link">
-                          <Table.LinkCell
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setHighLevelBudgetItemsRow(row);
-                            }}
-                            aria-label={`Open High Level Budget Items for ${row.project}`}
-                          >
-                            {formatLumpSumUsdInput(
-                              Number.isFinite(row.plannedAmount) ? row.plannedAmount : 0
-                            )}
-                          </Table.LinkCell>
-                        </Table.CurrencyCell>
-                      ) : projectBudgetPlannedAmountTooltip ? (
-                        <Tooltip
-                          trigger="hover"
-                          placement="top"
-                          overlay={
-                            <Tooltip.Content>{projectBudgetPlannedAmountTooltip}</Tooltip.Content>
-                          }
-                        >
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              width: "100%",
-                              justifyContent: "flex-end",
-                              minWidth: 0,
-                            }}
-                          >
-                            <Table.CurrencyCell
-                              className="capital-planning-planned-amount-value"
-                              value={row.plannedAmount}
-                            />
-                          </span>
-                        </Tooltip>
-                      ) : (
-                        <Table.CurrencyCell
-                          className="capital-planning-planned-amount-value"
-                          value={row.plannedAmount}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("status", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("status", columnVisibility)}>
-                  <Pill color={STATUS_PILL_COLOR[row.status]}>{row.status}</Pill>
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("projectPriority", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("projectPriority", columnVisibility)}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    {setPrioritiesByRowId ? (
-                      <Table.SelectCell
-                        key={`capital-planning-priority-${row.id}-${row.priority}`}
-                        block
-                        label={row.priority}
-                        aria-label={`Priority For ${row.project}`}
-                        onSelect={(s) => {
-                          if (s.action !== "selected") return;
-                          const next = s.item as ProjectPriority;
-                          if (next === row.priority) return;
-                          setPrioritiesByRowId((prev) => ({ ...prev, [row.id]: next }));
-                        }}
-                      >
-                        {PRIORITY_OPTIONS.map((p) => (
-                          <Select.Option key={p} value={p} selected={row.priority === p}>
-                            {p}
-                          </Select.Option>
-                        ))}
-                      </Table.SelectCell>
-                    ) : (
-                      <Table.TextCell>{row.priority}</Table.TextCell>
-                    )}
-                  </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("prioritizationScore", columnVisibility)}
-                    style={{ verticalAlign: "middle", textAlign: "right" }}
-                  >
-                    <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {formatPrioritizationScorePercent(
-                        prioritizationScoresByRowId?.[row.id] ?? null
-                      )}
-                    </Typography>
-                  </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("originalBudget", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("originalBudget", columnVisibility)}>
-                  {budgetMetricCurrencyCell(row.originalBudget)}
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("revisedBudget", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("revisedBudget", columnVisibility)}>
-                  {budgetMetricCurrencyCell(row.revisedBudget)}
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("jobToDate", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("jobToDate", columnVisibility)}>
-                  {budgetMetricCurrencyCell(row.jobToDateCosts)}
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("startDate", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("startDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
-                  <Table.DateSelectCell
-                    value={optionalIsoStringToDate(row.startDate)}
-                    onChange={(d) => {
-                      setRowDatesById((prev) => {
-                        const cur = prev[row.id] ?? {
-                          startDate: row.startDate,
-                          endDate: row.endDate,
-                        };
-                        if (!d) {
-                          return {
-                            ...prev,
-                            [row.id]: { ...cur, startDate: "" },
-                          };
-                        }
-                        const nextStart = dateToIsoString(d);
-                        const end = cur.endDate ?? "";
-                        const nextEnd =
-                          end.trim() !== "" && nextStart > end ? nextStart : end;
-                        return {
-                          ...prev,
-                          [row.id]: {
-                            ...cur,
-                            startDate: nextStart,
-                            endDate: nextEnd,
-                          },
-                        };
-                      });
-                    }}
-                    disabledDate={(candidate) => {
-                      const end = row.endDate?.trim() ?? "";
-                      if (!end) return false;
-                      return dateToIsoString(candidate) > end;
-                    }}
-                    aria-label={`Start Date For ${row.project}`}
-                  />
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("endDate", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("endDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
-                  <Table.DateSelectCell
-                    value={optionalIsoStringToDate(row.endDate)}
-                    onChange={(d) => {
-                      setRowDatesById((prev) => {
-                        const cur = prev[row.id] ?? {
-                          startDate: row.startDate,
-                          endDate: row.endDate,
-                        };
-                        if (!d) {
-                          return {
-                            ...prev,
-                            [row.id]: { ...cur, endDate: "" },
-                          };
-                        }
-                        const nextEnd = dateToIsoString(d);
-                        return {
-                          ...prev,
-                          [row.id]: { ...cur, endDate: nextEnd },
-                        };
-                      });
-                    }}
-                    disabledDate={(candidate) => {
-                      const start = row.startDate?.trim() ?? "";
-                      if (!start) return false;
-                      return dateToIsoString(candidate) < start;
-                    }}
-                    aria-label={`End Date For ${row.project}`}
-                  />
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("curve", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("curve", columnVisibility)} style={{ verticalAlign: "middle" }}>
-                  <Table.SelectCell
-                    key={`capital-planning-curve-${row.id}-${row.curve}`}
-                    block
-                    label={
-                      row.curve === "" ? (
-                        <span className="capital-planning-curve-placeholder">{CURVE_SELECT_PLACEHOLDER_LABEL}</span>
-                      ) : (
-                        row.curve
-                      )
-                    }
-                    aria-label={`Curve For ${row.project}`}
-                    onSelect={(s) => {
-                      if (s.action !== "selected") return;
-                      const next = s.item as ProjectCurve;
-                      if (next === "" || next === row.curve) return;
-                      if (row.curve === "Manual" && next !== "Manual") {
-                        setCurveChangeFromManual({
-                          rowId: row.id,
-                          nextCurve: next,
-                        });
-                        return;
-                      }
-                      setCurvesByRowId((prev) => ({ ...prev, [row.id]: next }));
-                    }}
-                  >
-                    {CURVE_OPTIONS.map((c) => (
-                      <Select.Option key={c} value={c} selected={row.curve === c}>
-                        {c}
-                      </Select.Option>
-                    ))}
-                  </Table.SelectCell>
-                </Table.BodyCell>
-                ) : null}
-                {isBaselineColumnVisible("remaining", columnVisibility) ? (
-                <Table.BodyCell className={baselineCellClasses("remaining", columnVisibility)}>
-                  <Table.TextCell
-                    style={{
-                      textAlign: "right",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                  >
-                    {formatRemainingToForecastCurrency(
-                      getRemainingToForecast(
-                        getForecastAllocationBasisDollars(row),
-                        getTotalAllocatedForecastDollars(
-                          row,
-                          forecastOverrides,
-                          forecastBasisKey,
-                          anchorDate,
-                          forecastGranularity,
-                          forecastColumnsExpanded,
-                          forecastLeafLabels.length,
-                          ganttFlatForecast,
-                          ganttProgramMonthLayout,
-                          ganttQuarterYearBands
-                        )
-                      )
-                    )}
-                  </Table.TextCell>
-                </Table.BodyCell>
-                ) : null}
-                {renderProjectCriteriaCells(row.id)}
-                {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-                  <Table.BodyCell
-                    key={`${row.id}-prio-score`}
-                    className={prioritizationScoreStickyColClass}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {formatPrioritizationScorePercent(
-                        prioritizationScoresByRowId?.[row.id] ?? null
-                      )}
-                    </Typography>
-                  </Table.BodyCell>
-                ) : null}
-                {show.forecast ? (
-                  ganttFlatForecast ? (
-                    <Table.BodyCell
-                      key={`${row.id}-gantt-timeline`}
-                      colSpan={leafColumnCountForTable}
-                      className="capital-planning-gantt-row-timeline-cell"
-                    >
-                      {/*
-                        Keep Tooltip + Gantt in one stable tree. If we only wrapped the empty-date case,
-                        the first create-bar paint would swap branches, unmount the bar, and drop pointer capture
-                        so click-drag could not resize in one gesture.
-                      */}
-                      <Tooltip
-                        trigger="hover"
-                        placement="top"
-                        beforeShow={() => {
-                          const hasStart = Boolean(String(row.startDate ?? "").trim());
-                          const hasEnd = Boolean(String(row.endDate ?? "").trim());
-                          if (hasStart && hasEnd) return false;
-                          return undefined;
-                        }}
-                        overlay={<Tooltip.Content>{GANTT_EMPTY_SCHEDULE_TOOLTIP}</Tooltip.Content>}
-                      >
-                        <div className="capital-planning-gantt-forecast-tooltip-target">
-                          <div className="capital-planning-gantt-row-bar-wrap">
-                            <CapitalPlanningProjectGanttBar
-                              rowId={row.id}
-                              barTitle={row.project}
-                              startIso={row.startDate ?? ""}
-                              endIso={row.endDate ?? ""}
-                              timeline={ganttYearRollingFlat ? "rollingYear" : "program"}
-                              anchorDate={anchorDate}
-                              setRowDatesById={setRowDatesById}
-                            />
-                          </div>
-                        </div>
-                      </Tooltip>
-                    </Table.BodyCell>
-                  ) : forecastColumnsExpanded ? (
-                  forecastGranularity === "quarter" ? (
-                    CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((fyYear, fyIndex) => {
-                      if (!fyYearSectionExpanded[fyIndex]) {
-                        return [
-                          <Table.BodyCell
-                            key={`${row.id}-fy-year-rollup-${fyIndex}`}
-                            className="capital-planning-forecast-fq-rollup-cell"
-                          >
-                            <ForecastEditableNumberCell
-                              rowId={row.id}
-                              parts={["q", "y", fyIndex]}
-                              forecastBasisKey={forecastBasisKey}
-                              computedValue={effectiveMonthAmounts
-                                .slice(fyIndex * 12, fyIndex * 12 + 12)
-                                .reduce((a, b) => a + b, 0)}
-                              overrides={forecastOverrides}
-                              setOverrides={setForecastOverrides}
-                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} total for ${row.project}`}
-                            />
-                          </Table.BodyCell>,
-                        ];
-                      }
-                      return [0, 1, 2, 3].flatMap((fqInFy) => {
-                        const fqIndex = fyIndex * 4 + fqInFy;
-                        const fqLabel = forecastFqLabels[fqIndex];
-                        const fq1ReadOnly =
-                          fqInFy === 0 && isProgramForecastFq1PeriodEnded(fyYear, anchorDate);
-                        return fqCollapsed[fqIndex]
-                          ? [
-                              <Table.BodyCell
-                                key={`${row.id}-fq-rollup-${fqIndex}`}
-                                className="capital-planning-forecast-fq-rollup-cell"
-                              >
-                                <ForecastEditableNumberCell
-                                  rowId={row.id}
-                                  parts={["q", "r", fqIndex]}
-                                  forecastBasisKey={forecastBasisKey}
-                                  computedValue={sumQuarterMonthAmounts(effectiveMonthAmounts, fqIndex)}
-                                  overrides={forecastOverrides}
-                                  setOverrides={setForecastOverrides}
-                                  curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                                  onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                                  onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                                  readOnly={fq1ReadOnly}
-                                  ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} ${fqLabel} total for ${row.project}`}
-                                />
-                              </Table.BodyCell>,
-                            ]
-                          : [0, 1, 2].map((k) => {
-                              const monthIdx = fqIndex * 3 + k;
-                              const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
-                              const monthFq1ReadOnly =
-                                isGlobalMonthIndexInFq1(monthIdx) &&
-                                fyForMonth !== undefined &&
-                                isProgramForecastFq1PeriodEnded(fyForMonth, anchorDate);
-                              return (
-                                <Table.BodyCell
-                                  key={`${row.id}-forecast-m-${fqIndex}-${k}`}
-                                  className="capital-planning-forecast-month-cell"
-                                >
-                                  <ForecastEditableNumberCell
-                                    rowId={row.id}
-                                    parts={["q", "m", monthIdx]}
-                                    forecastBasisKey={forecastBasisKey}
-                                    computedValue={effectiveMonthAmounts[monthIdx] ?? 0}
-                                    overrides={forecastOverrides}
-                                    setOverrides={setForecastOverrides}
-                                    curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                                    onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                                    onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                                    readOnly={monthFq1ReadOnly}
-                                    ariaLabel={`Forecast ${forecastLeafLabels[monthIdx]} (${programForecastFyLabel(fyYear)}) for ${row.project}`}
-                                  />
-                                </Table.BodyCell>
-                              );
-                            });
-                      });
-                    })
-                  ) : (
-                    forecastLeafLabels.map((label, i) => (
-                      <Table.BodyCell
-                        key={`${row.id}-forecast-leaf-${i}-${label}`}
-                        className="capital-planning-forecast-period-cell"
-                      >
-                        <ForecastEditableNumberCell
-                          rowId={row.id}
-                          parts={["x", forecastGranularity, "e", i]}
-                          forecastBasisKey={forecastBasisKey}
-                          computedValue={getForecastLeafDollarAmount(
-                            row,
-                            i,
-                            forecastGranularity,
-                            anchorDate
-                          )}
-                          overrides={forecastOverrides}
-                          setOverrides={setForecastOverrides}
-                          curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                          onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                          onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                          ariaLabel={`Forecast ${label} for ${row.project}`}
-                        />
-                      </Table.BodyCell>
-                    ))
-                  )
-                ) : forecastGranularity === "quarter" ? (
-                  <Table.BodyCell className="capital-planning-forecast-fq-rollup-cell">
-                    <ForecastEditableNumberCell
-                      rowId={row.id}
-                      parts={["q", "fy"]}
-                      forecastBasisKey={forecastBasisKey}
-                      computedValue={effectiveMonthAmounts.reduce((a, b) => a + b, 0)}
-                      overrides={forecastOverrides}
-                      setOverrides={setForecastOverrides}
-                      curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                      onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                      onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                      ariaLabel={`Forecast ${getProgramForecastHeaderTitle()} total for ${row.project}`}
-                    />
-                  </Table.BodyCell>
-                ) : (
-                  forecastLeafLabels.map((label, i) => (
-                    <Table.BodyCell
-                      key={`${row.id}-fy-collapsed-leaf-${i}-${label}`}
-                      className="capital-planning-forecast-fq-rollup-cell"
-                    >
-                      <ForecastEditableNumberCell
-                        rowId={row.id}
-                        parts={["x", forecastGranularity, "c", i]}
-                        forecastBasisKey={forecastBasisKey}
-                        computedValue={getForecastLeafDollarAmount(
-                          row,
-                          i,
-                          forecastGranularity,
-                          anchorDate
-                        )}
-                        overrides={forecastOverrides}
-                        setOverrides={setForecastOverrides}
-                        curveBlocksInlineForecastEdit={row.curve !== "Manual"}
-                        onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
-                        onExpandProjectDatesForManualForecast={manualForecastDateExpand}
-                        ariaLabel={`Forecast ${label} for ${row.project}`}
-                      />
-                    </Table.BodyCell>
-                  ))
-                )
-                ) : null}
-              </Table.BodyRow>
-              );
-                })
+                ...group.rows.map((row) => renderProgramProjectBodyRow(row)),
               ];
             })
           )}
@@ -3584,9 +5205,12 @@ export function CapitalPlanningSmartGrid({
             <Table.BodyRow>
               <Table.BodyCell className={baselineCellClasses("project", columnVisibility)}>
                 <Table.TextCell>
-                  <Typography intent="small" weight="semibold">
-                    Total
-                  </Typography>
+                  <div className="capital-planning-project-footer-total-inner">
+                    <span className="capital-planning-project-checkbox-spacer" aria-hidden />
+                    <Typography intent="small" weight="semibold">
+                      Total
+                    </Typography>
+                  </div>
                 </Table.TextCell>
               </Table.BodyCell>
               {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
@@ -3734,7 +5358,21 @@ export function CapitalPlanningSmartGrid({
       onClose={() => setHighLevelBudgetItemsRow(null)}
       onSave={(plannedAmountTotal) => {
         if (highLevelBudgetItemsRow) {
-          onSaveHighLevelBudgetPlannedAmount(highLevelBudgetItemsRow.id, plannedAmountTotal);
+          const live = filteredProjectRows.find((r) => r.id === highLevelBudgetItemsRow.id);
+          const labelRow = live ?? highLevelBudgetItemsRow;
+          const rowId = highLevelBudgetItemsRow.id;
+          const savedPrior = plannedAmountHighLevelBudgetByRowId[rowId];
+          const prevAmount = savedPrior !== undefined ? savedPrior : 0;
+          onSaveHighLevelBudgetPlannedAmount(rowId, plannedAmountTotal);
+          if (onCapitalPlanningChange && prevAmount !== plannedAmountTotal) {
+            onCapitalPlanningChange({
+              project: labelRow.project,
+              description: prototypeProjectDescriptionFromName(labelRow.project),
+              changed: changeHistoryChangedField.plannedAmount,
+              from: formatChangeHistoryPlannedAmountValue(prevAmount),
+              to: formatChangeHistoryPlannedAmountValue(plannedAmountTotal),
+            });
+          }
         }
         setHighLevelBudgetItemsRow(null);
       }}

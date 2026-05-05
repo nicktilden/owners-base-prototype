@@ -1336,6 +1336,34 @@ div.nextjs-toast {
   overflow-x: auto;
 }
 
+/*
+ * Capital Planning Settings → Columns: compact row density (default).
+ * DS `Table.TextCell` applies vertical margin (`spacing.lg`); reset like `.capital-planning-table-scroll`.
+ */
+.capital-planning-columns-settings-table thead tr th {
+  height: auto !important;
+  min-height: 0 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+.capital-planning-columns-settings-table tbody tr td {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.capital-planning-columns-settings-table tbody tr td [class*="StyledTableCellText"] {
+  margin: 0 !important;
+  min-height: 0;
+}
+
+.capital-planning-columns-settings-table tbody tr td .capital-planning-columns-drag-handle,
+.capital-planning-columns-settings-table tbody tr td:last-child button[type="button"] {
+  padding: 2px !important;
+}
+
 /* AG Grid */
 .ag-cell-inline-editing {
   padding: 6px 12px !important;
@@ -1348,7 +1376,8 @@ div.nextjs-toast {
 
 /* Merged / single FY forecast header — FY label left, CaretsIn toggle right (Capital Planning Figma) */
 .capital-planning-table-scroll th.capital-planning-col-project,
-.capital-planning-table-scroll th.capital-planning-forecast-fy-subheader {
+.capital-planning-table-scroll th.capital-planning-forecast-fy-subheader,
+.capital-planning-table-scroll th.capital-planning-forecast-comparison-strip {
   border-color: var(--color-border-default) !important;
 }
 
@@ -1383,6 +1412,42 @@ div.nextjs-toast {
   text-align: left;
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* Comparison snapshot strip — bottom header row; label left, stack icon button right */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-comparison-strip {
+  text-align: left !important;
+  background-color: var(--color-surface-secondary) !important;
+  vertical-align: middle !important;
+  border-top: 1px solid var(--color-border-separator) !important;
+  border-bottom: 1px solid var(--color-border-separator) !important;
+  padding: 0 8px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-comparison-strip .capital-planning-forecast-comparison-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-comparison-strip
+  .capital-planning-forecast-comparison-header-inner--icon-only {
+  justify-content: flex-end;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-comparison-strip .capital-planning-forecast-fy-toggle {
+  flex-shrink: 0;
 }
 
 /* Second header row: one cell per program FY (spans that year’s FQ / month leaf columns) */
@@ -1740,6 +1805,60 @@ div.nextjs-toast {
   font-weight: 400;
 }
 
+/**
+ * Target budget exceeded hover — same shell + rhythm as `.capital-planning-gantt-bar-popover`;
+ * fixed width 300px (shrinks slightly on very narrow viewports).
+ */
+.capital-planning-target-budget-exceeded-popover-panel {
+  width: 300px;
+  max-width: min(300px, calc(100vw - 24px));
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 8px;
+  background-color: var(--color-surface-primary);
+  box-shadow: 0 4px 16px -2px hsla(200, 10%, 15%, 0.32);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.capital-planning-target-budget-exceeded-popover-panel .capital-planning-gantt-bar-popover-title {
+  margin-bottom: 8px;
+}
+
+.capital-planning-target-budget-exceeded-popover-intro {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-primary);
+  margin: 0 0 14px;
+}
+
+.capital-planning-target-budget-exceeded-popover-divider {
+  height: 1px;
+  background: var(--color-border-separator);
+  margin: 8px 0;
+}
+
+.capital-planning-target-budget-exceeded-popover-variance-values {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  justify-content: flex-end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.capital-planning-target-budget-exceeded-popover-panel .capital-planning-target-budget-exceeded-popover-variance-pct {
+  color: var(--color-feedback-negative, #d92626);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.capital-planning-target-budget-exceeded-popover-variance-usd {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
 /* Quarter view: third header row — same 32px band height as FY + FQ rows */
 .capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header {
   width: 150px !important;
@@ -1760,6 +1879,170 @@ div.nextjs-toast {
   height: 32px !important;
   min-height: 32px !important;
   max-height: 32px !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header .capital-planning-forecast-month-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header .capital-planning-forecast-month-header-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-header .capital-planning-forecast-fy-toggle {
+  flex-shrink: 0;
+}
+
+/* Month comparison expanded: stack icon matches design-system link color. */
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active {
+  color: var(--color-text-link) !important;
+}
+
+/* Button icon sits in StyledContent; tertiary styles set their own color — align with links. */
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  [class*="StyledContent"] {
+  color: var(--color-text-link) !important;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg {
+  stroke: var(--color-text-link) !important;
+  color: var(--color-text-link) !important;
+}
+
+/* Stroke is often on child shapes, not the root <svg>. */
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg
+  path,
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg
+  line,
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg
+  polyline,
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg
+  rect,
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header
+  button.capital-planning-forecast-month-comparison-toggle--active
+  svg
+  circle {
+  stroke: var(--color-text-link) !important;
+}
+
+/* Snapshot comparison: double the month header band height (entire row stays aligned). */
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-header.capital-planning-forecast-month-band-row--comparison,
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-fq-rollup-header.capital-planning-forecast-month-band-row--comparison {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+}
+
+/* Quarter view: comparison leaf row under expanded months (Current / snapshot / Variance). */
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-month-comparison-subheader {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+  box-sizing: border-box !important;
+  overflow: hidden;
+  text-align: left !important;
+  vertical-align: middle !important;
+  font-size: 10px !important;
+  line-height: 16px !important;
+  color: var(--color-text-secondary) !important;
+  background-color: var(--color-surface-secondary) !important;
+  padding: 0 8px !important;
+  border-top: 1px solid var(--color-border-separator) !important;
+  white-space: nowrap;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-comparison-subheader--labeled {
+  color: var(--color-text-primary) !important;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-comparison-subheader
+  .capital-planning-forecast-month-comparison-subheader-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-comparison-subheader-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capital-planning-table-scroll
+  thead
+  tr
+  th.capital-planning-forecast-month-comparison-subheader-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-primary);
 }
 
 .capital-planning-table-scroll
@@ -1853,10 +2136,138 @@ div.nextjs-toast {
 }
 
 /*
+ * Home hub card (`embeddedInHub`): fill the bounded hub row and keep toolbar fixed;
+ * only `.capital-planning-table-scroll-region` scrolls (not the whole SplitViewCard body).
+ */
+.capital-planning-embed-hub {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.capital-planning-embed-hub [class*="StyledSplitViewCardContainer"] {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.capital-planning-embed-hub [class*="StyledSplitViewCardMain"] {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.capital-planning-embed-hub [class*="StyledSplitViewCardMain"] > * {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.capital-planning-embed-hub [class*="StyledSectionInner"] {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Procore section body wrapper — must shrink so nested flex + scroll region get a bounded height in the hub. */
+.capital-planning-embed-hub [class*="StyledSectionInner"] > div[id^="content-"] {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.capital-planning-embed-hub .capital-planning-tool-section {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.capital-planning-embed-hub .capital-planning-main-with-filter {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.capital-planning-embed-hub .capital-planning-table-and-banner-stack {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.capital-planning-embed-hub .capital-planning-table-scroll-region {
+  /* Definite flex basis so this region stays within the hub card and scrolls (not content-height). */
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none !important;
+  overflow-x: auto;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/*
  * Snapshot selector — Capital Planning toolbar (Figma 4611-94196): bordered trigger, search inside menu via Select `onSearch`.
  */
+/*
+ * Capital Planning Settings — SplitViewCard ships min-height: 364px on the container (split-panel layout).
+ * Shrink-wrap to content so the Fiscal Year card is not mostly empty whitespace.
+ */
+[data-core-react="tool-landing-page"] .capital-planning-settings-page-body {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+}
+
+.capital-planning-settings-fiscal-card {
+  min-height: unset !important;
+  align-items: start;
+}
+
+.capital-planning-settings-fiscal-card [class*="StyledSplitViewCardMain"] {
+  padding-bottom: 0 !important;
+  height: auto !important;
+  align-self: start;
+}
+
+.capital-planning-settings-fiscal-card [class*="StyledSectionInner"] {
+  padding-bottom: 8px !important;
+}
+
+/* Capital Planning Settings — Fiscal Year card: 3-col row stacks on narrow viewports */
+@media (max-width: 768px) {
+  .capital-planning-settings-fiscal-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
 .capital-planning-snapshot-select-wrap {
   box-sizing: border-box;
+}
+
+.capital-planning-snapshot-select-option-meta {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.capital-planning-snapshot-select--historical [role="combobox"] {
+  color: #2d87c3 !important;
 }
 
 .capital-planning-snapshot-select [role="combobox"] {
@@ -1912,7 +2323,8 @@ div.nextjs-toast {
   max-width: 100%;
 }
 
-.capital-planning-group-by-select [role="combobox"] {
+/* Single-line View by / legacy select only — NOT MultiSelect inner search (that would swallow token “pills”) */
+.capital-planning-group-by-select:not(.capital-planning-group-by-multiselect) [role="combobox"] {
   border: 1px solid var(--color-border-strong) !important;
   border-radius: 4px !important;
   min-height: 36px !important;
@@ -1921,14 +2333,137 @@ div.nextjs-toast {
   box-shadow: none !important;
 }
 
-.capital-planning-group-by-select [role="combobox"]:hover {
+/* Group by MultiSelect: border on outer trigger; inner combobox stays borderless so tokens render as separate pills */
+.capital-planning-group-by-multiselect {
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 4px !important;
+  min-height: 36px !important;
+  background-color: var(--color-surface-primary) !important;
+  box-shadow: none !important;
+}
+
+.capital-planning-group-by-multiselect input[role="combobox"] {
+  border: none !important;
+  min-height: 24px !important;
+  height: 24px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.capital-planning-group-by-multiselect:has(input[role="combobox"][aria-expanded="true"]) {
+  border-color: #2d87c3 !important;
+  box-shadow: 0 0 0 1px #2d87c3 inset !important;
+}
+
+/* Selected values: neutral pills (menu list items stay plain text via DS Option) */
+.capital-planning-group-by-multiselect .capital-planning-group-by-pill-token {
+  background-color: var(--color-surface-secondary) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: 4px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+}
+
+.capital-planning-group-by-multiselect .capital-planning-group-by-pill-token:hover {
+  background-color: var(--color-surface-tertiary) !important;
+}
+
+.capital-planning-group-by-multiselect .capital-planning-group-by-pill-token button {
+  color: var(--color-text-secondary) !important;
+}
+
+.capital-planning-group-by-multiselect .capital-planning-group-by-pill-token button:hover {
+  background-color: transparent !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Group by menu: draggable chip at top of list (grip + label + clear); options below are plain text */
+.capital-planning-group-by-menu-header {
+  padding: 8px 12px 4px;
+  box-sizing: border-box;
+}
+
+.capital-planning-group-by-menu-header-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  background-color: var(--color-surface-primary);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.capital-planning-group-by-menu-header-chip__grip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: var(--color-text-secondary);
+  line-height: 0;
+  cursor: grab;
+}
+
+.capital-planning-group-by-menu-header-chip__grip:active {
+  cursor: grabbing;
+}
+
+.capital-planning-group-by-menu-header-chip__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.capital-planning-group-by-menu-header-chip__clear {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.capital-planning-group-by-menu-header-chip__clear:hover {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+}
+
+.capital-planning-group-by-menu-header-chip__clear:focus-visible {
+  outline: 2px solid var(--color-blue-50, #1d5cc9);
+  outline-offset: 1px;
+}
+
+.capital-planning-group-by-select:not(.capital-planning-group-by-multiselect) [role="combobox"]:hover {
   border-color: var(--color-border-hover) !important;
   background-color: var(--color-surface-primary) !important;
 }
 
-.capital-planning-group-by-select [role="combobox"][aria-expanded="true"] {
-  border-color: var(--color-border-strong) !important;
-  background-color: var(--color-surface-primary) !important;
+.capital-planning-group-by-multiselect:hover {
+  border-color: var(--color-border-hover) !important;
+}
+
+/* Open / focused: blue ring like View by (matches Group By spec) */
+.capital-planning-group-by-select:not(.capital-planning-group-by-multiselect) [role="combobox"][aria-expanded="true"] {
+  border-color: #2d87c3 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 1px #2d87c3 inset !important;
 }
 
 .capital-planning-main-with-filter {
@@ -1953,6 +2488,27 @@ div.nextjs-toast {
   max-height: none;
 }
 
+/*
+ * Column to the right of filter/configure panels: optional bulk banner strip + bordered table scrollport.
+ * Banner is outside `[data-tab-scroll-root]` so it does not scroll with the grid.
+ */
+.capital-planning-table-and-banner-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-height: min(72vh, calc(100dvh - 14rem));
+}
+
+.capital-planning-main-with-filter--fullscreen > .capital-planning-table-and-banner-stack {
+  max-height: none;
+  flex: 1;
+}
+
 .capital-planning-table-scroll-region {
   position: relative;
   flex: 1 1 auto;
@@ -1967,6 +2523,33 @@ div.nextjs-toast {
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Bulk selection strip above the bordered table Card (not inside scroll/data table) */
+.capital-planning-selection-banner {
+  display: flex;
+  align-items: center;
+  align-content: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+  width: 100%;
+  flex: 0 0 auto;
+  height: 52px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  background-color: #f2f7fc;
+  box-shadow: 0 1px 2px rgba(26, 34, 38, 0.06);
+}
+
+.capital-planning-selection-banner__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /*
@@ -2112,10 +2695,18 @@ div.nextjs-toast {
   background-color: #f5f7f8;
 }
 
-/* 8px from cell border to chevron; TextCell padding reset */
+/* Flat region group row (e.g. Pacific Northwest): align inset with thead/data cells (8px); TextCell padding reset */
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-table-status-group-header-label-cell {
-  padding: 0 12px 0 8px !important;
+  padding: 0 8px 0 8px !important;
   text-align: left;
+}
+
+/*
+ * Procore `StyledTable` adds `td:first-child [Checkbox] { padding-left: 16px }` — stacks with the cell padding above (~32px visual).
+ * Group rows: inset comes from the cell only; zero the checkbox root’s extra padding-left.
+ */
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-table-status-group-header-label-cell .capital-planning-project-checkbox {
+  padding-left: 0 !important;
 }
 
 .capital-planning-table-scroll
@@ -2162,12 +2753,71 @@ div.nextjs-toast {
 }
 
 /*
- * Rows under an expanded region group: hierarchy indent — gray rail + right rule on project column only.
+ * Hierarchy aggregate headers: `--cp-program-hierarchy-rails` = tier depth (1+). Each rail 12px; padding matches rail width.
+ */
+.capital-planning-table-scroll
+  tbody
+  tr.capital-planning-table-status-group.capital-planning-program-hierarchy-aggregate
+  td.capital-planning-table-status-group-header-label-cell {
+  /* Keep hierarchy aggregate tiers pinned with the sticky project column while preserving rail pseudo-elements. */
+  position: sticky;
+  left: 0;
+  padding-left: calc(var(--cp-program-hierarchy-rails, 1) * 12px) !important;
+}
+
+.capital-planning-table-scroll
+  tbody
+  tr.capital-planning-table-status-group.capital-planning-program-hierarchy-aggregate
+  td.capital-planning-table-status-group-header-label-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--cp-program-hierarchy-rails, 1) * 12px);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    #eef1f3 0,
+    #eef1f3 11px,
+    #d6dadc 11px,
+    #d6dadc 12px
+  );
+  background-size: 12px 100%;
+}
+
+.capital-planning-table-scroll
+  tbody
+  tr.capital-planning-table-status-group.capital-planning-program-hierarchy-aggregate:hover
+  td.capital-planning-table-status-group-header-label-cell::before {
+  background-image: repeating-linear-gradient(
+    to right,
+    #e8ebee 0,
+    #e8ebee 11px,
+    #d6dadc 11px,
+    #d6dadc 12px
+  );
+}
+
+.capital-planning-table-scroll
+  tbody
+  tr.capital-planning-table-status-group.capital-planning-program-hierarchy-aggregate
+  td.capital-planning-table-status-group-header-label-cell
+  .capital-planning-status-group-header-text-cell {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Rows under an expanded group: hierarchy indent on project column.
+ * `--cp-hierarchy-leaf-rails` on the row (default 1): count of 12px gray rails before project title.
  */
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-project:not([colspan]) {
   position: sticky;
   left: 0;
-  padding-left: 22px;
+  padding-left: calc(var(--cp-hierarchy-leaf-rails, 1) * 12px);
 }
 
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-project:not([colspan])::before {
@@ -2176,16 +2826,28 @@ div.nextjs-toast {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 12px;
+  width: calc(var(--cp-hierarchy-leaf-rails, 1) * 12px);
   box-sizing: border-box;
-  background-color: #eef1f3;
-  border-right: 1px solid #d6dadc;
   pointer-events: none;
   z-index: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    #eef1f3 0,
+    #eef1f3 11px,
+    #d6dadc 11px,
+    #d6dadc 12px
+  );
+  background-size: 12px 100%;
 }
 
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child:hover td.capital-planning-col-project:not([colspan])::before {
-  background-color: #e8ebee;
+  background-image: repeating-linear-gradient(
+    to right,
+    #e8ebee 0,
+    #e8ebee 11px,
+    #d6dadc 11px,
+    #d6dadc 12px
+  );
 }
 
 /* Capital Planning: sticky project column + second “split” baseline column (Planned Amount or first visible baseline) */
@@ -2247,8 +2909,131 @@ div.nextjs-toast {
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-inner {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
+}
+
+/* Align footer "Total" with project name text (checkbox column + gap matches body rows). */
+.capital-planning-table-scroll tfoot tr td.capital-planning-col-project .capital-planning-project-footer-total-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.capital-planning-project-checkbox-spacer {
+  flex: 0 0 auto;
+  /* Roughly matches DS checkbox hit target width (padding + 20px box), keeps footer “Total” aligned with project names */
+  width: 36px;
+  height: 20px;
+  pointer-events: none;
+}
+
+/* Now / Next (no row-selection checkboxes): collapse spacer slot so project titles aren’t pushed right by an empty column */
+.capital-planning-table-scroll.capital-planning-no-row-selection .capital-planning-project-checkbox-spacer {
+  display: none !important;
+}
+
+.capital-planning-table-scroll.capital-planning-no-row-selection .capital-planning-project-checkbox-slot {
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  flex: 0 0 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+  pointer-events: none;
+}
+
+/*
+ * Row/group/header selection: Procore Checkbox uses a block root + label wrapper with body typography.
+ * Without constraining, the project column flex row grows taller than neighboring cells.
+ */
+.capital-planning-project-select-cell-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Now/Next: collapsed checkbox slot — widen flex gap so project links sit ~18px past the last indent rail. */
+.capital-planning-table-scroll.capital-planning-no-row-selection
+  tbody
+  tr.capital-planning-table-status-group-child
+  td.capital-planning-col-project:not([colspan])
+  .capital-planning-project-select-cell-inner {
+  gap: 18px;
+}
+
+/* Flat program table (no Group by / no hierarchy rails): keep 8px gap — 18px is only for leaf rows under indents. */
+.capital-planning-table-scroll.capital-planning-no-row-selection
+  tbody
+  tr.capital-planning-table-body-row--flat-hierarchy
+  td.capital-planning-col-project:not([colspan])
+  .capital-planning-project-select-cell-inner {
+  gap: 8px;
+}
+
+/*
+ * Project name column with checkbox: flex-shrink the link stack so long titles ellipsis before the cell edge.
+ * Do not rely on `[class*="StyledTableCellText"]` — production hashed classes won’t match.
+ */
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) .capital-planning-project-link-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) .capital-planning-project-link-wrap > div {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100%;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll tbody tr td.capital-planning-col-project:not([colspan]) .capital-planning-project-link-wrap a {
+  display: block !important;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll .capital-planning-project-checkbox-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: center;
+  flex: 0 0 auto;
+  height: 20px;
+  line-height: 0;
+}
+
+.capital-planning-table-scroll .capital-planning-project-checkbox-slot .capital-planning-project-checkbox {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  line-height: 0 !important;
+  max-height: 20px !important;
+}
+
+.capital-planning-table-scroll .capital-planning-project-checkbox-slot .capital-planning-project-checkbox > div:last-child {
+  min-height: 20px !important;
+  max-height: 20px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
 }
 
 .capital-planning-table-scroll thead tr:first-child th.capital-planning-col-project .capital-planning-project-header-region-toggle {
@@ -2441,6 +3226,7 @@ div.nextjs-toast {
 
 /* Vertical rule between last visible baseline column (e.g. Remaining) and forecast — explicit color; rowspan lives on first row only */
 .capital-planning-table-scroll thead th.capital-planning-col-last-baseline {
+  border-left: 1px solid var(--color-border-separator) !important;
   border-right: 1px solid var(--color-border-separator) !important;
 }
 
@@ -2454,13 +3240,28 @@ div.nextjs-toast {
   box-shadow: 0 -1px 0 var(--color-border-separator);
 }
 
-.capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td {
+.capital-planning-table-scroll.capital-planning-row-height--sm tfoot.capital-planning-table-sticky-footer td {
   /* Match thead `tableHeaderBgColor` (gray96) — same band as Procore data table headers */
   background-color: var(--color-surface-secondary) !important;
   border-top: 1px solid inherit;
   vertical-align: middle;
-  height: 32px;
-  max-height: 32px;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--md tfoot.capital-planning-table-sticky-footer td,
+.capital-planning-table-scroll.capital-planning-row-height--lg tfoot.capital-planning-table-sticky-footer td {
+  background-color: var(--color-surface-secondary) !important;
+  border-top: 1px solid inherit;
+  vertical-align: middle;
+  height: auto !important;
+  min-height: 32px;
+  max-height: none !important;
   padding: 0 8px !important;
   box-sizing: border-box;
   font-size: 12px;
@@ -2481,6 +3282,33 @@ div.nextjs-toast {
 .capital-planning-table-scroll tfoot.capital-planning-table-sticky-footer td.capital-planning-table-footer-forecast-cell,
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-table-footer-forecast-cell {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Hierarchy aggregate forecast cells: target-budget warning icon in a fixed-width left rail so every
+ * row’s icon lines up; amount stays right-aligned in the remaining space (avoids flex-end group shifting).
+ */
+.capital-planning-target-budget-forecast-warning-cell-inner {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 6px;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.capital-planning-target-budget-forecast-warning-cell-inner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 22px;
+  line-height: 0;
+}
+
+.capital-planning-target-budget-forecast-warning-cell-inner__amount {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 /* Footer: same horizontal sticky columns as body so totals stay aligned when scrolling */
@@ -2526,12 +3354,14 @@ div.nextjs-toast {
 }
 
 .capital-planning-table-scroll tfoot tr td.capital-planning-col-last-baseline {
+  border-left: 1px solid var(--color-border-separator) !important;
   border-right: 1px solid var(--color-border-separator) !important;
 }
 
 /* Body: vertical rule between last baseline column (e.g. Remaining) and forecast — matches tfoot / thead */
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-col-last-baseline,
 .capital-planning-table-scroll tbody tr.capital-planning-table-status-group-child td.capital-planning-col-last-baseline {
+  border-left: 1px solid var(--color-border-separator) !important;
   border-right: 1px solid var(--color-border-separator) !important;
 }
 
@@ -2619,13 +3449,76 @@ div.nextjs-toast {
   box-sizing: border-box;
 }
 
-.capital-planning-table-scroll tbody tr {
-  height: 32px;
+/*
+ * Body row height — scoped by toolbar setting:
+ * - sm (default): 32px Procore data-table density (matches pre-checkbox grid).
+ * - md/lg: taller rows via padding rules above; do not clamp td to 32px or content + padding cannot fit.
+ */
+.capital-planning-table-scroll.capital-planning-row-height--sm tbody tr {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
 }
 
-.capital-planning-table-scroll tbody tr td {
-  height: 32px;
+.capital-planning-table-scroll.capital-planning-row-height--sm tbody tr td {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Override Procore `StyledTable` body typography (14px / 20px on `<table>`) so line boxes fit 32px rows */
+.capital-planning-table-scroll.capital-planning-row-height--sm > table {
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm tbody tr,
+.capital-planning-table-scroll.capital-planning-row-height--sm tbody tr td {
+  line-height: 16px !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm thead tr th {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 8px !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm td.capital-planning-col-project .capital-planning-project-select-cell-inner {
   max-height: 32px;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  tbody
+  tr.capital-planning-table-status-group
+  td.capital-planning-table-status-group-header-label-cell
+  .capital-planning-status-group-header-text-cell {
+  max-height: 32px;
+  box-sizing: border-box;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--md tbody tr,
+.capital-planning-table-scroll.capital-planning-row-height--lg tbody tr {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--md tbody tr td,
+.capital-planning-table-scroll.capital-planning-row-height--lg tbody tr td {
+  height: auto !important;
+  min-height: 32px;
+  max-height: none !important;
   padding: 0 8px !important;
   box-sizing: border-box;
   vertical-align: middle;
@@ -2640,6 +3533,14 @@ div.nextjs-toast {
 }
 
 .capital-planning-table-scroll tbody tr td > div > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/*
+ * Project column + other cells: LinkCell / nested TextCell is often the third div under td — DS margin:16px still applied otherwise.
+ */
+.capital-planning-table-scroll tbody tr td > div > div > div {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
@@ -2703,6 +3604,218 @@ div.nextjs-toast {
   line-height: 16px !important;
   font-variant-numeric: tabular-nums !important;
   text-underline-offset: 2px;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group.capital-planning-mvp-group-row td {
+  height: auto !important;
+  min-height: 96px !important;
+  max-height: none !important;
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group td.capital-planning-mvp-planned-amount-cell {
+  padding: 0 !important;
+}
+
+.capital-planning-mvp-planned-amount-breakout {
+  display: grid;
+  grid-template-rows: repeat(3, 32px);
+  position: relative;
+}
+
+.capital-planning-mvp-planned-amount-breakout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 72px;
+  width: 1px;
+  background: var(--color-border-separator);
+  pointer-events: none;
+}
+
+.capital-planning-mvp-planned-amount-breakout-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+}
+
+.capital-planning-mvp-planned-amount-breakout-row + .capital-planning-mvp-planned-amount-breakout-row {
+  border-top: 1px solid var(--color-border-separator);
+}
+
+.capital-planning-mvp-planned-amount-breakout-label {
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.capital-planning-mvp-planned-amount-breakout-value {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.capital-planning-mvp-planned-amount-breakout-value .capital-planning-mvp-budget-inline-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-mvp-planned-amount-breakout-value .capital-planning-mvp-budget-inline-input[class*="StyledTableInlineEditContainer"],
+.capital-planning-mvp-planned-amount-breakout-value .capital-planning-mvp-budget-inline-input [class*="StyledTableInlineEditContainer"] {
+  flex: 1 1 auto;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.capital-planning-mvp-planned-amount-breakout-value .capital-planning-mvp-budget-inline-input[class*="StyledTableCellInput"],
+.capital-planning-mvp-planned-amount-breakout-value .capital-planning-mvp-budget-inline-input [class*="StyledTableCellInput"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.capital-planning-mvp-planned-amount-breakout-variance--positive {
+  color: var(--color-text-success);
+}
+
+.capital-planning-mvp-planned-amount-breakout-variance--negative {
+  color: var(--color-text-error);
+}
+
+.capital-planning-table-scroll tbody tr.capital-planning-table-status-group.capital-planning-mvp-group-row td.capital-planning-mvp-forecast-cell {
+  padding: 0 !important;
+}
+
+.capital-planning-mvp-forecast-breakout {
+  display: grid;
+  grid-template-rows: repeat(3, 32px);
+}
+
+.capital-planning-mvp-forecast-breakout-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 0 8px;
+}
+
+.capital-planning-mvp-forecast-breakout-row + .capital-planning-mvp-forecast-breakout-row {
+  border-top: 1px solid var(--color-border-separator);
+}
+
+.capital-planning-mvp-forecast-breakout-row .capital-planning-mvp-budget-inline-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.capital-planning-mvp-forecast-breakout-row .capital-planning-mvp-budget-inline-input[class*="StyledTableInlineEditContainer"],
+.capital-planning-mvp-forecast-breakout-row .capital-planning-mvp-budget-inline-input [class*="StyledTableInlineEditContainer"] {
+  flex: 1 1 auto;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.capital-planning-mvp-forecast-breakout-row .capital-planning-mvp-budget-inline-input[class*="StyledTableCellInput"],
+.capital-planning-mvp-forecast-breakout-row .capital-planning-mvp-budget-inline-input [class*="StyledTableCellInput"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  box-sizing: border-box !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.capital-planning-mvp-forecast-breakout-variance--positive {
+  color: var(--color-text-success);
+}
+
+.capital-planning-mvp-forecast-breakout-variance--negative {
+  color: var(--color-text-error);
+}
+
+.capital-planning-mvp-remaining-breakout {
+  display: grid;
+  grid-template-rows: repeat(3, 32px);
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.capital-planning-mvp-remaining-breakout-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 0 8px;
+}
+
+.capital-planning-mvp-remaining-breakout-row + .capital-planning-mvp-remaining-breakout-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--color-border-separator);
+  pointer-events: none;
+}
+
+/* MVP aggregate rows: add internal 3-row dividers for baseline cells (status → remaining)
+   so column cells align with Budget / Rollup / Variance row borders. */
+.capital-planning-table-scroll
+  tbody
+  tr.capital-planning-table-status-group.capital-planning-mvp-group-row
+  td.capital-planning-col-scroll:not(.capital-planning-table-footer-forecast-cell):not(.capital-planning-mvp-planned-amount-cell):not(.capital-planning-col-last-baseline) {
+  background-image:
+    linear-gradient(to bottom, transparent 31px, var(--color-border-separator) 31px, var(--color-border-separator) 32px, transparent 32px),
+    linear-gradient(to bottom, transparent 63px, var(--color-border-separator) 63px, var(--color-border-separator) 64px, transparent 64px);
+  background-repeat: no-repeat;
+  background-size:
+    100% 100%,
+    100% 100%;
+  background-position:
+    0 0,
+    0 0;
 }
 
 /*
@@ -2816,6 +3929,86 @@ div.nextjs-toast {
   z-index: 4;
 }
 
+/* Target Budget: forecast cell opens Add Target Budget tearsheet (replaces inline edit). */
+.capital-planning-target-budget-forecast-cell-trigger {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: right;
+  font: inherit;
+  color: var(--p-blue-40);
+  box-sizing: border-box;
+}
+
+/* Target Budget: amounts render as links in the forecast grid. */
+.capital-planning-target-budget-forecast-cell-trigger [class*="StyledTableCellText"] {
+  color: var(--p-blue-40) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.capital-planning-target-budget-forecast-cell-trigger:hover [class*="StyledTableCellText"] {
+  color: var(--color-text-tinted) !important;
+}
+
+
+.capital-planning-target-budget-forecast-cell-trigger:focus-visible {
+  outline: 2px solid #1d5cc9;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+ * Match 32px body rows (`capital-planning-row-height--sm`): `Table.CurrencyCell` defaults (~14px/20px,
+ * block layout) were stretching forecast `<td>` to ~49px. Flex + explicit line metrics + margin strip on
+ * descendants keeps row height aligned with the Capital Plan program grid.
+ */
+.capital-planning-table-scroll.capital-planning-row-height--sm tbody tr td .capital-planning-target-budget-forecast-cell-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 0;
+  max-height: 32px;
+  height: 32px;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  overflow: hidden;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  tbody
+  tr
+  td
+  .capital-planning-target-budget-forecast-cell-trigger
+  * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  tbody
+  tr
+  td
+  .capital-planning-target-budget-forecast-cell-trigger
+  * {
+  font-size: 12px !important;
+  line-height: 16px !important;
+  max-height: 32px !important;
+  box-sizing: border-box;
+}
+
+/* Target Budget 2.0: "Total Targets" column matches FY target column width. */
+.capital-planning-table-scroll thead tr th.capital-planning-target-total-targets-col,
+.capital-planning-table-scroll tbody tr td.capital-planning-target-total-targets-col,
+.capital-planning-table-scroll tfoot tr td.capital-planning-target-total-targets-col {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px !important;
+}
+
 /* Forecast columns: `Table.InputCell` fills cell; match 32px row + right-aligned currency */
 .capital-planning-table-scroll .capital-planning-forecast-number-input[class*="StyledTableInlineEditContainer"],
 .capital-planning-table-scroll .capital-planning-forecast-number-input [class*="StyledTableInlineEditContainer"] {
@@ -2826,6 +4019,31 @@ div.nextjs-toast {
   margin: 0 !important;
   display: flex !important;
   align-items: center !important;
+}
+
+/* Add Target Budget tearsheet: keep inline budget input fully inside 32px table rows. */
+.capital-planning-table-scroll .add-target-budget-inline-input[class*="StyledTableInlineEditContainer"],
+.capital-planning-table-scroll .add-target-budget-inline-input [class*="StyledTableInlineEditContainer"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 0 !important;
+  height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll .add-target-budget-inline-input[class*="StyledTableCellInput"],
+.capital-planning-table-scroll .add-target-budget-inline-input [class*="StyledTableCellInput"] {
+  min-height: 0 !important;
+  height: 32px !important;
+  max-height: 32px !important;
+  line-height: 16px !important;
+  font-size: 12px !important;
+  box-sizing: border-box;
 }
 
 .capital-planning-table-scroll .capital-planning-forecast-number-input[class*="StyledTableCellInput"],
@@ -2860,6 +4078,30 @@ div.nextjs-toast {
     border-color 0.12s ease,
     background-color 0.12s ease,
     box-shadow 0.12s ease;
+}
+
+.add-target-budget-funding-table tbody tr td [class*="StyledSelectButtonWrapper"] {
+  margin: 0 !important;
+}
+
+.add-target-budget-funding-table tbody tr td [class*="StyledInput"] {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  box-sizing: border-box;
+}
+
+.add-target-budget-funding-table tbody tr.add-target-budget-funding-empty-row:hover td,
+.add-target-budget-funding-table tbody tr.add-target-budget-funding-empty-row td:hover {
+  background: var(--color-surface-primary) !important;
+  cursor: default !important;
+}
+
+.capital-planning-table-scroll th.add-target-budget-funding-link-col,
+.capital-planning-table-scroll td.add-target-budget-funding-link-col {
+  width: 300px !important;
+  min-width: 300px !important;
+  max-width: 300px !important;
 }
 
 /* Table.SelectCell: read-only look until hover, keyboard focus, or menu open (then full edit chrome) */
