@@ -3,7 +3,10 @@ import { Button, Pill, Search, Select, ToggleButton } from "@procore/core-react"
 import { Clear, Filter } from "@procore/core-icons";
 import styled from "styled-components";
 import { CapitalPlanningSmartGrid } from "@/components/tools/capitalPlanning/CapitalPlanningSmartGrid";
-import type { CapitalPlanningColumnVisibility } from "@/components/tools/capitalPlanning/capitalPlanningColumnGroups";
+import type {
+  CapitalPlanningColumnVisibility,
+  CapitalPlanningProgramPageVariant,
+} from "@/components/tools/capitalPlanning/capitalPlanningColumnGroups";
 import type {
   CapitalPlanningRegion,
   CapitalPlanningSampleRow,
@@ -110,6 +113,7 @@ export interface CapitalPlanningPrioritizationProjectListProps {
   criteriaRows: CriteriaBuilderRow[];
   criteriaValuesByProjectId: Record<string, Record<string, string>>;
   onCriteriaValueChange: (projectId: string, criterionId: string, value: string) => void;
+  programPageVariant: CapitalPlanningProgramPageVariant;
 }
 
 /**
@@ -120,6 +124,7 @@ export function CapitalPlanningPrioritizationProjectList({
   criteriaRows,
   criteriaValuesByProjectId,
   onCriteriaValueChange,
+  programPageVariant,
 }: CapitalPlanningPrioritizationProjectListProps) {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -355,6 +360,7 @@ export function CapitalPlanningPrioritizationProjectList({
             rowHeight={tableRowHeight}
             configShowEmpty={true}
             search={search}
+            programPageVariant={programPageVariant}
             filteredProjectRows={filteredProjectRows}
             plannedAmountSourceByRowId={plannedAmountSourceByRowId}
             setPlannedAmountSourceByRowId={setPlannedAmountSourceByRowId}
@@ -365,7 +371,7 @@ export function CapitalPlanningPrioritizationProjectList({
             forecastGranularity="quarter"
             planView="grid"
             onSaveHighLevelBudgetPlannedAmount={noopPlannedAmountSave}
-            groupBy={null}
+            groupByDimensions={null}
             criteriaColumns={criteriaColumns}
             criteriaValuesByProjectId={criteriaValuesByProjectId}
             onCriteriaValueChange={onCriteriaValueChange}

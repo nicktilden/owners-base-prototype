@@ -7,6 +7,7 @@
  * - High level budget items tearsheet: https://www.figma.com/design/wbjpyOCTw2MQaOzx4ibk6r/Capital-Planning?node-id=4440-88961
  */
 
+import { DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH } from "@/utils/capitalPlanningFiscalSettings";
 import type { CapitalPlanningSampleRow, ProjectCurve } from "./capitalPlanningData";
 import { dateToIsoString, optionalIsoStringToDate } from "./capitalPlanningData";
 
@@ -114,25 +115,47 @@ export function getProgramForecastHeaderTitle(): string {
   return `${programForecastFyLabel(first)} – ${programForecastFyLabel(last)}`;
 }
 
-/**
- * Program columns use calendar-year FY blocks: FQ1 = Jan–Mar of `fyYear` (see {@link getFiscalYearMonthLabelsForCalendarYear}).
- * After that quarter ends (on/after Apr 1 of `fyYear`), FQ1 cells are read-only.
- */
-export function isProgramForecastFq1PeriodEnded(fyYear: number, anchor: Date): boolean {
-  const startOfToday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
-  const firstDayAfterFq1 = new Date(fyYear, 3, 1);
-  return startOfToday >= firstDayAfterFq1;
-}
-
 /** Global month index 0… → which program FY calendar year (2026, 2027, …). */
 export function programFiscalYearForGlobalMonthIndex(monthIndex: number): number | undefined {
   const fyIndex = Math.floor(monthIndex / 12);
   return CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[fyIndex];
 }
 
-/** Jan–Mar within a program FY block (FQ1 month leaf columns). */
-export function isGlobalMonthIndexInFq1(monthIndex: number): boolean {
-  return monthIndex % 12 < 3;
+/**
+ * Calendar-month global indices (0…71) for the three months in program FQ `fqInFy` (0–3) within FY block `fyIndex`.
+ * `fiscalStartMonth`: 0 = Jan … 11 = Dec — first month of FQ1 for each program FY block (matches Settings).
+ */
+export function fiscalQuarterMonthGlobalIndices(
+  fyIndex: number,
+  fqInFy: number,
+  fiscalStartMonth: number
+): [number, number, number] {
+  const base = fyIndex * 12;
+  const o0 = (fiscalStartMonth + fqInFy * 3) % 12;
+  const o1 = (fiscalStartMonth + fqInFy * 3 + 1) % 12;
+  const o2 = (fiscalStartMonth + fqInFy * 3 + 2) % 12;
+  return [base + o0, base + o1, base + o2];
+}
+
+export function sumProgramForecastQuarterMonthAmounts(
+  monthAmounts: readonly number[],
+  fqIndex: number,
+  fiscalStartMonth: number
+): number {
+  const fyIndex = Math.floor(fqIndex / 4);
+  const fqInFy = fqIndex % 4;
+  const [i0, i1, i2] = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, fiscalStartMonth);
+  return (monthAmounts[i0] ?? 0) + (monthAmounts[i1] ?? 0) + (monthAmounts[i2] ?? 0);
+}
+
+/** True when `monthIndex` is one of the three fiscal FQ1 months for its program FY block. */
+export function isGlobalMonthIndexInFq1(
+  monthIndex: number,
+  fiscalStartMonth = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH
+): boolean {
+  const fyIndex = Math.floor(monthIndex / 12);
+  const [m0, m1, m2] = fiscalQuarterMonthGlobalIndices(fyIndex, 0, fiscalStartMonth);
+  return monthIndex === m0 || monthIndex === m1 || monthIndex === m2;
 }
 
 function programHorizonStart(): Date {
@@ -220,6 +243,27 @@ function addCalendarDaysLocal(d: Date, days: number): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   x.setDate(x.getDate() + days);
   return startOfDayLocal(x);
+}
+
+/**
+ * Program columns use FY blocks keyed by calendar year label; FQ1 groups three months starting at Settings fiscal year month.
+ * After that quarter ends (first day after the last month of FQ1), FQ1 cells are read-only.
+ */
+export function isProgramForecastFq1PeriodEnded(
+  fyYear: number,
+  anchor: Date,
+  fiscalStartMonth = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH
+): boolean {
+  const fyIndex = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.indexOf(
+    fyYear as (typeof CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS)[number]
+  );
+  if (fyIndex < 0) return false;
+  const thirdIdx = fiscalQuarterMonthGlobalIndices(fyIndex, 0, fiscalStartMonth)[2];
+  const range = programGridMonthFirstLastDay(thirdIdx);
+  if (!range) return false;
+  const startOfToday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const dayAfterFq1 = addCalendarDaysLocal(range.end, 1);
+  return startOfToday.getTime() >= dayAfterFq1.getTime();
 }
 
 /**
@@ -496,15 +540,29 @@ export function getForecastAllocationBasisDollars(row: CapitalPlanningSampleRow)
 }
 
 /**
+ * - **`allocation`**: same basis as grid forecast cells ({@link getForecastAllocationBasisDollars}).
+ * - **`fullPlanned`**: spreads the row’s full **Planned Amount** across months (hub “Planned” vs JTD chart).
+ */
+export type ProgramForecastMonthDollarBasis = "allocation" | "fullPlanned";
+
+/**
  * Allocation basis spread across program FY month columns (see {@link getForecastAllocationBasisDollars}).
  * Start/end dates set how much applies within the FY 2026–2031 grid (`sumNaive` from calendar overlap).
  * The selected **curve** splits that total across chronologically ordered months that overlap the project
  * (Linear = even, Front/Back-loaded = ramp, Bell = center-weighted, Manual = pseudo-random but stable per row).
  */
-export function getProgramForecastMonthDollarAmounts(row: CapitalPlanningSampleRow): number[] {
+export function getProgramForecastMonthDollarAmounts(
+  row: CapitalPlanningSampleRow,
+  basis: ProgramForecastMonthDollarBasis = "allocation"
+): number[] {
   const n = CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS;
   const out = Array.from({ length: n }, () => 0);
-  const planned = getForecastAllocationBasisDollars(row);
+  const planned =
+    basis === "fullPlanned"
+      ? row.plannedAmount > 0 && Number.isFinite(row.plannedAmount)
+        ? row.plannedAmount
+        : 0
+      : getForecastAllocationBasisDollars(row);
   if (planned <= 0) return out;
 
   let pStart = optionalIsoStringToDate(row.startDate) ?? programHorizonStart();
@@ -553,17 +611,84 @@ export function getProgramForecastMonthDollarAmounts(row: CapitalPlanningSampleR
   return allocateExactDollars(target, exact);
 }
 
+/**
+ * Spreads {@link CapitalPlanningSampleRow.jobToDateCosts} across program-grid months in proportion to
+ * calendar overlap between the project span and each month (no curve). Integer dollars sum to rounded JTD.
+ */
+export function getProgramJobToDateMonthAllocations(row: CapitalPlanningSampleRow): number[] {
+  const n = CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS;
+  const out = Array.from({ length: n }, () => 0);
+  const jtd = row.jobToDateCosts;
+  if (jtd == null || !Number.isFinite(jtd) || jtd <= 0) return out;
+
+  let pStart = optionalIsoStringToDate(row.startDate) ?? programHorizonStart();
+  let pEnd = optionalIsoStringToDate(row.endDate) ?? programHorizonEnd();
+  pStart = startOfDayLocal(pStart);
+  pEnd = startOfDayLocal(pEnd);
+  if (pEnd.getTime() < pStart.getTime()) {
+    const t = pStart;
+    pStart = pEnd;
+    pEnd = t;
+  }
+
+  const naive: number[] = [];
+  for (let m = 0; m < n; m++) {
+    const rng = programGridMonthFirstLastDay(m);
+    if (!rng) {
+      naive.push(0);
+      continue;
+    }
+    naive.push(overlapInclusiveDays(pStart, pEnd, rng.start, rng.end));
+  }
+  const sumNaive = naive.reduce((a, b) => a + b, 0);
+  if (sumNaive <= 0) return out;
+
+  const exact = naive.map((od) => (jtd * od) / sumNaive);
+  return allocateExactDollars(Math.round(jtd), exact);
+}
+
 export function getProgramForecastDollarSumForFiscalYearIndex(
   row: CapitalPlanningSampleRow,
-  fyIndex: number
+  fyIndex: number,
+  basis: ProgramForecastMonthDollarBasis = "allocation"
 ): number {
-  const monthly = getProgramForecastMonthDollarAmounts(row);
+  const monthly = getProgramForecastMonthDollarAmounts(row, basis);
   const start = fyIndex * 12;
   let sum = 0;
   for (let i = 0; i < 12; i++) {
     sum += monthly[start + i] ?? 0;
   }
   return sum;
+}
+
+/**
+ * Full planned dollars attributed to a **calendar year** by naive time share (overlap days ÷ project span).
+ * For YoY against FY 2026 program totals when calendar 2025 is outside the FY 2026–2031 month grid.
+ */
+export function getFullPlannedNaiveDollarsForCalendarYear(
+  row: CapitalPlanningSampleRow,
+  calendarYear: number
+): number {
+  const planned = row.plannedAmount;
+  if (!Number.isFinite(planned) || planned <= 0) return 0;
+  let pStart = optionalIsoStringToDate(row.startDate) ?? programHorizonStart();
+  let pEnd = optionalIsoStringToDate(row.endDate) ?? programHorizonEnd();
+  pStart = startOfDayLocal(pStart);
+  pEnd = startOfDayLocal(pEnd);
+  if (pEnd.getTime() < pStart.getTime()) {
+    const t = pStart;
+    pStart = pEnd;
+    pEnd = t;
+  }
+  const T = Math.max(1, inclusiveCalendarDays(pStart, pEnd));
+  let overlapSum = 0;
+  for (let m = 0; m < 12; m++) {
+    const m0 = new Date(calendarYear, m, 1);
+    const lastDay = new Date(calendarYear, m + 1, 0).getDate();
+    const m1 = new Date(calendarYear, m, lastDay);
+    overlapSum += overlapInclusiveDays(pStart, pEnd, m0, m1);
+  }
+  return Math.round((planned * overlapSum) / T);
 }
 
 export function getProgramForecastDollarTotal(row: CapitalPlanningSampleRow): number {
@@ -587,17 +712,28 @@ function isProgramForecastFq1QuarterIndex(fqIndex: number): boolean {
   return fqIndex % 4 === 0;
 }
 
-function isProgramForecastQuarterRollupReadOnly(fqIndex: number, anchor: Date): boolean {
+function isProgramForecastQuarterRollupReadOnly(
+  fqIndex: number,
+  anchor: Date,
+  fiscalStartMonth: number
+): boolean {
   if (!isProgramForecastFq1QuarterIndex(fqIndex)) return false;
   const fyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(fqIndex / 4)];
-  return fyYear !== undefined && isProgramForecastFq1PeriodEnded(fyYear, anchor);
+  return fyYear !== undefined && isProgramForecastFq1PeriodEnded(fyYear, anchor, fiscalStartMonth);
 }
 
 /** FQ1 month leaf cells that are locked after the quarter ends. */
-function isProgramForecastMonthGridCellReadOnly(monthIndex: number, anchor: Date): boolean {
+function isProgramForecastMonthGridCellReadOnly(
+  monthIndex: number,
+  anchor: Date,
+  fiscalStartMonth: number
+): boolean {
   const fyYear = programFiscalYearForGlobalMonthIndex(monthIndex);
   if (fyYear === undefined) return false;
-  return isGlobalMonthIndexInFq1(monthIndex) && isProgramForecastFq1PeriodEnded(fyYear, anchor);
+  return (
+    isGlobalMonthIndexInFq1(monthIndex, fiscalStartMonth) &&
+    isProgramForecastFq1PeriodEnded(fyYear, anchor, fiscalStartMonth)
+  );
 }
 
 /**
@@ -608,7 +744,8 @@ export function getEffectiveProgramForecastMonthAmounts(
   row: CapitalPlanningSampleRow,
   overrides: Record<string, number>,
   forecastBasisKey: string,
-  anchor: Date
+  anchor: Date,
+  fiscalStartMonth: number = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH
 ): number[] {
   const rowId = row.id;
   const key = (parts: (string | number)[]) =>
@@ -618,24 +755,26 @@ export function getEffectiveProgramForecastMonthAmounts(
   const effective = monthly.map((v) => Number(v));
 
   for (let m = 0; m < CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS; m++) {
-    if (isProgramForecastMonthGridCellReadOnly(m, anchor)) continue;
+    if (isProgramForecastMonthGridCellReadOnly(m, anchor, fiscalStartMonth)) continue;
     const km = key(["q", "m", m]);
     if (overrides[km] !== undefined) effective[m] = overrides[km]!;
   }
 
   const nq = CAPITAL_PLANNING_PROGRAM_FORECAST_QUARTERS;
   for (let q = 0; q < nq; q++) {
-    if (isProgramForecastQuarterRollupReadOnly(q, anchor)) continue;
+    if (isProgramForecastQuarterRollupReadOnly(q, anchor, fiscalStartMonth)) continue;
     const kq = key(["q", "r", q]);
     if (overrides[kq] === undefined) continue;
     const target = overrides[kq]!;
     const rounded = Math.round(target);
-    const b = q * 3;
+    const fyIndex = Math.floor(q / 4);
+    const fqInFy = q % 4;
+    const [i0, i1, i2] = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, fiscalStartMonth);
     const third = rounded / 3;
     const shares = allocateExactDollars(rounded, [third, third, third]);
-    effective[b] = shares[0] ?? 0;
-    effective[b + 1] = shares[1] ?? 0;
-    effective[b + 2] = shares[2] ?? 0;
+    effective[i0] = shares[0] ?? 0;
+    effective[i1] = shares[1] ?? 0;
+    effective[i2] = shares[2] ?? 0;
   }
 
   for (let fy = 0; fy < CAPITAL_PLANNING_PROGRAM_FY_COUNT; fy++) {
@@ -662,7 +801,7 @@ export function getEffectiveProgramForecastMonthAmounts(
   }
 
   for (let m = 0; m < CAPITAL_PLANNING_PROGRAM_FORECAST_MONTHS; m++) {
-    if (isProgramForecastMonthGridCellReadOnly(m, anchor)) {
+    if (isProgramForecastMonthGridCellReadOnly(m, anchor, fiscalStartMonth)) {
       effective[m] = monthly[m] ?? 0;
     }
   }
@@ -678,12 +817,16 @@ export function getAllocatedForecastProgramTotal(
   row: CapitalPlanningSampleRow,
   overrides: Record<string, number>,
   forecastBasisKey: string,
-  anchor: Date
+  anchor: Date,
+  fiscalStartMonth: number = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH
 ): number {
-  return getEffectiveProgramForecastMonthAmounts(row, overrides, forecastBasisKey, anchor).reduce(
-    (a, b) => a + b,
-    0
-  );
+  return getEffectiveProgramForecastMonthAmounts(
+    row,
+    overrides,
+    forecastBasisKey,
+    anchor,
+    fiscalStartMonth
+  ).reduce((a, b) => a + b, 0);
 }
 
 function getTotalNonQuarterForecastAllocated(
@@ -725,14 +868,15 @@ export function getTotalAllocatedForecastDollars(
   /** Gantt + View by Month: 72 program months (same totals as grid program forecast). */
   ganttProgramMonthGrid = false,
   /** Gantt + View by Quarter: 24 program quarter rollups (same program total as grid). */
-  ganttProgramQuarterBands = false
+  ganttProgramQuarterBands = false,
+  fiscalYearStartMonth: number = DEFAULT_CAPITAL_PLANNING_FISCAL_YEAR_START_MONTH
 ): number {
   if (
     (granularity === "quarter" && !ganttFlatForecast) ||
     ganttProgramMonthGrid ||
     ganttProgramQuarterBands
   ) {
-    return getAllocatedForecastProgramTotal(row, overrides, forecastBasisKey, anchor);
+    return getAllocatedForecastProgramTotal(row, overrides, forecastBasisKey, anchor, fiscalYearStartMonth);
   }
   return getTotalNonQuarterForecastAllocated(
     row,

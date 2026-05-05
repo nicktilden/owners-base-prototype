@@ -1,6 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import styled from "styled-components";
-import { Button, MenuImperative, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
+import {
+  Button,
+  MenuImperative,
+  Modal,
+  ToolLandingPage,
+  H1,
+  Title,
+  ToggleButton,
+  Switch,
+  Typography,
+} from "@procore/core-react";
 import { Home, Plus, Filter, EllipsisVertical } from "@procore/core-icons";
 import GlobalHeader from "@/components/nav/GlobalHeader";
 import AppLayout from "@/components/nav/AppLayout";
@@ -10,10 +21,14 @@ import ProjectsTableCard from "@/components/ProjectsTableCard";
 import ScheduleHeatmapCard from "@/components/ScheduleHeatmapCard";
 import CostManagementTableCard from "@/components/CostManagementTableCard";
 import HubsContentLayout from "@/components/hubs/HubsContentLayout";
-import { ScheduleRiskGHubCard, ScheduleVariance2HubCard } from "@/components/ScheduleInsightsHubCards";
+import {
+  ProjectsByPriorityHubCard,
+  ProjectsByStageHubCard,
+  ScheduleRiskGHubCard,
+  ScheduleVariance2HubCard,
+} from "@/components/ScheduleInsightsHubCards";
 import { FinancialScorecardCard, InvoicesForApprovalCard } from "@/components/FinancialHubCards";
 import {
-  ActionPlansPortfolioMatrixHubCard,
   ActionPlansTemplateAdoptionHubCard,
   ActionPlansOverdueItemsHubCard,
 } from "@/components/ActionPlansExplorationHubCards";
@@ -22,11 +37,29 @@ import {
   APv2KpiDashboardHubCard,
   APv2ProjectCardsHubCard,
 } from "@/components/ActionPlansExploration2HubCards";
+import CapitalPlanningExplorationHubCard from "@/components/CapitalPlanningExplorationHubCard";
+import CapitalPlanSummaryHubCard from "@/components/CapitalPlanSummaryHubCard";
+import { SAMPLE_PROJECT_ROWS } from "@/components/tools/capitalPlanning/capitalPlanningData";
+import {
+  computeCapitalPlanningProgramSummaryMetrics,
+  type CapitalPlanningProgramSummaryMetrics,
+} from "@/components/tools/capitalPlanning/capitalPlanningProgramSummaryMetrics";
 import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
 import HubFilterBar from "@/components/HubFilterBar";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 
-const tabs = ["My Work", "Cost Management", "Schedule & Milestones", "Action Plans"] as const;
+const CapitalPlanningHubPanel = dynamic(
+  () => import("@/components/tools/CapitalPlanningContent"),
+  { ssr: false, loading: () => <p style={{ padding: 24 }}>Loading Capital Planning…</p> }
+);
+
+const tabs = [
+  "My Work",
+  "Capital Planning",
+  "Cost Management",
+  "Schedule & Milestones",
+  "Action Plans",
+] as const;
 type TabName = typeof tabs[number];
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
@@ -101,6 +134,7 @@ const EllipsisBtn = styled.button`
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
   "My Work": ["My Open Items", "AI Daily Planner", "Projects Table"],
+  "Capital Planning": ["Capital Planning", "Planned Cost", "Projects by Stage", "Projects by Priority"],
   "Cost Management": ["Financial Scorecard", "Invoices for Approval", "Cost Management Table"],
   "Schedule & Milestones": ["Schedule Risk", "Schedule Variance", "Schedule Heatmap"],
   "Action Plans": [
@@ -118,6 +152,7 @@ type HiddenCards = Record<TabName, Set<string>>;
 function makeEmptyHidden(): HiddenCards {
   return {
     "My Work": new Set(),
+    "Capital Planning": new Set(),
     "Cost Management": new Set(),
     "Schedule & Milestones": new Set(),
     "Action Plans": new Set(),
@@ -128,7 +163,7 @@ function HomeContentInner() {
   const [activeTab, setActiveTab] = useState<TabName>("My Work");
   useResetScrollOnTabChange(activeTab);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
-  const { hasActiveFilters } = useHubFilters();
+  const { hasActiveFilters, filteredSeedProjects } = useHubFilters();
 
   // Ellipsis menu state
   const [menuOpenTab, setMenuOpenTab] = useState<TabName | null>(null);
@@ -138,6 +173,30 @@ function HomeContentInner() {
   // Edit view modal state
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
   const [hiddenCards, setHiddenCards] = useState<HiddenCards>(makeEmptyHidden);
+
+  /** Capital plan rows that match the hub filter bar (seed `projectId` ∩ filtered seed projects). */
+  const capitalPlanHubRowsForFilterBar = useMemo(() => {
+    const allowed = new Set(filteredSeedProjects.map((p) => p.id));
+    return SAMPLE_PROJECT_ROWS.filter((r) => allowed.has(r.projectId));
+  }, [filteredSeedProjects]);
+
+  const capitalPlanHubMetricsFromFilterBar = useMemo(
+    () => computeCapitalPlanningProgramSummaryMetrics(capitalPlanHubRowsForFilterBar),
+    [capitalPlanHubRowsForFilterBar]
+  );
+
+  /** When the embedded grid applies search / table filters, it overrides the filter-bar-only rollup. */
+  const [capitalPlanGridMetrics, setCapitalPlanGridMetrics] = useState<CapitalPlanningProgramSummaryMetrics | null>(null);
+
+  useEffect(() => {
+    setCapitalPlanGridMetrics(null);
+  }, [capitalPlanHubRowsForFilterBar]);
+
+  const capitalPlanHubMetrics = capitalPlanGridMetrics ?? capitalPlanHubMetricsFromFilterBar;
+
+  const onCapitalPlanHubMetrics = useCallback((m: CapitalPlanningProgramSummaryMetrics) => {
+    setCapitalPlanGridMetrics(m);
+  }, []);
 
   // Close dropdown on outside click or Escape
   useEffect(() => {
@@ -337,6 +396,39 @@ function HomeContentInner() {
                 {isCardVisible("Schedule & Milestones", "Schedule Heatmap") && (
                   <HubsContentLayout.Row variant="table">
                     <ScheduleHeatmapCard />
+                  </HubsContentLayout.Row>
+                )}
+              </HubsContentLayout>
+            )}
+            {activeTab === "Capital Planning" && (
+              <HubsContentLayout>
+                {(() => {
+                  const showCapSummary = isCardVisible("Capital Planning", "Capital Planning");
+                  const showPlannedCost = isCardVisible("Capital Planning", "Planned Cost");
+                  if (!showCapSummary && !showPlannedCost) return null;
+                  const both = showCapSummary && showPlannedCost;
+                  return (
+                    <HubsContentLayout.Row
+                      columnsTemplate={both ? "minmax(0, 1fr) minmax(0, 2fr)" : "minmax(0, 1fr)"}
+                    >
+                      {showCapSummary ? <CapitalPlanSummaryHubCard metrics={capitalPlanHubMetrics} /> : null}
+                      {showPlannedCost ? <CapitalPlanningExplorationHubCard /> : null}
+                    </HubsContentLayout.Row>
+                  );
+                })()}
+                {isCardVisible("Capital Planning", "Projects by Stage") ||
+                isCardVisible("Capital Planning", "Projects by Priority") ? (
+                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) minmax(0, 1fr)">
+                    {isCardVisible("Capital Planning", "Projects by Stage") && <ProjectsByStageHubCard />}
+                    {isCardVisible("Capital Planning", "Projects by Priority") && <ProjectsByPriorityHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Capital Planning", "Capital Planning") && (
+                  <HubsContentLayout.Row variant="table-scroll">
+                    <CapitalPlanningHubPanel
+                      embeddedInHub
+                      hubEmbedReportSummaryMetrics={onCapitalPlanHubMetrics}
+                    />
                   </HubsContentLayout.Row>
                 )}
               </HubsContentLayout>

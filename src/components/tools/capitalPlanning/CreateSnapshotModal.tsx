@@ -2,21 +2,9 @@ import React, { useEffect, useState, type ChangeEvent } from "react";
 import { Button, Modal, TextArea, TextInput, Typography } from "@procore/core-react";
 
 /**
- * Create snapshot — Capital Planning (Figma node 1893-294458).
+ * Create / edit snapshot — Capital Planning (Figma node 1893-294458).
  * https://www.figma.com/design/wbjpyOCTw2MQaOzx4ibk6r/Capital-Planning?node-id=1893-294458
  */
-
-const readOnlyValueBoxStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  minHeight: 40,
-  padding: "10px 12px",
-  borderRadius: 4,
-  border: "1px solid var(--color-border-default)",
-  background: "var(--color-surface-tertiary)",
-  display: "flex",
-  alignItems: "center",
-};
 
 function formatSnapshotDate(d: Date): string {
   return d.toLocaleDateString("en-US", {
@@ -27,34 +15,59 @@ function formatSnapshotDate(d: Date): string {
   });
 }
 
+export type CreateSnapshotModalMode = "create" | "edit";
+
 export function CreateSnapshotModal({
   open,
   onClose,
+  mode = "create",
   /** Read-only; replace with signed-in user when auth exists. */
   createdByLabel = "Alex Rivera",
+  heading,
+  submitLabel,
+  initialName = "",
+  initialDescription = "",
+  capturedAt,
+  onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
+  mode?: CreateSnapshotModalMode;
   createdByLabel?: string;
+  heading?: string;
+  submitLabel?: string;
+  initialName?: string;
+  initialDescription?: string;
+  /** Defaults to “now” when opening create. */
+  capturedAt?: Date;
+  onSubmit?: (payload: { name: string; description: string }) => void;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [capturedAt, setCapturedAt] = useState(() => new Date());
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+  const [capturedAtLocal, setCapturedAtLocal] = useState(() => capturedAt ?? new Date());
 
   useEffect(() => {
     if (!open) return;
-    setName("");
-    setDescription("");
-    setCapturedAt(new Date());
-  }, [open]);
+    setName(mode === "edit" ? initialName : "");
+    setDescription(mode === "edit" ? initialDescription : "");
+    setCapturedAtLocal(capturedAt ?? new Date());
+  }, [open, mode, initialName, initialDescription, capturedAt]);
 
   const trimmedName = name.trim();
   const canSubmit = trimmedName.length > 0;
 
+  const resolvedHeading =
+    heading ?? (mode === "edit" ? "Edit Snapshot" : "Create snapshot");
+  const resolvedSubmit =
+    submitLabel ?? (mode === "edit" ? "Save" : "Create snapshot");
+
   function handleSubmit() {
     if (!canSubmit) return;
+    onSubmit?.({ name: trimmedName, description: description.trim() });
     onClose();
   }
+
+  const dateLabel = formatSnapshotDate(capturedAtLocal);
 
   return (
     <Modal
@@ -66,12 +79,41 @@ export function CreateSnapshotModal({
       placement="center"
     >
       <Modal.Header>
-        <Modal.Heading level={2}>Create snapshot</Modal.Heading>
+        <Modal.Heading level={2}>{resolvedHeading}</Modal.Heading>
       </Modal.Header>
       <Modal.Body>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+              paddingBottom: 4,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+              <Typography intent="small" weight="bold" as="span" style={{ display: "block" }}>
+                Created by
+              </Typography>
+              <Typography intent="small" style={{ margin: 0 }}>
+                {createdByLabel}
+              </Typography>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+              <Typography intent="small" weight="bold" as="span" style={{ display: "block" }}>
+                Date
+              </Typography>
+              <Typography intent="small" style={{ margin: 0 }}>
+                {dateLabel}
+              </Typography>
+            </div>
+          </div>
+
           <div>
-            <label htmlFor="capital-planning-snapshot-name" style={{ display: "block", marginBottom: 6, cursor: "pointer" }}>
+            <label
+              htmlFor="capital-planning-snapshot-name"
+              style={{ display: "block", marginBottom: 6, cursor: "pointer" }}
+            >
               <Typography intent="small" weight="bold" as="span">
                 Snapshot name
                 <span aria-hidden style={{ color: "#c7482d", marginLeft: 2 }}>
@@ -92,7 +134,10 @@ export function CreateSnapshotModal({
           </div>
 
           <div>
-            <label htmlFor="capital-planning-snapshot-description" style={{ display: "block", marginBottom: 6, cursor: "pointer" }}>
+            <label
+              htmlFor="capital-planning-snapshot-description"
+              style={{ display: "block", marginBottom: 6, cursor: "pointer" }}
+            >
               <Typography intent="small" weight="bold">
                 Description
               </Typography>
@@ -101,50 +146,21 @@ export function CreateSnapshotModal({
               id="capital-planning-snapshot-description"
               name="snapshotDescription"
               value={description}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.currentTarget.value)}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                setDescription(e.currentTarget.value)
+              }
               placeholder="Enter description"
               rows={4}
               resize="vertical"
               style={{ width: "100%", minHeight: 96 }}
             />
           </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div>
-              <Typography
-                id="capital-planning-snapshot-created-by-label"
-                intent="small"
-                weight="bold"
-                color="gray45"
-                style={{ display: "block", marginBottom: 6 }}
-              >
-                Created by
-              </Typography>
-              <div style={readOnlyValueBoxStyle} aria-labelledby="capital-planning-snapshot-created-by-label">
-                <Typography intent="small">{createdByLabel}</Typography>
-              </div>
-            </div>
-            <div>
-              <Typography
-                id="capital-planning-snapshot-date-label"
-                intent="small"
-                weight="bold"
-                color="gray45"
-                style={{ display: "block", marginBottom: 6 }}
-              >
-                Date
-              </Typography>
-              <div style={readOnlyValueBoxStyle} aria-labelledby="capital-planning-snapshot-date-label">
-                <Typography intent="small">{formatSnapshotDate(capturedAt)}</Typography>
-              </div>
-            </div>
-          </div>
         </div>
       </Modal.Body>
       <Modal.Footer>
         <Modal.FooterButtons>
           <Button variant="primary" onClick={handleSubmit} disabled={!canSubmit}>
-            Create snapshot
+            {resolvedSubmit}
           </Button>
         </Modal.FooterButtons>
       </Modal.Footer>

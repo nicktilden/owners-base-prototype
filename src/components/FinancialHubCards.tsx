@@ -5,7 +5,54 @@ import styled from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import KPIPill from "@/components/KPIPill";
 import { sampleProjectRows } from "@/data/projects";
+import type { ProjectRow } from "@/data/projects";
 import { useHubFilters } from "@/context/HubFilterContext";
+
+type FinancialScorecardVariant = "financial" | "portfolio";
+
+const ACTIVE_CONSTRUCTION_STAGE = "Course of Construction" as const;
+
+function formatCompactUsd(n: number): string {
+  if (!Number.isFinite(n) || n === 0) return "$0";
+  if (Math.abs(n) >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}bn`;
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+function buildPortfolioKpis(rows: readonly ProjectRow[], fullListCount: number, hasActiveFilters: boolean) {
+  const total = rows.length;
+  const pctOfFull = fullListCount > 0 ? Math.round((total / fullListCount) * 100) : 100;
+  const programs = new Set(rows.map((r) => r.program)).size;
+  const regions = new Set(rows.map((r) => r.region)).size;
+  const projectManagers = new Set(rows.map((r) => r.projectManager)).size;
+  const inConstruction = rows.filter((r) => r.stage === ACTIVE_CONSTRUCTION_STAGE).length;
+  const earlyPhase = rows.filter((r) =>
+    ["Conceptual", "Feasibility", "Permitting", "Pre-Construction", "Bidding"].includes(r.stage)
+  ).length;
+  const highPriority = rows.filter((r) => r.priority === "high").length;
+  const estSum = rows.reduce((s, r) => s + (Number.isFinite(r.estimatedCost) ? r.estimatedCost : 0), 0);
+  const filterNote =
+    hasActiveFilters && total !== fullListCount ? `${pctOfFull}% of ${fullListCount} projects` : "Hub filters apply";
+
+  const neutral = "neutral" as const;
+  return [
+    { label: "Total projects", value: String(total), delta: filterNote, tone: neutral, trendValue: 0 },
+    { label: "In construction", value: String(inConstruction), delta: "Active build stage", tone: neutral, trendValue: 0 },
+    { label: "Early-phase projects", value: String(earlyPhase), delta: "Concept → bidding", tone: neutral, trendValue: 0 },
+    { label: "High priority", value: String(highPriority), delta: "P0 / urgent weighting", tone: neutral, trendValue: 0 },
+    { label: "Programs represented", value: String(programs), delta: "Distinct programs", tone: neutral, trendValue: 0 },
+    { label: "Regions represented", value: String(regions), delta: "Geographic spread", tone: neutral, trendValue: 0 },
+    { label: "Project managers", value: String(projectManagers), delta: "Distinct PMs", tone: neutral, trendValue: 0 },
+    {
+      label: "Est. portfolio value",
+      value: formatCompactUsd(estSum),
+      delta: "Sum of est. cost (scale)",
+      tone: neutral,
+      trendValue: 0,
+    },
+  ];
+}
 
 const KpiGrid = styled.div`
   display: grid;
@@ -106,11 +153,15 @@ const invoiceRows = [
   { invoice: "Invoice #002-259", amount: "$157,990", company: "Catalyst CM" },
 ];
 
-export function FinancialScorecardCard() {
+export interface FinancialScorecardCardProps {
+  /** `portfolio` = project composition KPIs for the Portfolio hub; default keeps budget-style metrics (e.g. Cost Management). */
+  variant?: FinancialScorecardVariant;
+}
+
+export function FinancialScorecardCard({ variant = "financial" }: FinancialScorecardCardProps) {
   const [view, setView] = useState("Budget View");
   const [snapshot, setSnapshot] = useState("Budget Snapshot");
-  const { filteredProjectRows } = useHubFilters();
-  const valuePillColor = useMemo(() => "green" as const, []);
+  const { filteredProjectRows, hasActiveFilters } = useHubFilters();
   const financialKpis = useMemo(() => {
     const revisedBudget = filteredProjectRows.reduce((sum, p) => sum + p.originalBudget, 0);
     const forecastToComplete = filteredProjectRows.reduce((sum, p) => sum + p.forecastToComplete, 0);
@@ -149,10 +200,22 @@ export function FinancialScorecardCard() {
     ];
   }, [filteredProjectRows]);
 
+  const portfolioKpis = useMemo(
+    () =>
+      buildPortfolioKpis(filteredProjectRows, sampleProjectRows.length, hasActiveFilters),
+    [filteredProjectRows, hasActiveFilters]
+  );
+
+  const kpis = variant === "portfolio" ? portfolioKpis : financialKpis;
+
   return (
     <HubCardFrame
-      title="Financial Scorecard"
-      infoTooltip="Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
+      title={variant === "portfolio" ? "Portfolio overview" : "Financial Scorecard"}
+      infoTooltip={
+        variant === "portfolio"
+          ? "Project portfolio composition from the same Trinity seed rows as the projects table, filtered by the hub filter bar (stage, program, region, priority)."
+          : "Portfolio financial KPIs from seeded budget/forecast data, including revised budget, cost-to-complete, commitments, and variance indicators."
+      }
       titleSuffix={null}
       actions={
         <Button
@@ -160,44 +223,46 @@ export function FinancialScorecardCard() {
           variant="tertiary"
           size="sm"
           icon={<EllipsisVertical size="sm" />}
-          aria-label="Financial scorecard actions"
+          aria-label={variant === "portfolio" ? "Portfolio overview actions" : "Financial scorecard actions"}
         />
       }
       controls={
-        <>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setView(next);
-            }}
-            placeholder="Budget View"
-            style={{ minWidth: 180 }}
-          >
-            <Select.Option value="Budget View" selected={view === "Budget View"}>
-              Budget View
-            </Select.Option>
-            <Select.Option value="Forecast View" selected={view === "Forecast View"}>
-              Forecast View
-            </Select.Option>
-          </Select>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setSnapshot(next);
-            }}
-            placeholder="Budget Snapshot"
-            style={{ minWidth: 180 }}
-          >
-            <Select.Option value="Budget Snapshot" selected={snapshot === "Budget Snapshot"}>
-              Budget Snapshot
-            </Select.Option>
-            <Select.Option value="Current Snapshot" selected={snapshot === "Current Snapshot"}>
-              Current Snapshot
-            </Select.Option>
-          </Select>
-        </>
+        variant === "portfolio" ? undefined : (
+          <>
+            <Select
+              onSelect={(next) => {
+                if (typeof next === "string") setView(next);
+              }}
+              placeholder="Budget View"
+              style={{ minWidth: 180 }}
+            >
+              <Select.Option value="Budget View" selected={view === "Budget View"}>
+                Budget View
+              </Select.Option>
+              <Select.Option value="Forecast View" selected={view === "Forecast View"}>
+                Forecast View
+              </Select.Option>
+            </Select>
+            <Select
+              onSelect={(next) => {
+                if (typeof next === "string") setSnapshot(next);
+              }}
+              placeholder="Budget Snapshot"
+              style={{ minWidth: 180 }}
+            >
+              <Select.Option value="Budget Snapshot" selected={snapshot === "Budget Snapshot"}>
+                Budget Snapshot
+              </Select.Option>
+              <Select.Option value="Current Snapshot" selected={snapshot === "Current Snapshot"}>
+                Current Snapshot
+              </Select.Option>
+            </Select>
+          </>
+        )
       }
     >
       <KpiGrid>
-        {financialKpis.map((kpi) => (
+        {kpis.map((kpi) => (
           <div key={kpi.label}>
             <KpiLabel>{kpi.label}</KpiLabel>
             <KpiValueRow>

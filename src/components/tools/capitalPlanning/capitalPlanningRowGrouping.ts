@@ -142,15 +142,12 @@ function groupByAssignedBucket(
     }));
 }
 
-/**
- * Groups rows for the grid body / totals. {@link effectiveCapitalPlanningGroupBy} applies default region.
- */
-export function groupProjectRowsForCapitalPlanning(
+/** One grouping tier (region, department, …) — used for flat toolbar grouping and multi-level hierarchy steps. */
+export function groupProjectRowsBySingleDimension(
   rows: readonly CapitalPlanningSampleRow[],
-  groupBy: CapitalPlanningGroupBy | null | undefined
+  dim: CapitalPlanningGroupBy
 ): CapitalPlanningRegionGroup[] {
-  const mode = effectiveCapitalPlanningGroupBy(groupBy);
-  switch (mode) {
+  switch (dim) {
     case "region":
       return groupProjectRowsByRegion(rows);
     case "priority":
@@ -162,6 +159,70 @@ export function groupProjectRowsForCapitalPlanning(
     case "projectType":
       return groupByAssignedBucket(rows, [...CAPITAL_PLANNING_PROJECT_TYPES], assignedCapitalPlanningProjectType);
   }
+}
+
+/**
+ * Groups rows for the grid body / totals. {@link effectiveCapitalPlanningGroupBy} applies default region.
+ */
+export function groupProjectRowsForCapitalPlanning(
+  rows: readonly CapitalPlanningSampleRow[],
+  groupBy: CapitalPlanningGroupBy | null | undefined
+): CapitalPlanningRegionGroup[] {
+  const mode = effectiveCapitalPlanningGroupBy(groupBy);
+  return groupProjectRowsBySingleDimension(rows, mode);
+}
+
+export type DynamicHierarchyFlattenItem =
+  | {
+      kind: "aggregate";
+      depth: number;
+      collapseKey: string;
+      label: string;
+      rows: readonly CapitalPlanningSampleRow[];
+    }
+  | {
+      kind: "project";
+      row: CapitalPlanningSampleRow;
+      leafRailCount: number;
+    };
+
+/** Nested groups in toolbar order: first dimension = outermost, last = innermost before project rows. */
+export function flattenDynamicHierarchyForTable(
+  rows: readonly CapitalPlanningSampleRow[],
+  dimensions: readonly CapitalPlanningGroupBy[],
+  collapsed: Record<string, boolean>
+): DynamicHierarchyFlattenItem[] {
+  if (dimensions.length === 0) {
+    return rows.map((row) => ({ kind: "project", row, leafRailCount: 0 }));
+  }
+  const out: DynamicHierarchyFlattenItem[] = [];
+
+  function recurse(subset: readonly CapitalPlanningSampleRow[], level: number, pathKey: string): void {
+    if (level >= dimensions.length) {
+      for (const row of subset) {
+        out.push({ kind: "project", row, leafRailCount: dimensions.length });
+      }
+      return;
+    }
+    const dim = dimensions[level]!;
+    const groups = groupProjectRowsBySingleDimension(subset, dim);
+    for (const g of groups) {
+      const collapseKey = pathKey ? `${pathKey}|${dim}:${g.key}` : `${dim}:${g.key}`;
+      const expanded = !collapsed[collapseKey];
+      out.push({
+        kind: "aggregate",
+        depth: level,
+        collapseKey,
+        label: g.label,
+        rows: g.rows,
+      });
+      if (!expanded) continue;
+      recurse(g.rows, level + 1, collapseKey);
+    }
+  }
+
+  recurse(rows, 0, "");
+  return out;
 }
 
 /** Short noun phrase for header collapse control (e.g. “program regions”, “departments”). */
@@ -186,4 +247,189 @@ export function capitalPlanningGroupByEmptyToolbarLabel(mode: CapitalPlanningGro
     projectType: "Project types",
   };
   return m[mode];
+}
+
+/** Campus labels used by {@link groupProjectRowsByRegionCampusBuilding} and Target Budget filters (2nd tier under each region). */
+export const HIERARCHY_CAMPUS_LABELS = ["North Campus", "South Campus", "Central"] as const;
+/** Building labels used by {@link groupProjectRowsByRegionCampusBuilding} and Target Budget filters. */
+export const HIERARCHY_BUILDING_LABELS = ["Building A", "Building B", "Building C", "Tower 1"] as const;
+
+export function assignedHierarchyCampus(rowId: string): string {
+  return HIERARCHY_CAMPUS_LABELS[hashRowIdToBucket(rowId) % HIERARCHY_CAMPUS_LABELS.length]!;
+}
+
+export function assignedHierarchyBuilding(rowId: string): string {
+  return HIERARCHY_BUILDING_LABELS[hashRowIdToBucket(`${rowId}|b`) % HIERARCHY_BUILDING_LABELS.length]!;
+}
+
+export type LocationHierarchyRegionNode = {
+  key: string;
+  label: string;
+  campuses: LocationHierarchyCampusNode[];
+};
+
+export type LocationHierarchyCampusNode = {
+  key: string;
+  label: string;
+  buildings: LocationHierarchyBuildingNode[];
+};
+
+export type LocationHierarchyBuildingNode = {
+  key: string;
+  label: string;
+  rows: CapitalPlanningSampleRow[];
+};
+
+/**
+ * Next-route program table: Region → Campus → Building for collapsible hierarchy + indent rails.
+ */
+export function groupProjectRowsByRegionCampusBuilding(
+  rows: readonly CapitalPlanningSampleRow[]
+): LocationHierarchyRegionNode[] {
+  const regionGroups = groupProjectRowsByRegion(rows);
+  return regionGroups.map((rg) => {
+    const campusMap = new Map<string, CapitalPlanningSampleRow[]>();
+    for (const row of rg.rows) {
+      const c = assignedHierarchyCampus(row.id);
+      if (!campusMap.has(c)) campusMap.set(c, []);
+      campusMap.get(c)!.push(row);
+    }
+    const campuses: LocationHierarchyCampusNode[] = [...campusMap.entries()].map(([campusLabel, campusRows]) => {
+      const buildingMap = new Map<string, CapitalPlanningSampleRow[]>();
+      for (const row of campusRows) {
+        const b = assignedHierarchyBuilding(row.id);
+        if (!buildingMap.has(b)) buildingMap.set(b, []);
+        buildingMap.get(b)!.push(row);
+      }
+      const buildings: LocationHierarchyBuildingNode[] = [...buildingMap.entries()].map(([buildingLabel, br]) => ({
+        key: `${rg.key}|${campusLabel}|${buildingLabel}`,
+        label: buildingLabel,
+        rows: br,
+      }));
+      return {
+        key: `${rg.key}|${campusLabel}`,
+        label: campusLabel,
+        buildings,
+      };
+    });
+    return {
+      key: rg.key,
+      label: rg.label,
+      campuses,
+    };
+  });
+}
+
+export type LocationHierarchyFlattenItem =
+  | {
+      kind: "aggregate";
+      depth: 0 | 1 | 2;
+      collapseKey: string;
+      label: string;
+      rows: readonly CapitalPlanningSampleRow[];
+    }
+  | {
+      kind: "project";
+      row: CapitalPlanningSampleRow;
+      leafRailCount: number;
+    };
+
+export function flattenLocationHierarchyForTable(
+  tree: readonly LocationHierarchyRegionNode[] | null,
+  collapsed: Record<string, boolean>
+): LocationHierarchyFlattenItem[] {
+  if (!tree?.length) return [];
+  const out: LocationHierarchyFlattenItem[] = [];
+  for (const region of tree) {
+    const rKey = `r:${region.key}`;
+    const rExpanded = !collapsed[rKey];
+    const regionRows = region.campuses.flatMap((c) => c.buildings.flatMap((b) => b.rows));
+    out.push({
+      kind: "aggregate",
+      depth: 0,
+      collapseKey: rKey,
+      label: region.label,
+      rows: regionRows,
+    });
+    if (!rExpanded) continue;
+    for (const campus of region.campuses) {
+      const cKey = `c:${campus.key}`;
+      const cExpanded = !collapsed[cKey];
+      const campusRows = campus.buildings.flatMap((b) => b.rows);
+      out.push({
+        kind: "aggregate",
+        depth: 1,
+        collapseKey: cKey,
+        label: campus.label,
+        rows: campusRows,
+      });
+      if (!cExpanded) continue;
+      for (const building of campus.buildings) {
+        const bKey = `b:${building.key}`;
+        const bExpanded = !collapsed[bKey];
+        out.push({
+          kind: "aggregate",
+          depth: 2,
+          collapseKey: bKey,
+          label: building.label,
+          rows: building.rows,
+        });
+        if (!bExpanded) continue;
+        for (const row of building.rows) {
+          out.push({ kind: "project", row, leafRailCount: 3 });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+export type LocationHierarchyAggregateFlattenItem = Extract<LocationHierarchyFlattenItem, { kind: "aggregate" }>;
+
+/** Region → Campus → Building tiers only (no project leaf rows), for Target Budget and similar rollups. */
+export function flattenLocationHierarchyAggregatesOnly(
+  tree: readonly LocationHierarchyRegionNode[] | null,
+  collapsed: Record<string, boolean>
+): LocationHierarchyAggregateFlattenItem[] {
+  if (!tree?.length) return [];
+  const out: LocationHierarchyAggregateFlattenItem[] = [];
+  for (const region of tree) {
+    const rKey = `r:${region.key}`;
+    const rExpanded = !collapsed[rKey];
+    const regionRows = region.campuses.flatMap((c) => c.buildings.flatMap((b) => b.rows));
+    out.push({
+      kind: "aggregate",
+      depth: 0,
+      collapseKey: rKey,
+      label: region.label,
+      rows: regionRows,
+    });
+    if (!rExpanded) continue;
+    for (const campus of region.campuses) {
+      const cKey = `c:${campus.key}`;
+      const cExpanded = !collapsed[cKey];
+      const campusRows = campus.buildings.flatMap((b) => b.rows);
+      out.push({
+        kind: "aggregate",
+        depth: 1,
+        collapseKey: cKey,
+        label: campus.label,
+        rows: campusRows,
+      });
+      if (!cExpanded) continue;
+      for (const building of campus.buildings) {
+        const bKey = `b:${building.key}`;
+        const bExpanded = !collapsed[bKey];
+        out.push({
+          kind: "aggregate",
+          depth: 2,
+          collapseKey: bKey,
+          label: building.label,
+          rows: building.rows,
+        });
+        if (!bExpanded) continue;
+      }
+    }
+  }
+  return out;
 }

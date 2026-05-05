@@ -41,6 +41,8 @@ const Controls = styled.div`
   gap: 8px;
   flex-shrink: 0;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const Content = styled.div`
@@ -59,6 +61,8 @@ interface HubCardFrameProps {
   controls?: React.ReactNode;
   children: React.ReactNode;
   style?: React.CSSProperties;
+  /** Optional styles for the scrollable body below the header (e.g. fixed height for compact metric strips). */
+  contentStyle?: React.CSSProperties;
 }
 
 export default function HubCardFrame({
@@ -70,6 +74,7 @@ export default function HubCardFrame({
   controls,
   children,
   style,
+  contentStyle,
 }: HubCardFrameProps) {
   return (
     <Card className="card_container" style={style}>
@@ -109,7 +114,7 @@ export default function HubCardFrame({
         {actions}
       </Header>
       {controls ? <Controls>{controls}</Controls> : null}
-      <Content>{children}</Content>
+      <Content style={contentStyle}>{children}</Content>
     </Card>
   );
 }

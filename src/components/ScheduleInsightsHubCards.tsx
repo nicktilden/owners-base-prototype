@@ -1,6 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { Avatar, Button, Card, H2, Link, Pill, Select, Tearsheet, Typography } from "@procore/core-react";
-import { Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
+import { Avatar, Button, Card, Dropdown, H2, Link, Pill, Tearsheet, Typography } from "@procore/core-react";
+import {
+  Comment,
+  Copilot,
+  Duplicate,
+  EllipsisVertical,
+  Envelope,
+  ExternalLink,
+  Fullscreen,
+  Lightning,
+  Phone,
+  PhoneMobile,
+} from "@procore/core-icons";
 import {
   sampleProjectMilestones,
   sampleProjectRows,
@@ -10,11 +21,14 @@ import {
   PROJECT_MILESTONES,
   varianceColors,
   PROJECT_MANAGER_CONTACTS,
+  type ProjectPriority,
+  type ProjectStage,
 } from "@/data/projects";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
+import type { ProjectStage as SeedProjectStage } from "@/types/project";
 import { getProjectConnection } from "@/data/procoreConnect";
 import { Connect } from "@procore/core-icons";
 
@@ -381,145 +395,417 @@ const HISTOGRAM_BUCKETS = [
   { label: "14+ days", min: 14, max: Infinity, color: "#b71c1c" },
 ];
 
+/** Roll detailed `ProjectStage` values into four portfolio buckets (donut + legend). */
+const PROJECT_STAGE_BUCKETS: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+  readonly stages: readonly ProjectStage[];
+}[] = [
+  { id: "concept", label: "Concept", color: "#1d59d1", stages: ["Conceptual", "Feasibility"] },
+  {
+    id: "preconstruction",
+    label: "Preconstruction",
+    color: "#26a69a",
+    stages: ["Final design", "Permitting", "Pre-Construction"],
+  },
+  {
+    id: "coc",
+    label: "Course of Construction",
+    color: "#7b1f62",
+    stages: ["Course of Construction", "Post-Construction", "Handover", "Closeout", "Maintenance"],
+  },
+  { id: "bidding", label: "Bidding", color: "#8d6e63", stages: ["Bidding"] },
+] as const;
+
+/** Map seed `Project.stage` → donut bucket id (aligned with hub lifecycle buckets: Concept, Preconstruction, CoC, Bidding). */
+function seedStageToDonutBucketId(stage: SeedProjectStage): (typeof PROJECT_STAGE_BUCKETS)[number]["id"] {
+  switch (stage) {
+    case "conceptual":
+    case "feasibility":
+      return "concept";
+    case "final_design":
+    case "permitting":
+    case "Pre-Construction":
+      return "preconstruction";
+    case "course_of_construction":
+    case "Post-Construction":
+    case "handover":
+    case "closeout":
+    case "maintenance":
+      return "coc";
+    case "bidding":
+      return "bidding";
+    default: {
+      const _exhaustive: never = stage;
+      return _exhaustive;
+    }
+  }
+}
+
+const PROJECT_PRIORITY_BUCKETS: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+  readonly priority: ProjectPriority;
+}[] = [
+  { id: "high", label: "High", color: "#c62828", priority: "high" },
+  { id: "medium", label: "Medium", color: "#ef6c00", priority: "medium" },
+  { id: "low", label: "Low", color: "#2e7d32", priority: "low" },
+] as const;
+
+function donutSectorPath(
+  cx: number,
+  cy: number,
+  rInner: number,
+  rOuter: number,
+  startDeg: number,
+  endDeg: number
+): string {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const a0 = rad(startDeg - 90);
+  const a1 = rad(endDeg - 90);
+  const sweep = endDeg - startDeg;
+  const large = sweep > 180 ? 1 : 0;
+  const xo0 = cx + rOuter * Math.cos(a0);
+  const yo0 = cy + rOuter * Math.sin(a0);
+  const xo1 = cx + rOuter * Math.cos(a1);
+  const yo1 = cy + rOuter * Math.sin(a1);
+  const xi0 = cx + rInner * Math.cos(a0);
+  const yi0 = cy + rInner * Math.sin(a0);
+  const xi1 = cx + rInner * Math.cos(a1);
+  const yi1 = cy + rInner * Math.sin(a1);
+  return `M ${xo0} ${yo0} A ${rOuter} ${rOuter} 0 ${large} 1 ${xo1} ${yo1} L ${xi1} ${yi1} A ${rInner} ${rInner} 0 ${large} 0 ${xi0} ${yi0} Z`;
+}
+
 export function ProjectsByStageHubCard() {
-  const [programFilter, setProgramFilter] = useState<string>("All Programs");
-  const [stageFilter, setStageFilter] = useState<string>("All Stages");
-  const { filteredProjectRows } = useHubFilters();
-  const stageColors = ["#1d5cc9", "#00a878", "#6b4ce6", "#f6a623", "#e05263", "#4a6572"];
-  const programOptions = useMemo(
-    () => ["All Programs", ...Array.from(new Set(filteredProjectRows.map((r) => r.program))).sort()],
-    [filteredProjectRows]
-  );
-  const stageOptions = useMemo(
-    () => ["All Stages", ...Array.from(new Set(filteredProjectRows.map((r) => r.stage))).sort()],
-    [filteredProjectRows]
-  );
-  const filteredProjects = useMemo(
-    () =>
-      filteredProjectRows.filter((r) => {
-        const programOk = programFilter === "All Programs" || r.program === programFilter;
-        const stageOk = stageFilter === "All Stages" || r.stage === stageFilter;
-        return programOk && stageOk;
-      }),
-    [filteredProjectRows, programFilter, stageFilter]
-  );
-  const stageRows = useMemo(() => {
-    const counts = new Map<string, number>();
-    filteredProjects.forEach((p) => {
-      counts.set(p.stage, (counts.get(p.stage) ?? 0) + 1);
+  const { filteredSeedProjects } = useHubFilters();
+
+  const bucketCounts = useMemo(() => {
+    const counts = PROJECT_STAGE_BUCKETS.map((b) => ({ bucket: b, value: 0 }));
+    for (const p of filteredSeedProjects) {
+      const id = seedStageToDonutBucketId(p.stage);
+      const row = counts.find((c) => c.bucket.id === id);
+      if (row) row.value += 1;
+    }
+    return counts;
+  }, [filteredSeedProjects]);
+
+  /** Center total = filtered seed portfolio size (matches Capital Planning hub filter). */
+  const total = filteredSeedProjects.length;
+
+  const gapDeg = 2;
+  const cx = 50;
+  const cy = 50;
+  const rOuter = 38;
+  const rInner = 24;
+  const allocDeg = Math.max(0, 360 - PROJECT_STAGE_BUCKETS.length * gapDeg);
+
+  const segments = useMemo(() => {
+    if (total <= 0) return [] as { path: string; color: string; key: string }[];
+    let angle = -90 + gapDeg / 2;
+    return bucketCounts.map(({ bucket, value }) => {
+      const sweep = (value / total) * allocDeg;
+      const start = angle;
+      const end = angle + sweep;
+      angle = end + gapDeg;
+      const path = value > 0 ? donutSectorPath(cx, cy, rInner, rOuter, start, end) : "";
+      return { path, color: bucket.color, key: bucket.id };
     });
-    return Array.from(counts.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [filteredProjects]);
-  const total = useMemo(
-    () => stageRows.reduce((sum, s) => sum + s.value, 0),
-    [stageRows]
-  );
-  const maxStageValue = useMemo(
-    () => Math.max(...stageRows.map((s) => s.value), 1),
-    [stageRows]
-  );
+  }, [bucketCounts, total, allocDeg, gapDeg]);
 
   return (
     <HubCardFrame
       title="Projects by Stage"
-      infoTooltip="Distribution of projects by current stage from the sample project dataset, with optional Program and Stage filters."
+      infoTooltip="On Home → Capital Planning: seed projects in the current hub filter, grouped into four lifecycle stages. Center total matches the filtered portfolio count."
+      style={{ minHeight: 260, maxHeight: 360 }}
       actions={
-        <Button
-          className="b_tertiary"
-          variant="tertiary"
-          size="sm"
-          icon={<ExternalLink size="sm" />}
-          aria-label="View all projects by stage"
-        >
-          View All
-        </Button>
-      }
-      controls={
-        <>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setProgramFilter(next);
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <Button
+            type="button"
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<Fullscreen size="sm" />}
+            aria-label="Full screen"
+            onClick={() => {}}
+          />
+          <Dropdown
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="Projects by stage card menu"
+            placement="bottom-right"
+            onSelect={(selection) => {
+              if (selection.action !== "selected") return;
             }}
-            placeholder="Program"
-            style={{ minWidth: 180 }}
           >
-            {programOptions.map((opt) => (
-              <Select.Option key={opt} value={opt} selected={programFilter === opt}>
-                {opt}
-              </Select.Option>
-            ))}
-          </Select>
-          <Select
-            onSelect={(next) => {
-              if (typeof next === "string") setStageFilter(next);
-            }}
-            placeholder="Stage"
-            style={{ minWidth: 160 }}
-          >
-            {stageOptions.map((opt) => (
-              <Select.Option key={opt} value={opt} selected={stageFilter === opt}>
-                {opt}
-              </Select.Option>
-            ))}
-          </Select>
-        </>
+            <Dropdown.Item item="export">Export</Dropdown.Item>
+            <Dropdown.Item item="refresh">Refresh</Dropdown.Item>
+          </Dropdown>
+        </div>
       }
     >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "28px 40px",
+          width: "100%",
+          minHeight: 200,
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: 200,
+            height: 200,
+            flexShrink: 0,
+          }}
+          aria-label="Projects by stage donut chart"
+        >
+          <svg width="200" height="200" viewBox="0 0 100 100" style={{ display: "block" }}>
+            {total > 0 ? (
+              segments.map(
+                (s) =>
+                  s.path && (
+                    <path key={s.key} d={s.path} fill={s.color} stroke="var(--color-surface-card)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+                  )
+              )
+            ) : (
+              <circle cx={50} cy={50} r={31} fill="none" stroke="var(--color-border-separator)" strokeWidth={14} />
+            )}
+          </svg>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.max(stageRows.length, 1)}, minmax(56px, 1fr))`,
-              gap: 10,
-              alignItems: "end",
-              height: 210,
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              textAlign: "center",
             }}
-            aria-label="Projects by Stage column chart"
           >
-            {stageRows.map((s, i) => {
-              const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
-              const barHeight = `${Math.max(s.value > 0 ? 12 : 0, (s.value / maxStageValue) * 140)}px`;
-              return (
-                <div key={s.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
-                    {s.value}
-                  </span>
-                  <div
-                    style={{
-                      width: "100%",
-                      maxWidth: 48,
-                      height: barHeight,
-                      borderRadius: "6px 6px 0 0",
-                      background: stageColors[i % stageColors.length],
-                    }}
-                  />
-                  <span
-                    style={{
-                      width: "100%",
-                      fontSize: 12,
-                      color: "var(--color-text-primary)",
-                      textAlign: "center",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                    title={s.name}
-                  >
-                    {s.name}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    {pct}%
-                  </span>
-                </div>
-              );
-            })}
-            {stageRows.length === 0 && (
-              <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>
-                No projects for selected filters.
-              </div>
-            )}
+            <Typography intent="h2" style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.1 }}>
+              {total}
+            </Typography>
+            <Typography intent="small" style={{ marginTop: 2, color: "var(--color-text-secondary)" }}>
+              Total
+            </Typography>
           </div>
+        </div>
+
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            minWidth: 0,
+            flex: "1 1 200px",
+            maxWidth: 320,
+          }}
+          aria-label="Stage legend"
+        >
+          {bucketCounts.map(({ bucket, value }) => (
+            <li key={bucket.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span
+                aria-hidden
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: bucket.color,
+                  marginTop: 5,
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", lineHeight: 1.25 }}>
+                <Typography intent="body" weight="semibold" style={{ margin: 0, fontVariantNumeric: "tabular-nums" }}>
+                  {value}
+                </Typography>
+                <Typography intent="body" style={{ margin: 0, color: "var(--color-text-secondary)" }}>
+                  {bucket.label}
+                </Typography>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </HubCardFrame>
+  );
+}
+
+export function ProjectsByPriorityHubCard() {
+  const { filteredSeedProjects } = useHubFilters();
+
+  const bucketCounts = useMemo(() => {
+    const counts = PROJECT_PRIORITY_BUCKETS.map((b) => ({ bucket: b, value: 0 }));
+    for (const p of filteredSeedProjects) {
+      const row = counts.find((c) => c.bucket.priority === p.priority);
+      if (row) row.value += 1;
+    }
+    return counts;
+  }, [filteredSeedProjects]);
+
+  /** Center total = filtered seed portfolio size (matches Capital Planning hub filter). */
+  const total = filteredSeedProjects.length;
+
+  const gapDeg = 2;
+  const cx = 50;
+  const cy = 50;
+  const rOuter = 38;
+  const rInner = 24;
+  const nBuckets = PROJECT_PRIORITY_BUCKETS.length;
+  const allocDeg = Math.max(0, 360 - nBuckets * gapDeg);
+
+  const segments = useMemo(() => {
+    if (total <= 0) return [] as { path: string; color: string; key: string }[];
+    let angle = -90 + gapDeg / 2;
+    return bucketCounts.map(({ bucket, value }) => {
+      const sweep = (value / total) * allocDeg;
+      const start = angle;
+      const end = angle + sweep;
+      angle = end + gapDeg;
+      const path = value > 0 ? donutSectorPath(cx, cy, rInner, rOuter, start, end) : "";
+      return { path, color: bucket.color, key: bucket.id };
+    });
+  }, [bucketCounts, total, allocDeg, gapDeg]);
+
+  return (
+    <HubCardFrame
+      title="Projects by Priority"
+      infoTooltip="On Home → Capital Planning: seed projects in the current hub filter, grouped by priority (High, Medium, Low). Center total matches the filtered portfolio count."
+      style={{ minHeight: 260, maxHeight: 360 }}
+      actions={
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <Button
+            type="button"
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<Fullscreen size="sm" />}
+            aria-label="Full screen"
+            onClick={() => {}}
+          />
+          <Dropdown
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="Projects by priority card menu"
+            placement="bottom-right"
+            onSelect={(selection) => {
+              if (selection.action !== "selected") return;
+            }}
+          >
+            <Dropdown.Item item="export">Export</Dropdown.Item>
+            <Dropdown.Item item="refresh">Refresh</Dropdown.Item>
+          </Dropdown>
+        </div>
+      }
+    >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "28px 40px",
+          width: "100%",
+          minHeight: 200,
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: 200,
+            height: 200,
+            flexShrink: 0,
+          }}
+          aria-label="Projects by priority donut chart"
+        >
+          <svg width="200" height="200" viewBox="0 0 100 100" style={{ display: "block" }}>
+            {total > 0 ? (
+              segments.map(
+                (s) =>
+                  s.path && (
+                    <path key={s.key} d={s.path} fill={s.color} stroke="var(--color-surface-card)" strokeWidth={0.6} vectorEffect="non-scaling-stroke" />
+                  )
+              )
+            ) : (
+              <circle cx={50} cy={50} r={31} fill="none" stroke="var(--color-border-separator)" strokeWidth={14} />
+            )}
+          </svg>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+              textAlign: "center",
+            }}
+          >
+            <Typography intent="h2" style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.1 }}>
+              {total}
+            </Typography>
+            <Typography intent="small" style={{ marginTop: 2, color: "var(--color-text-secondary)" }}>
+              Total
+            </Typography>
+          </div>
+        </div>
+
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            minWidth: 0,
+            flex: "1 1 200px",
+            maxWidth: 320,
+          }}
+          aria-label="Priority legend"
+        >
+          {bucketCounts.map(({ bucket, value }) => (
+            <li key={bucket.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span
+                aria-hidden
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: bucket.color,
+                  marginTop: 5,
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", lineHeight: 1.25 }}>
+                <Typography intent="body" weight="semibold" style={{ margin: 0, fontVariantNumeric: "tabular-nums" }}>
+                  {value}
+                </Typography>
+                <Typography intent="body" style={{ margin: 0, color: "var(--color-text-secondary)" }}>
+                  {bucket.label}
+                </Typography>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </HubCardFrame>
   );
 }
@@ -656,7 +942,7 @@ export function ScheduleRiskGHubCard() {
               background: '#FFF8F5',
               border: '1px solid #FF5100',
               borderRadius: 4,
-              color: '#232729',
+              color: 'var(--color-pill-text-blue)',
             }}
           >
             Summarize
@@ -935,7 +1221,7 @@ export function ScheduleVariance2HubCard() {
               background: '#FFF8F5',
               border: '1px solid #FF5100',
               borderRadius: 4,
-              color: '#232729',
+              color: 'var(--color-pill-text-blue)',
             }}
           >
             Summarize

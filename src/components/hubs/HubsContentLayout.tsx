@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 
-type RowVariant = "cards" | "table";
+type RowVariant = "cards" | "table" | "table-scroll";
 
 interface HubsRowProps {
   children: React.ReactNode;
@@ -36,6 +36,20 @@ const RowGrid = styled.div<{ $columns: number; $variant: RowVariant; $columnsTem
       }
     `}
 
+  /* Bounded height like "table", but the card fills the cell and scrolls internally (e.g. Capital Planning grid). */
+  ${({ $variant }) =>
+    $variant === "table-scroll" &&
+    `
+      > * {
+        min-height: 0;
+        height: min(800px, 72vh);
+        max-height: min(800px, 72vh);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+    `}
+
 @media (max-width: 1200px) {
     grid-template-columns: repeat(${({ $columns }) => Math.min($columns, 2)}, minmax(0, 1fr));
     width: 100%;
@@ -57,7 +71,7 @@ const HubsContentLayout = (({ children }) => {
 
 HubsContentLayout.Row = function HubsContentRow({ children, variant = "cards", columnsTemplate }: HubsRowProps) {
   const childCount = React.Children.toArray(children).filter(Boolean).length;
-  const columns = variant === "table" ? 1 : Math.max(1, Math.min(childCount || 1, 3));
+  const columns = variant === "table" || variant === "table-scroll" ? 1 : Math.max(1, Math.min(childCount || 1, 3));
   return (
     <RowGrid $columns={columns} $variant={variant} $columnsTemplate={columnsTemplate}>
       {children}

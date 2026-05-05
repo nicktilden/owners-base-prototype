@@ -142,6 +142,11 @@ export function useHubFilters(): HubFilterContextValue {
   return ctx;
 }
 
+/** Same as {@link useHubFilters} but returns null outside {@link HubFilterProvider} (e.g. embedded hub cards). */
+export function useHubFiltersOrNull(): HubFilterContextValue | null {
+  return useContext(HubFilterContext);
+}
+
 /**
  * Helper: toggle a value in/out of an array filter field.
  */
