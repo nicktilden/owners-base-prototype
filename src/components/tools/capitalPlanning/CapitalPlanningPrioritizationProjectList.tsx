@@ -365,7 +365,7 @@ export function CapitalPlanningPrioritizationProjectList({
             forecastGranularity="quarter"
             planView="grid"
             onSaveHighLevelBudgetPlannedAmount={noopPlannedAmountSave}
-            groupBy={null}
+            groupByDimensions={null}
             criteriaColumns={criteriaColumns}
             criteriaValuesByProjectId={criteriaValuesByProjectId}
             onCriteriaValueChange={onCriteriaValueChange}

@@ -864,7 +864,7 @@ function getSourceItem(sourceType: string, sourceId: string): {
       const c = ceMap[sourceId];
       return {
         itemTitle:      c?.title ?? sourceId,
-        itemDueDate:    c?.created ?? '',
+        itemDueDate:    c?.createdAt instanceof Date ? c.createdAt.toLocaleDateString() : (c?.createdAt ?? ''),
         itemStatus:     c?.status ?? '',
         itemAssignedTo: '',
       };
@@ -873,9 +873,9 @@ function getSourceItem(sourceType: string, sourceId: string): {
       const s = subMap[sourceId];
       return {
         itemTitle:      s?.title ?? sourceId,
-        itemDueDate:    s?.dueDate ?? '',
+        itemDueDate:    s?.finalDueDate ?? '',
         itemStatus:     s?.status ?? '',
-        itemAssignedTo: s?.responsibleContractor ?? '',
+        itemAssignedTo: s?.responsibleContractorId ?? '',
       };
     }
     case 'punch_list': {

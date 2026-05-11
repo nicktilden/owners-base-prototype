@@ -51,8 +51,8 @@ interface SubmittalItem {
   title: string;
   type: string;
   status: string;
-  responsibleContractor: string;
-  dueDate: string;
+  responsibleContractorId: string | null;
+  finalDueDate: string | null;
 }
 
 interface Props {
@@ -127,11 +127,11 @@ export default function SubmittalDetailTearsheet({ item, open, onClose }: Props)
                         </FieldCell>
                         <FieldCell>
                           <Typography intent="label" style={{ fontWeight: 600 }}>Responsible Contractor</Typography>
-                          <Typography intent="body">{item.responsibleContractor}</Typography>
+                          <Typography intent="body">{item.responsibleContractorId ?? '—'}</Typography>
                         </FieldCell>
                         <FieldCell>
                           <Typography intent="label" style={{ fontWeight: 600 }}>Due Date</Typography>
-                          <Typography intent="body">{item.dueDate}</Typography>
+                          <Typography intent="body">{item.finalDueDate ?? '—'}</Typography>
                         </FieldCell>
                       </FieldGrid>
                     </SectionCard>

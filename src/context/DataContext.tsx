@@ -18,7 +18,12 @@ import type { ActionPlan } from '@/types/action_plans';
 import type { Hub } from '@/types/hubs';
 import type { Rfi } from '@/types/rfis';
 import type { SpecificationDivision } from '@/types/specifications';
-import type { RiskTag, ManualRiskItem, ConnectedProjectHealth, HealthSnapshot } from '@/types/health';
+import type { RiskTag, ManualRiskItem, ConnectedProjectHealth, HealthSnapshot, Incident, WorkHours } from '@/types/health';
+import type { Observation } from '@/types/observations';
+import type { Submittal } from '@/types/submittals';
+import type { ChangeEvent } from '@/types/change_events';
+import type { PrimeContract } from '@/types/prime_contracts';
+import type { FundingSource } from '@/types/funding_source';
 
 export interface SeedData {
   account: Account | null;
@@ -38,6 +43,17 @@ export interface SeedData {
   manualRiskItems: ManualRiskItem[];
   connectedProjects: ConnectedProjectHealth[];
   healthSnapshotsByProject: Record<string, HealthSnapshot[]>;
+  // Extended seed data for UC#2, UC#4, UC#6
+  observations: Observation[];
+  submittals: Submittal[];
+  changeEvents: ChangeEvent[];
+  primeContracts: PrimeContract[];
+  fundingSources: FundingSource[];
+  budgetLineItems: BudgetLineItem[];
+  scheduleEntries: ScheduleEntry[];
+  incidents: Incident[];
+  workHours: WorkHours[];
+  automationRules: any[];
 }
 
 const defaultSeedData: SeedData = {
@@ -58,6 +74,16 @@ const defaultSeedData: SeedData = {
   manualRiskItems: [],
   connectedProjects: [],
   healthSnapshotsByProject: {},
+  observations: [],
+  submittals: [],
+  changeEvents: [],
+  primeContracts: [],
+  fundingSources: [],
+  budgetLineItems: [],
+  scheduleEntries: [],
+  incidents: [],
+  workHours: [],
+  automationRules: [],
 };
 
 interface DataContextValue {

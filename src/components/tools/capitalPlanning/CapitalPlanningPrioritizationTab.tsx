@@ -6,6 +6,8 @@ export interface CapitalPlanningPrioritizationTabProps {
   criteriaRows: CriteriaBuilderRow[];
   criteriaValuesByProjectId: Record<string, Record<string, string>>;
   onCriteriaValueChange: (projectId: string, criterionId: string, value: string) => void;
+  /** Page variant from CapitalPlanningContent (used for future variant-specific rendering). */
+  programPageVariant?: string;
 }
 
 export function CapitalPlanningPrioritizationTab({

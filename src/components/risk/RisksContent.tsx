@@ -76,6 +76,8 @@ const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   correspondence: 'Correspondence',
   milestone:      'Milestone',
   budget_line:    'Budget Line',
+  observation:    'Observation',
+  incident:       'Incident',
   manual:         'Manual',
 };
 

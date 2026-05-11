@@ -118,9 +118,13 @@ export function getProgramForecastHeaderTitle(): string {
  * Program columns use calendar-year FY blocks: FQ1 = Jan–Mar of `fyYear` (see {@link getFiscalYearMonthLabelsForCalendarYear}).
  * After that quarter ends (on/after Apr 1 of `fyYear`), FQ1 cells are read-only.
  */
-export function isProgramForecastFq1PeriodEnded(fyYear: number, anchor: Date): boolean {
+export function isProgramForecastFq1PeriodEnded(fyYear: number, anchor: Date, fiscalYearStartMonth: number = 0): boolean {
   const startOfToday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
-  const firstDayAfterFq1 = new Date(fyYear, 3, 1);
+  // FQ1 spans the first 3 months of the fiscal year.
+  // firstDayAfterFq1 is the 1st day of the 4th month after the FY start.
+  const fq1EndCalendarMonth = (fiscalYearStartMonth + 3) % 12;
+  const fq1EndYear = fyYear + (fiscalYearStartMonth + 3 >= 12 ? 1 : 0);
+  const firstDayAfterFq1 = new Date(fq1EndYear, fq1EndCalendarMonth, 1);
   return startOfToday >= firstDayAfterFq1;
 }
 
@@ -130,9 +134,9 @@ export function programFiscalYearForGlobalMonthIndex(monthIndex: number): number
   return CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[fyIndex];
 }
 
-/** Jan–Mar within a program FY block (FQ1 month leaf columns). */
-export function isGlobalMonthIndexInFq1(monthIndex: number): boolean {
-  return monthIndex % 12 < 3;
+/** Jan–Mar within a program FY block (FQ1 month leaf columns). Accepts optional fiscalYearStartMonth for configurable FY alignment. */
+export function isGlobalMonthIndexInFq1(monthIndex: number, fiscalYearStartMonth: number = 0): boolean {
+  return (monthIndex - fiscalYearStartMonth) % 12 < 3;
 }
 
 function programHorizonStart(): Date {
@@ -608,7 +612,9 @@ export function getEffectiveProgramForecastMonthAmounts(
   row: CapitalPlanningSampleRow,
   overrides: Record<string, number>,
   forecastBasisKey: string,
-  anchor: Date
+  anchor: Date,
+  /** Calendar month (0–11) where the fiscal year begins. Reserved for future use; default: 0 (January). */
+  _fiscalYearStartMonth = 0
 ): number[] {
   const rowId = row.id;
   const key = (parts: (string | number)[]) =>
@@ -725,7 +731,9 @@ export function getTotalAllocatedForecastDollars(
   /** Gantt + View by Month: 72 program months (same totals as grid program forecast). */
   ganttProgramMonthGrid = false,
   /** Gantt + View by Quarter: 24 program quarter rollups (same program total as grid). */
-  ganttProgramQuarterBands = false
+  ganttProgramQuarterBands = false,
+  /** Calendar month (0–11) where the fiscal year begins. Reserved for future use; default: 0 (January). */
+  _fiscalYearStartMonth = 0
 ): number {
   if (
     (granularity === "quarter" && !ganttFlatForecast) ||
@@ -1159,4 +1167,51 @@ export function sampleForecastTotalForProgramFiscalYear(
     sum += sampleForecastCostForPeriod(rowId, start + m, totalMonths, plannedAmount);
   }
   return sum;
+}
+
+// ── Fiscal-year-start-aware helpers (required by CapitalPlanningSmartGrid) ──
+
+/**
+ * Returns the 3 global month indices for a given FY index and FQ-in-FY index,
+ * offset by {@link fiscalYearStartMonth} (0 = Jan … 11 = Dec).
+ *
+ * When `fiscalYearStartMonth` is 0 (January, the default) this is equivalent to
+ * `[fyIndex * 12 + fqInFy * 3, ..., fyIndex * 12 + fqInFy * 3 + 2]`.
+ *
+ * The caller passes the third argument as an optional `number` — existing call sites that
+ * omit it receive the January-based mapping (offset = 0) which matches prior behaviour.
+ */
+export function fiscalQuarterMonthGlobalIndices(
+  fyIndex: number,
+  fqInFy: number,
+  fiscalYearStartMonth: number = 0
+): [number, number, number] {
+  // Base global month index for the first month of this FY/FQ combination.
+  // Each FY spans 12 months; each FQ spans 3 months.
+  const base = fyIndex * 12 + fqInFy * 3;
+  // Offset all three months by the fiscal-year start so that month-0 of FY-0 aligns
+  // with the calendar month indicated by fiscalYearStartMonth.
+  return [
+    base + fiscalYearStartMonth,
+    base + fiscalYearStartMonth + 1,
+    base + fiscalYearStartMonth + 2,
+  ] as [number, number, number];
+}
+
+/**
+ * Sum of the three month amounts within a specific global fiscal quarter.
+ *
+ * @param monthAmounts - Full array of month dollar amounts for a row (length ≥ total program months).
+ * @param fqIndex      - Global fiscal-quarter index (0 … CAPITAL_PLANNING_PROGRAM_FORECAST_QUARTERS - 1).
+ * @param fiscalYearStartMonth - Calendar month (0–11) where the fiscal year begins (default: 0 = Jan).
+ */
+export function sumProgramForecastQuarterMonthAmounts(
+  monthAmounts: readonly number[],
+  fqIndex: number,
+  fiscalYearStartMonth: number = 0
+): number {
+  const fyIndex = Math.floor(fqIndex / 4);
+  const fqInFy = fqIndex % 4;
+  const [m0, m1, m2] = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, fiscalYearStartMonth);
+  return (monthAmounts[m0] ?? 0) + (monthAmounts[m1] ?? 0) + (monthAmounts[m2] ?? 0);
 }

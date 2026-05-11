@@ -34,6 +34,8 @@ import {
   type RfiDetailData,
   getItemDetailData,
 } from '@/data/openitems';
+import { assets as seedAssets } from '@/data/seed/assets';
+import { projects as seedProjects } from '@/data/seed/projects';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -756,6 +758,9 @@ function getAutoPromptForContext(ctx: AiPanelContextData): string {
   if (ctx.cardType === 'risk_scorecard') {
     return `Summarize the Risk Signals scorecard — interpret each KPI, highlight the most critical signals, and recommend actions.`;
   }
+  if (ctx.cardType === 'assets') {
+    return `Summarize the asset portfolio — show lifecycle stage distribution by trade, flag anything that needs attention, and recommend next steps.`;
+  }
   if (ctx.itemId) {
     return `Tell me about ${ctx.itemName} (${ctx.itemId}) — what are the key risks and what actions should I take?`;
   }
@@ -997,23 +1002,194 @@ function buildRiskScorecardResponse(aiSummary: string): string {
   return response;
 }
 
-function getSimulatedResponse(ctx: AiPanelContextData | null, message: string): string {
-  if (ctx?.cardType === 'risk_scorecard' && ctx?.aiSummary) {
-    return buildRiskScorecardResponse(ctx.aiSummary);
+function buildAssetsResponse(aiSummary: string): string {
+  // aiSummary format: "total|trade:label:ordered:delivered:installed:commissioned:turned_over|..."
+  const lines = aiSummary.split('|');
+  const total = parseInt(lines[0] ?? '0', 10);
+  const tradeLines = lines.slice(1).filter(Boolean);
+
+  // Aggregate stage totals
+  let totalOrdered = 0, totalDelivered = 0, totalInstalled = 0, totalCommissioned = 0, totalTurnedOver = 0;
+  const tradeRows: { label: string; ordered: number; delivered: number; installed: number; commissioned: number; turnedOver: number; total: number }[] = [];
+
+  for (const line of tradeLines) {
+    const [label, o, d, i, c, t] = line.split(':');
+    const ordered = parseInt(o ?? '0', 10);
+    const delivered = parseInt(d ?? '0', 10);
+    const installed = parseInt(i ?? '0', 10);
+    const commissioned = parseInt(c ?? '0', 10);
+    const turnedOver = parseInt(t ?? '0', 10);
+    totalOrdered += ordered;
+    totalDelivered += delivered;
+    totalInstalled += installed;
+    totalCommissioned += commissioned;
+    totalTurnedOver += turnedOver;
+    tradeRows.push({ label: label ?? '', ordered, delivered, installed, commissioned, turnedOver, total: ordered + delivered + installed + commissioned + turnedOver });
   }
-  if (ctx?.cardType === 'open_items' && ctx?.itemId) {
-    const itemResponse = buildOpenItemResponse(ctx.itemId);
-    if (itemResponse) return itemResponse;
+
+  tradeRows.sort((a, b) => b.total - a.total);
+
+  let response = `**Assets by Trade Summary**\n\n`;
+  response += `📦 **${total} total assets** tracked across all projects\n\n`;
+
+  response += `**Lifecycle Stage Overview:**\n`;
+  response += `• 🔘 Ordered: **${totalOrdered}**\n`;
+  response += `• 🔵 Delivered: **${totalDelivered}**\n`;
+  response += `• 🔷 Installed: **${totalInstalled}**\n`;
+  response += `• 🟢 Commissioned: **${totalCommissioned}**\n`;
+  response += `• ⬛ Turned Over: **${totalTurnedOver}**\n\n`;
+
+  response += `**By Trade:**\n`;
+  for (const row of tradeRows) {
+    const pct = total > 0 ? Math.round((row.total / total) * 100) : 0;
+    const inProgress = row.ordered + row.delivered;
+    const complete = row.commissioned + row.turnedOver;
+    const statusIcon = inProgress > complete ? '🟡' : complete >= row.total * 0.5 ? '🟢' : '🔵';
+    response += `${statusIcon} **${row.label}** — ${row.total} assets (${pct}%)\n`;
+    const parts: string[] = [];
+    if (row.ordered) parts.push(`${row.ordered} ordered`);
+    if (row.delivered) parts.push(`${row.delivered} delivered`);
+    if (row.installed) parts.push(`${row.installed} installed`);
+    if (row.commissioned) parts.push(`${row.commissioned} commissioned`);
+    if (row.turnedOver) parts.push(`${row.turnedOver} turned over`);
+    response += `  ${parts.join(' · ')}\n`;
   }
-  if (ctx?.cardType === 'open_items' && !ctx?.itemId) {
-    return buildOpenItemsSummaryResponse();
+
+  response += `\n**✅ Recommended Actions:**\n`;
+  if (totalOrdered > 10) {
+    response += `1. Review the ${totalOrdered} ordered assets — confirm delivery schedules align with project timelines\n`;
   }
-  if (ctx?.cardType === 'schedule_variance' && ctx?.projectId) {
-    const projectResponse = buildProjectScheduleResponse(ctx.projectId);
-    if (projectResponse) return projectResponse;
+  if (totalDelivered > 0) {
+    response += `2. Expedite installation of ${totalDelivered} delivered assets sitting on-site\n`;
+  }
+  if (totalInstalled > totalCommissioned + totalTurnedOver) {
+    response += `3. Prioritize commissioning for the ${totalInstalled} installed assets to advance toward turnover\n`;
+  }
+  response += `4. Verify warranty tracking is current for all ${totalCommissioned + totalTurnedOver} commissioned/turned-over assets\n`;
+
+  response += `\nWould you like me to drill into a specific trade, flag assets approaching warranty expiry, or generate a turnover readiness report?`;
+  return response;
+}
+
+const STATUS_STAGE_LABELS: Record<string, string> = {
+  ordered: 'Ordered',
+  delivered: 'Delivered',
+  installed: 'Installed',
+  commissioned: 'Commissioned',
+  turned_over: 'Turned Over',
+};
+
+const STATUS_STAGE_ICONS: Record<string, string> = {
+  ordered: '🔘',
+  delivered: '🔵',
+  installed: '🔷',
+  commissioned: '🟢',
+  turned_over: '⬛',
+};
+
+function buildAssetLookupResponse(message: string): string | null {
+  const lower = message.toLowerCase();
+
+  // Extract an asset code from the message (e.g. AHU-001, HVAC-002, GENRT-004)
+  const codeMatch = message.match(/\b([A-Z][A-Z0-9]*-\d+)\b/i);
+  // Also check for asset name keywords that map to trade/type
+  const mentionsAsset = lower.includes('asset') || lower.includes('installed') || lower.includes('where') || lower.includes('project');
+
+  if (!codeMatch || !mentionsAsset) return null;
+
+  const searchCode = codeMatch[1].toUpperCase();
+
+  // Find matching assets by code (exact) or partial name match
+  const matched = seedAssets.filter(
+    (a) => a.assetCode.toUpperCase() === searchCode
+  );
+
+  if (matched.length === 0) {
+    // Try partial — e.g. user typed "AHU" without number
+    const partialMatched = seedAssets.filter((a) =>
+      a.assetCode.toUpperCase().startsWith(searchCode.replace(/-\d+$/, ''))
+    );
+    if (partialMatched.length === 0) {
+      return `I couldn't find any assets matching **${searchCode}** in the portfolio. Double-check the asset ID and try again.`;
+    }
+    // Show all assets with that prefix
+    const projectMap = new Map(seedProjects.map((p) => [p.id, p]));
+    let response = `**Assets matching "${searchCode.replace(/-\d+$/, '')}"** — ${partialMatched.length} found\n\n`;
+    partialMatched.forEach((a) => {
+      const project = projectMap.get(a.projectId);
+      const icon = STATUS_STAGE_ICONS[a.status] ?? '•';
+      const stage = STATUS_STAGE_LABELS[a.status] ?? a.status;
+      response += `${icon} **${a.assetCode}** — ${a.name}\n`;
+      response += `  📁 ${project ? project.name : a.projectId} · Stage: **${stage}**\n`;
+    });
+    response += `\nWould you like details on any of these assets or a full trade breakdown?`;
+    return response;
+  }
+
+  const projectMap = new Map(seedProjects.map((p) => [p.id, p]));
+  const asset = matched[0];
+
+  // Find all portfolio instances of the same equipment (same name + model)
+  const siblings = seedAssets.filter(
+    (a) => a.name === asset.name && (asset.model ? a.model === asset.model : true)
+  );
+
+  let response = `**Asset Lookup: ${asset.name}**\n`;
+  if (asset.manufacturer && asset.model) {
+    response += `${asset.manufacturer} · ${asset.model}\n`;
+  }
+  response += `• Trade: ${asset.trade.toUpperCase()} · Type: ${asset.type.charAt(0).toUpperCase() + asset.type.slice(1)}\n`;
+  response += `\n**Found on ${siblings.length} project${siblings.length !== 1 ? 's' : ''}:**\n\n`;
+
+  siblings.forEach((a) => {
+    const project = projectMap.get(a.projectId);
+    const icon = STATUS_STAGE_ICONS[a.status] ?? '•';
+    const stage = STATUS_STAGE_LABELS[a.status] ?? a.status;
+    response += `${icon} **${project ? project.name : a.projectId}**\n`;
+    response += `  ID: ${a.assetCode} · Stage: **${stage}**`;
+    if (project) response += ` · ${project.city}, ${project.state}`;
+    response += `\n`;
+    if (a.installDate) {
+      response += `  🔧 Installed: ${a.installDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n`;
+    }
+    if (a.warrantyExpiry) {
+      const now = new Date();
+      const expired = a.warrantyExpiry < now;
+      response += `  ${expired ? '⚠️' : '✅'} Warranty: ${expired ? 'Expired' : 'Active until'} ${a.warrantyExpiry.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}\n`;
+    }
+    response += `\n`;
+  });
+
+  response += `Would you like me to check warranty expiry across all instances, or find other HVAC equipment in the portfolio?`;
+  return response;
+}
+
+function getSimulatedResponse(ctx: AiPanelContextData | null, message: string, isAutoPrompt = false): string {
+  // Context-based responses only fire for the auto-prompt, not user follow-ups
+  if (isAutoPrompt) {
+    if (ctx?.cardType === 'assets' && ctx?.aiSummary) {
+      return buildAssetsResponse(ctx.aiSummary);
+    }
+    if (ctx?.cardType === 'risk_scorecard' && ctx?.aiSummary) {
+      return buildRiskScorecardResponse(ctx.aiSummary);
+    }
+    if (ctx?.cardType === 'open_items' && ctx?.itemId) {
+      const itemResponse = buildOpenItemResponse(ctx.itemId);
+      if (itemResponse) return itemResponse;
+    }
+    if (ctx?.cardType === 'open_items' && !ctx?.itemId) {
+      return buildOpenItemsSummaryResponse();
+    }
+    if (ctx?.cardType === 'schedule_variance' && ctx?.projectId) {
+      const projectResponse = buildProjectScheduleResponse(ctx.projectId);
+      if (projectResponse) return projectResponse;
+    }
   }
 
   const lower = message.toLowerCase();
+
+  const assetLookup = buildAssetLookupResponse(message);
+  if (assetLookup) return assetLookup;
 
   if (lower.includes('health summary') || lower.includes('portfolio health') || lower.includes('how is my portfolio')) {
     return `**Portfolio Health Summary — Trinity Health System**\n\n📊 **20 Active Projects** · $1.24B Total Value\n\n🟢 **On Track (14 projects)** — Schedule within tolerance, budget within 5%\n🟡 **Watch (3 projects)** — Minor delays (3–7 days) or budget variance 5–10%\n🔴 **At Risk (3 projects)** — Critical delays (>7 days) or budget overrun >10%\n\n**Key Metrics:**\n• Average schedule variance: +4.2 days\n• Budget utilization: 62% of committed funds\n• Open RFIs requiring response: 18\n• Change orders pending approval: 7 ($2.1M aggregate)\n\n**Highlights:**\n• 🟢 Loyola Medical Campus — 2 days ahead of schedule, under budget\n• 🟡 Mercy West Pavilion — 5-day delay on MEP rough-in, recovery plan in progress\n• 🔴 St. Vincent Behavioral Health — 14 days behind, 3 critical RFIs unresolved\n\nWould you like me to drill into any specific project or generate a stakeholder report?`;
@@ -1200,6 +1376,8 @@ export default function AiChatPanel() {
       autoSkill = SKILLS.find((s) => s.id === 'item-reviewer') ?? null;
     } else if (context.cardType === 'risk_scorecard') {
       autoSkill = SKILLS.find((s) => s.id === 'risk-monitor') ?? null;
+    } else if (context.cardType === 'assets') {
+      autoSkill = SKILLS.find((s) => s.id === 'item-reviewer') ?? null;
     }
     if (autoSkill) setSelectedSkill(autoSkill);
 
@@ -1225,7 +1403,7 @@ export default function AiChatPanel() {
 
       const delay = 1200 + Math.random() * 800;
       setTimeout(() => {
-        const responseText = getSimulatedResponse(context, prompt);
+        const responseText = getSimulatedResponse(context, prompt, true);
         const assistantId = `msg-auto-${Date.now()}-resp`;
         const assistantMsg: ChatMessage = {
           id: assistantId,

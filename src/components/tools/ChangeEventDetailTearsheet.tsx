@@ -50,7 +50,7 @@ interface ChangeEventItem {
   status: string;
   scope: string;
   origin: string;
-  created: string;
+  createdAt: Date | string;
 }
 
 interface Props {
@@ -124,7 +124,7 @@ export default function ChangeEventDetailTearsheet({ item, open, onClose }: Prop
                         </FieldCell>
                         <FieldCell>
                           <Typography intent="label" style={{ fontWeight: 600 }}>Created</Typography>
-                          <Typography intent="body">{item.created}</Typography>
+                          <Typography intent="body">{item.createdAt instanceof Date ? item.createdAt.toLocaleDateString() : item.createdAt}</Typography>
                         </FieldCell>
                         <FieldCell>
                           <Typography intent="label" style={{ fontWeight: 600 }}>Scope</Typography>

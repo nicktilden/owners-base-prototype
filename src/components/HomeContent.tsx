@@ -18,6 +18,7 @@ import {
   ActionPlansTemplateAdoptionHubCard,
   ActionPlansOverdueItemsHubCard,
 } from "@/components/ActionPlansExplorationHubCards";
+import { AssetsHubCard } from "@/components/AssetsHubCard";
 import {
   APv2FullMatrixHubCard,
   APv2KpiDashboardHubCard,
@@ -32,7 +33,7 @@ import PortfolioRiskGaugeCard from "@/components/health/cards/PortfolioRiskGauge
 import HealthKPIGridCard from "@/components/health/cards/HealthKPIGridCard";
 import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTableCard";
 
-const tabs = ["Portfolio Performance", "My Work", "Risk Register", "Schedule & Milestones", "Ideas Hub"] as const;
+const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
 
 const HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
@@ -109,8 +110,8 @@ const EllipsisBtn = styled.button`
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
   "My Work": ["My Open Items", "Projects by Stage", "Projects Table"],
-  "Risk Register": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Risk Register"],
-  "Portfolio Performance": ["Risk Signals", "Financial Scorecard", "Schedule Variance", "Action Plans Portfolio Matrix"],
+  "Health & Risk": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Health & Risk"],
+  "Portfolio Performance": ["Risk Signals", "Financial Scorecard", "Schedule Variance", "Assets by Type", "Action Plans Portfolio Matrix"],
   "Schedule & Milestones": ["Schedule Risk", "Action Plans Template", "Schedule Heatmap"],
   "Ideas Hub": [
     "Invoices for Approval",
@@ -128,8 +129,8 @@ type HiddenCards = Record<TabName, Set<string>>;
 function makeEmptyHidden(): HiddenCards {
   return {
     "My Work": new Set(),
-    "Risk Register": new Set(),
-    "Portfolio Performance": new Set(),
+    "Health & Risk": new Set(),
+    "Portfolio Performance": new Set(["Schedule Variance"]),
     "Schedule & Milestones": new Set(),
     "Ideas Hub": new Set(),
   };
@@ -262,7 +263,7 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Risk Register" && (
+            {activeTab === "Health & Risk" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row variant="table">
                   <RiskScorecardCard defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />
@@ -283,10 +284,11 @@ function HomeContentInner() {
                     <RiskScorecardCard />
                   </HubsContentLayout.Row>
                 )}
-                {isCardVisible("Portfolio Performance", "Financial Scorecard") || isCardVisible("Portfolio Performance", "Schedule Variance") ? (
+                {isCardVisible("Portfolio Performance", "Financial Scorecard") || isCardVisible("Portfolio Performance", "Schedule Variance") || isCardVisible("Portfolio Performance", "Assets by Type") ? (
                   <HubsContentLayout.Row columnsTemplate="1fr 1fr">
                     {isCardVisible("Portfolio Performance", "Financial Scorecard") && <FinancialScorecardCard />}
                     {isCardVisible("Portfolio Performance", "Schedule Variance") && <ScheduleVariance2HubCard />}
+                    {isCardVisible("Portfolio Performance", "Assets by Type") && <AssetsHubCard />}
                   </HubsContentLayout.Row>
                 ) : null}
                 {isCardVisible("Portfolio Performance", "Action Plans Portfolio Matrix") && (
