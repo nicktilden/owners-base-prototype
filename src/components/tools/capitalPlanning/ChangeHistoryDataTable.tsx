@@ -139,6 +139,9 @@ export const CHANGE_HISTORY_TABLE_SAMPLE_ROWS: ChangeHistoryRow[] = [
   },
 ];
 
+/** Alias for {@link CHANGE_HISTORY_TABLE_SAMPLE_ROWS} — used as the initial state for live change history in CapitalPlanningContent. */
+export const CHANGE_HISTORY_INITIAL_MOCK_ROWS: ChangeHistoryRow[] = CHANGE_HISTORY_TABLE_SAMPLE_ROWS;
+
 const QUICK_FILTER_OPTIONS = [
   { id: "qf1", label: "Quick Filter 01" },
   { id: "qf2", label: "Quick Filter 01" },
@@ -181,7 +184,12 @@ function ColumnHeaderWithMenu({ label, menuLabel }: { label: string; menuLabel: 
  * Change History tab — data table pattern from Figma (toolbar, 8 columns, pagination).
  * @see CHANGE_HISTORY_FIGMA_URL
  */
-export function ChangeHistoryDataTable() {
+export interface ChangeHistoryDataTableProps {
+  /** Live change log rows (prepended as edits happen). When omitted, falls back to sample data. */
+  rows?: ChangeHistoryRow[];
+}
+
+export function ChangeHistoryDataTable({ rows }: ChangeHistoryDataTableProps = {}) {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [activePage, setActivePage] = useState(5);

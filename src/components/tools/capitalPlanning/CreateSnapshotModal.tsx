@@ -32,10 +32,23 @@ export function CreateSnapshotModal({
   onClose,
   /** Read-only; replace with signed-in user when auth exists. */
   createdByLabel = "Alex Rivera",
+  onSubmit,
+  /** "edit" pre-fills name/description for editing an existing snapshot. */
+  mode,
+  initialName,
+  initialDescription,
 }: {
   open: boolean;
   onClose: () => void;
   createdByLabel?: string;
+  /** Called when the user confirms the snapshot with { name, description }. */
+  onSubmit?: (payload: { name: string; description: string }) => void;
+  /** Modal mode: "create" (default) or "edit". */
+  mode?: "create" | "edit" | string;
+  /** Pre-filled name when editing an existing snapshot. */
+  initialName?: string;
+  /** Pre-filled description when editing an existing snapshot. */
+  initialDescription?: string;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -43,8 +56,8 @@ export function CreateSnapshotModal({
 
   useEffect(() => {
     if (!open) return;
-    setName("");
-    setDescription("");
+    setName(initialName ?? "");
+    setDescription(initialDescription ?? "");
     setCapturedAt(new Date());
   }, [open]);
 
@@ -53,6 +66,7 @@ export function CreateSnapshotModal({
 
   function handleSubmit() {
     if (!canSubmit) return;
+    onSubmit?.({ name: trimmedName, description: description.trim() });
     onClose();
   }
 

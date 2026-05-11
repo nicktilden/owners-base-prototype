@@ -31,7 +31,7 @@ function toSeedId(projectRowId: number): string {
 const GlobalHeader = dynamic(() => import("@/components/nav/GlobalHeader"), { ssr: false });
 const AppLayout = dynamic(() => import("@/components/nav/AppLayout"), { ssr: false });
 
-const tabs = ["Overview", "Risk Register"] as const;
+const tabs = ["Overview", "Health & Risk"] as const;
 type TabName = (typeof tabs)[number];
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
@@ -108,19 +108,19 @@ const TAB_CARDS: Record<TabName, string[]> = {
     "All Open Items",
     "Project Team",
   ],
-  "Risk Register": [
+  "Health & Risk": [
     "Project Health",
     "Cost Health",
     "Schedule Health",
     "Delivery Risk",
-    "Risk Register",
+    "Health & Risk",
   ],
 };
 
 type HiddenCards = Record<TabName, Set<string>>;
 
 function makeEmptyHidden(): HiddenCards {
-  return { Overview: new Set(), "Risk Register": new Set() };
+  return { Overview: new Set(), "Health & Risk": new Set() };
 }
 
 function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectRowId: number; seedProjectId: string }) {
@@ -336,19 +336,19 @@ function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectR
                   )}
                 </HubsContentLayout>
               )}
-              {activeTab === "Risk Register" && (
+              {activeTab === "Health & Risk" && (
                 <HubsContentLayout>
-                  {isCardVisible("Risk Register", "Project Health") || isCardVisible("Risk Register", "Risk Register") ? (
+                  {isCardVisible("Health & Risk", "Project Health") || isCardVisible("Health & Risk", "Health & Risk") ? (
                     <HubsContentLayout.Row>
-                      {isCardVisible("Risk Register", "Project Health") && <HealthSummaryCard scope="project" projectId={seedProjectId} />}
-                      {isCardVisible("Risk Register", "Risk Register") && <RiskRegisterCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Health & Risk", "Project Health") && <HealthSummaryCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Health & Risk", "Health & Risk") && <RiskRegisterCard scope="project" projectId={seedProjectId} />}
                     </HubsContentLayout.Row>
                   ) : null}
-                  {isCardVisible("Risk Register", "Cost Health") || isCardVisible("Risk Register", "Schedule Health") || isCardVisible("Risk Register", "Delivery Risk") ? (
+                  {isCardVisible("Health & Risk", "Cost Health") || isCardVisible("Health & Risk", "Schedule Health") || isCardVisible("Health & Risk", "Delivery Risk") ? (
                     <HubsContentLayout.Row>
-                      {isCardVisible("Risk Register", "Cost Health") && <CostHealthCard scope="project" projectId={seedProjectId} />}
-                      {isCardVisible("Risk Register", "Schedule Health") && <ScheduleHealthCard scope="project" projectId={seedProjectId} />}
-                      {isCardVisible("Risk Register", "Delivery Risk") && <DeliveryRiskCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Health & Risk", "Cost Health") && <CostHealthCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Health & Risk", "Schedule Health") && <ScheduleHealthCard scope="project" projectId={seedProjectId} />}
+                      {isCardVisible("Health & Risk", "Delivery Risk") && <DeliveryRiskCard scope="project" projectId={seedProjectId} />}
                     </HubsContentLayout.Row>
                   ) : null}
                 </HubsContentLayout>

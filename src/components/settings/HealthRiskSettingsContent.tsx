@@ -27,6 +27,8 @@ import {
   Typography,
 } from '@procore/core-react';
 import { Info, Pencil, Plus, Trash, Warning } from '@procore/core-icons';
+import type { AutomationRule } from '@/types/automation';
+import { automationRules as seedAutomationRules } from '@/data/seed/automationRules';
 import styled from 'styled-components';
 import { KPI_LABELS, KPI_CATEGORY_MAP, DEFAULT_THRESHOLDS } from '@/types/health';
 import type { KPIKey, KPIThreshold, AccountHealthConfig, RiskType, RiskTypeCategory } from '@/types/health';
@@ -446,9 +448,256 @@ function ConnectAccountsTable() {
   );
 }
 
+// ─── Automation Rules Tab ─────────────────────────────────────────────────────
+
+const RuleRow = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr 1fr 80px 100px 40px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-separator);
+  font-size: 13px;
+  &:first-child { border-top: none; }
+  &:hover { background: var(--color-surface-secondary); }
+`;
+
+const RuleHeaderRow = styled(RuleRow)`
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  padding: 8px 16px;
+  &:hover { background: transparent; }
+`;
+
+const SOURCE_LABELS: Record<string, string> = {
+  change_event: 'Change Event', rfi: 'RFI', submittal: 'Submittal',
+  punch_list: 'Punch List', milestone: 'Milestone', incident: 'Incident',
+  observation: 'Observation', correspondence: 'Correspondence', budget_line: 'Budget Line',
+};
+
+const STATUS_PILL: Record<string, 'green' | 'gray' | 'blue'> = {
+  active: 'green', inactive: 'gray', draft: 'blue',
+};
+
+function formatLastFired(rule: AutomationRule): string {
+  if (!rule.lastFiredAt) return '—';
+  const now = new Date('2026-05-04');
+  const diffMs = now.getTime() - rule.lastFiredAt.getTime();
+  const diffHrs = Math.floor(diffMs / 3600000);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  return `${diffDays}d ago`;
+}
+
+function AutomationRulesTab() {
+  const [rules, setRules] = useState<AutomationRule[]>(seedAutomationRules);
+  const [editRule, setEditRule] = useState<AutomationRule | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+
+  function openNew() {
+    setEditRule(null);
+    setShowEditor(true);
+  }
+
+  function openEdit(rule: AutomationRule) {
+    setEditRule(rule);
+    setShowEditor(true);
+  }
+
+  function handleDelete(id: string) {
+    setRules(prev => prev.filter(r => r.id !== id));
+  }
+
+  return (
+    <TabBody>
+      <DetailPage.Card>
+        <DetailPage.Section
+          heading="Automation Rules"
+          actions={
+            <Button variant="primary" className="b_primary" size="sm" icon={<Plus />} onClick={openNew}>
+              Create rule
+            </Button>
+          }
+        >
+          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 16 }}>
+            Rules evaluate source items automatically. When conditions match, the rule creates a risk tag and optionally triggers an approval workflow.
+          </Typography>
+          <div style={{ border: '1px solid var(--color-border-separator)', borderRadius: 8, overflow: 'hidden' }}>
+            <RuleHeaderRow>
+              <span>Rule</span>
+              <span>Source</span>
+              <span>Conditions</span>
+              <span>Actions</span>
+              <span>Status</span>
+              <span>Last fired</span>
+              <span />
+            </RuleHeaderRow>
+            {rules.map(rule => (
+              <RuleRow key={rule.id}>
+                <Typography style={{ fontSize: 13, fontWeight: 500 }}>{rule.name}</Typography>
+                <Typography style={{ fontSize: 13 }}>{SOURCE_LABELS[rule.sourceType] ?? rule.sourceType}</Typography>
+                <Typography style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  {rule.conditions.map(c => `${c.field} ${c.operator} ${c.value}`).join(' AND ')}
+                </Typography>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {rule.taggingAction && <Pill color="blue" style={{ fontSize: 11 }}>Tag</Pill>}
+                  {rule.workflowAction && <Pill color="yellow" style={{ fontSize: 11 }}>Workflow</Pill>}
+                </div>
+                <Pill color={STATUS_PILL[rule.status] ?? 'gray'} style={{ fontSize: 11 }}>
+                  {rule.status.charAt(0).toUpperCase() + rule.status.slice(1)}
+                </Pill>
+                <Typography style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  {formatLastFired(rule)}{rule.fireCount > 0 ? ` · ${rule.fireCount}×` : ''}
+                </Typography>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Pencil />} onClick={() => openEdit(rule)} aria-label="Edit rule" />
+                  <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Trash />} onClick={() => handleDelete(rule.id)} aria-label="Delete rule" />
+                </div>
+              </RuleRow>
+            ))}
+          </div>
+        </DetailPage.Section>
+      </DetailPage.Card>
+
+      {showEditor && (
+        <AutomationRuleEditor
+          rule={editRule}
+          onClose={() => setShowEditor(false)}
+          onSave={(updated) => {
+            if (editRule) {
+              setRules(prev => prev.map(r => r.id === updated.id ? updated : r));
+            } else {
+              setRules(prev => [...prev, updated]);
+            }
+            setShowEditor(false);
+          }}
+        />
+      )}
+    </TabBody>
+  );
+}
+
+// ─── Automation Rule Editor Modal ─────────────────────────────────────────────
+
+const RULE_SOURCE_OPTIONS = [
+  { value: 'change_event', label: 'Change Event' },
+  { value: 'rfi', label: 'RFI' },
+  { value: 'submittal', label: 'Submittal' },
+  { value: 'punch_list', label: 'Punch List' },
+  { value: 'milestone', label: 'Milestone' },
+  { value: 'incident', label: 'Incident' },
+  { value: 'observation', label: 'Observation' },
+];
+
+const CONDITION_OPERATORS = [
+  { value: 'gt', label: 'is greater than' },
+  { value: 'lt', label: 'is less than' },
+  { value: 'gte', label: 'is ≥' },
+  { value: 'lte', label: 'is ≤' },
+  { value: 'eq', label: 'equals' },
+  { value: 'neq', label: 'does not equal' },
+  { value: 'aging_gt', label: 'is aging >' },
+];
+
+interface EditorProps {
+  rule: AutomationRule | null;
+  onClose: () => void;
+  onSave: (rule: AutomationRule) => void;
+}
+
+function AutomationRuleEditor({ rule, onClose, onSave }: EditorProps) {
+  const [name, setName] = useState(rule?.name ?? '');
+  const [status, setStatus] = useState<AutomationRule['status']>(rule?.status ?? 'draft');
+  const [sourceType, setSourceType] = useState(rule?.sourceType ?? 'change_event');
+  const [enableTagging, setEnableTagging] = useState(!!rule?.taggingAction);
+  const [enableWorkflow, setEnableWorkflow] = useState(!!rule?.workflowAction);
+
+  function handleSave() {
+    const saved: AutomationRule = {
+      id: rule?.id ?? `ar-${Date.now()}`,
+      name: name || 'Untitled Rule',
+      status,
+      sourceType: sourceType as AutomationRule['sourceType'],
+      conditions: rule?.conditions ?? [],
+      taggingAction: enableTagging ? (rule?.taggingAction ?? { riskTypeId: 'rt-001', defaultProbability: 3, defaultImpact: 'inherit_from_source', behavior: 'auto_create' }) : undefined,
+      workflowAction: enableWorkflow ? (rule?.workflowAction ?? { workflowId: 'wf-default', tagStateOnTrigger: 'pending_approval' }) : undefined,
+      fireCount: rule?.fireCount ?? 0,
+      lastFiredAt: rule?.lastFiredAt,
+      createdBy: 'user-001',
+      createdAt: rule?.createdAt ?? new Date(),
+    };
+    onSave(saved);
+  }
+
+  return (
+    <Modal open onClose={onClose} aria-label="Automation Rule Editor" style={{ width: 640 }}>
+      <Modal.Header>{rule ? 'Edit rule' : 'Create rule'}</Modal.Header>
+      <Modal.Body>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Rule name *</Typography>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Large CE auto-approval"
+              style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Status</Typography>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as AutomationRule['status'])}
+                style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Source type</Typography>
+              <select
+                value={sourceType}
+                onChange={e => setSourceType(e.target.value as AutomationRule['sourceType'])}
+                style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
+              >
+                {RULE_SOURCE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border-separator)', paddingTop: 16 }}>
+            <Typography style={{ fontWeight: 600, marginBottom: 12, display: 'block' }}>THEN — actions to take</Typography>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Switch checked={enableTagging} onChange={() => setEnableTagging(v => !v)} aria-label="Enable risk tagging" />
+                <Typography>Create risk association</Typography>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Switch checked={enableWorkflow} onChange={() => setEnableWorkflow(v => !v)} aria-label="Enable workflow trigger" />
+                <Typography>Trigger approval workflow</Typography>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" className="b_secondary" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" className="b_primary" onClick={handleSave}>Save rule</Button>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TABS = ['Risk Types', 'KPIs', 'Scope', 'Connect'] as const;
+const TABS = ['Risk Types', 'KPIs', 'Scope', 'Connect', 'Automation Rules'] as const;
 type SettingsTab = typeof TABS[number];
 
 const KPI_CALC_LABELS: Record<KPIKey, string> = {
@@ -624,13 +873,13 @@ export default function HealthRiskSettingsContent() {
                       Settings
                     </a>
                   </Breadcrumbs.Crumb>
-                  <Breadcrumbs.Crumb active>Risk Register Configuration</Breadcrumbs.Crumb>
+                  <Breadcrumbs.Crumb active>Health & Risk Configuration</Breadcrumbs.Crumb>
                 </Breadcrumbs>
                 <Title>
                   <Title.Text>
                     <H1 style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-primary)' }}>
                       <Warning size="md" style={{ color: 'var(--color-pill-text-yellow)' }} />
-                      Risk Register Configuration
+                      Health & Risk Configuration
                       <Pill color="blue">Account Level</Pill>
                     </H1>
                   </Title.Text>
@@ -1065,6 +1314,11 @@ export default function HealthRiskSettingsContent() {
                       </DetailPage.Section>
                     </DetailPage.Card>
                   </TabBody>
+                )}
+
+                {/* ── Automation Rules Tab ── */}
+                {activeTab === 'Automation Rules' && (
+                  <AutomationRulesTab />
                 )}
 
               </TabContent>

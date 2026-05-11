@@ -32,7 +32,7 @@ export { observations } from './observations';
 export { correspondence } from './correspondence';
 export { commitments } from './commitments';
 export { capitalPlanning } from './capital_planning';
-export { fundingSource } from './funding_source';
+export { fundingSources } from './funding_source';
 
 // v7 Health & Risk
 export { riskTags } from './riskTags';
@@ -42,3 +42,8 @@ export { riskTypeRules } from './riskTypeRules';
 export { approvalTriggers } from './approvalTriggers';
 export { healthSnapshotsByProject } from './healthSnapshots';
 export { connectedAccounts } from './account';
+
+// Use Case seed additions
+export { incidents } from './incidents';
+export { workHours } from './work_hours';
+export { automationRules } from './automationRules';

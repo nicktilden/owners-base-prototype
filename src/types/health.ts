@@ -144,6 +144,8 @@ export type SourceType =
   | 'correspondence'
   | 'milestone'
   | 'budget_line'
+  | 'observation'
+  | 'incident'
   | 'manual'; // points to a ManualRiskItem
 
 /** Lifecycle states for a RiskTag. */
@@ -316,6 +318,59 @@ export interface KPIResult {
 export interface HealthSnapshot {
   date: string;   // ISO date string YYYY-MM-DD
   score: HealthScore;
+  /** Dimension-specific numeric fields for trend KPIs. */
+  numericFields?: {
+    // Cost dimension
+    ftc?: number;
+    cac?: number;
+    contingencyRemaining?: number;
+    pctBilled?: number;
+    pctComplete?: number;
+    // Schedule dimension
+    criticalPathVarianceDays?: number;
+    submittalAgingCount?: number;
+    // Safety dimension
+    openIncidentCount?: number;
+    nearMissCount?: number;
+    oshaRate?: number;
+  };
+}
+
+// ─── Incidents ────────────────────────────────────────────────────────────────
+
+export type IncidentType = 'injury' | 'near_miss' | 'property_damage' | 'environmental' | 'security' | 'other';
+export type IncidentSeverity = 'minor' | 'moderate' | 'serious' | 'critical';
+export type OshaCategory = 'fatality' | 'days_away' | 'restricted_work' | 'medical_treatment' | 'first_aid' | 'other';
+
+export interface Incident {
+  id: string;
+  projectId: string;
+  incidentNumber: string;
+  dateOccurred: Date;
+  dateReported: Date;
+  incidentType: IncidentType;
+  severity: IncidentSeverity;
+  oshaRecordable: boolean;
+  oshaCategory?: OshaCategory | null;
+  description: string;
+  injuredPersonId?: string | null;
+  bodyPart?: string | null;
+  daysAwayFromWork?: number | null;
+  linkedSubcontractorId?: string | null;
+  linkedTradeId?: string | null;
+  rootCause?: string | null;
+  contributingFactors?: string[];
+  costEstimate?: number | null;
+  status: 'open' | 'under_investigation' | 'closed';
+}
+
+// ─── Work Hours ───────────────────────────────────────────────────────────────
+
+export interface WorkHours {
+  projectId: string;
+  weekStarting: Date;
+  totalHoursWorked: number;
+  headcount: number;
 }
 
 // ─── Risk Records ─────────────────────────────────────────────────────────────

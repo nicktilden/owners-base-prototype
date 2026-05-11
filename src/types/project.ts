@@ -211,6 +211,14 @@ export interface Project {
   invoiceOverdueDays?: number;
   /** Milestone completion rate as % (0–100). */
   milestoneCompletionRate?: number;
+  /** Original contingency amount in dollars. */
+  contingencyOriginal?: number;
+  /** Contingency consumed to date in dollars. */
+  contingencyUsed?: number;
+  /** Percentage of contract amount billed to date. */
+  pctBilled?: number;
+  /** Percentage of work physically complete. */
+  pctComplete?: number;
   /** 90-day health score history for sparkline rendering. */
   healthHistory?: HealthSnapshot[];
   /** Structured risk records for forward-looking forecast. */

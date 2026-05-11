@@ -143,6 +143,15 @@ export function useHubFilters(): HubFilterContextValue {
 }
 
 /**
+ * Like {@link useHubFilters} but returns `null` when used outside a
+ * `HubFilterProvider` instead of throwing. Useful for components that are
+ * rendered in both hub and non-hub contexts.
+ */
+export function useHubFiltersOrNull(): HubFilterContextValue | null {
+  return useContext(HubFilterContext);
+}
+
+/**
  * Helper: toggle a value in/out of an array filter field.
  */
 export function toggleFilterValue<T>(arr: T[], value: T): T[] {

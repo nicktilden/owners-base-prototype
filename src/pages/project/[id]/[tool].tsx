@@ -23,6 +23,7 @@ const CommitmentsContent    = dynamic(() => import('@/components/tools/Commitmen
 const SpecificationsContent = dynamic(() => import('@/components/tools/SpecificationsContent'), { ssr: false });
 const BiddingContent        = dynamic(() => import('@/components/tools/BiddingContent'),       { ssr: false });
 const HealthContent         = dynamic(() => import('@/components/tools/HealthContent'),        { ssr: false });
+const HealthRiskHubContent  = dynamic(() => import('@/components/tools/HealthRiskHubContent'), { ssr: false });
 
 const GlobalHeader = dynamic(() => import('@/components/nav/GlobalHeader'), { ssr: false });
 const AppLayout    = dynamic(() => import('@/components/nav/AppLayout'),    { ssr: false });
@@ -44,6 +45,9 @@ export default function ProjectToolPage() {
   }, [projectId]);
 
   const toolName = TOOL_DISPLAY_NAMES[toolKey as keyof typeof TOOL_DISPLAY_NAMES] ?? tool;
+
+  // Wait for Next.js to hydrate dynamic route params
+  if (!router.isReady) return null;
 
   // ── Tool-specific pages ──────────────────────────────────────────────────
   if (toolKey === 'health' && projectId) {
@@ -195,6 +199,15 @@ export default function ProjectToolPage() {
       <>
         <Head><title>Specifications — Owner Prototype</title></Head>
         <SpecificationsContent projectId={projectId} />
+      </>
+    );
+  }
+
+  if (toolKey === 'health_risk' && projectId) {
+    return (
+      <>
+        <Head><title>Health & Risk — Owner Prototype</title></Head>
+        <HealthRiskHubContent scope="project" projectId={projectId} />
       </>
     );
   }

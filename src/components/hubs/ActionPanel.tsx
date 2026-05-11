@@ -174,6 +174,7 @@ export default function ActionPanel({
     schedule_variance: 'Schedule Variance',
     open_items: 'Open Items',
     risk_scorecard: 'Risk Signals',
+    assets: 'Assets',
   };
 
   return (
