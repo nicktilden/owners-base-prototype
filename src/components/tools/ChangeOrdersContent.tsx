@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
+import { Button, Dropdown, Pill, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
 import { NotepadList as ChangeOrdersIcon, Filter, Plus, Sliders } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -50,6 +51,32 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "reason", label: "Reason" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Approved": "green",
+  "Pending Approval": "yellow",
+  "Draft": "gray",
+  "Under Review": "yellow",
+  "Void": "gray",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Approved": "Approved",
+  "Pending Approval": "Pending Approval",
+  "Draft": "Draft",
+  "Under Review": "Under Review",
+  "Void": "Void",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface ChangeOrdersContentProps {
   projectId: string;
 }
@@ -64,12 +91,20 @@ export default function ChangeOrdersContent({ projectId }: ChangeOrdersContentPr
   const rowData = useMemo(() => changeOrders.filter((o: any) => o.projectId === projectId), [projectId]);
 
   const columnDefs = useMemo<ColDef[]>(() => [
+    { field: "contract", headerName: "Contract", minWidth: 160, filter: "agSetColumnFilter", enableRowGroup: true },
     { field: "number", headerName: "#", width: 80 },
-    { field: "title", headerName: "Title", minWidth: 200 },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "amount", headerName: "Amount", width: 130 },
-    { field: "reason", headerName: "Reason", width: 150, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "created", headerName: "Created", width: 120 },
+    { field: "revision", headerName: "Revision", width: 100 },
+    { field: "title", headerName: "Title", minWidth: 200, cellRenderer: LinkCellRenderer },
+    { field: "dateInitiated", headerName: "Date Initiated", width: 140 },
+    { field: "contractCompany", headerName: "Contract Company", minWidth: 180, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "designatedReviewer", headerName: "Designated Reviewer", minWidth: 180, filter: "agSetColumnFilter" },
+    { field: "dueDate", headerName: "Due Date", width: 120 },
+    { field: "reviewDate", headerName: "Review Date", width: 130 },
+    { field: "status", headerName: "Status", minWidth: 160, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
+    { field: "signaturesRequired", headerName: "Signatures Required", width: 170 },
+    { field: "amount", headerName: "Amount", width: 140 },
+    { field: "reason", headerName: "Reason", width: 150, filter: "agSetColumnFilter", enableRowGroup: true, hide: true },
+    { field: "created", headerName: "Created", width: 120, hide: true },
     {
       colId: "actions",
       headerName: "Actions",

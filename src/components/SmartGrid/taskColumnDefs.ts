@@ -9,6 +9,7 @@ import type {
 import type { Task, TaskStatus } from "@/types/tasks";
 import { formatDateMMDDYYYY } from "@/utils/date";
 import CostActionsCellRenderer from "./CostActionsCellRenderer";
+import LinkCellRenderer from "./LinkCellRenderer";
 
 type PillColor = "blue" | "cyan" | "gray" | "green" | "magenta" | "red" | "UNSAFE_orange" | "yellow";
 
@@ -49,7 +50,8 @@ export const CATEGORY_OPTIONS = [
 
 export function buildTaskColumnDefs(
   projectMap: Map<string, string>,
-  isPortfolio: boolean
+  isPortfolio: boolean,
+  userMap: Map<string, string> = new Map()
 ): ColDef<Task>[] {
   return [
     {
@@ -77,7 +79,7 @@ export function buildTaskColumnDefs(
       headerName: "Title",
       minWidth: 250,
       filter: "agTextColumnFilter",
-      cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
+      cellRenderer: LinkCellRenderer,
     },
     {
       field: "status",
@@ -91,6 +93,18 @@ export function buildTaskColumnDefs(
       },
       cellRenderer: StatusPillRenderer,
       enableRowGroup: true,
+    },
+    {
+      colId: "assignee",
+      headerName: "Assignee",
+      minWidth: 160,
+      filter: "agSetColumnFilter",
+      enableRowGroup: true,
+      valueGetter: (params: ValueGetterParams<Task>) => {
+        const assignees = params.data?.assignees;
+        if (!assignees?.length) return "";
+        return assignees.map((id) => userMap.get(id) ?? id).join(", ");
+      },
     },
     {
       field: "category",

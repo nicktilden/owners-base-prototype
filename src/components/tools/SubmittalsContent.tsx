@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -13,7 +14,8 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
-import type { GridApi } from "ag-grid-community";
+import type { GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import type { ColDef } from "ag-grid-community";
@@ -65,6 +67,36 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "responsibleContractor", label: "Responsible Contractor" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Approved": "green",
+  "Approved as Noted": "green",
+  "Revise and Resubmit": "red",
+  "Under Review": "yellow",
+  "Pending Submission": "blue",
+  "Rejected": "red",
+  "Void": "gray",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Approved": "Approved",
+  "Approved as Noted": "Approved as Noted",
+  "Revise and Resubmit": "Revise and Resubmit",
+  "Under Review": "Under Review",
+  "Pending Submission": "Pending Submission",
+  "Rejected": "Rejected",
+  "Void": "Void",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface SubmittalsContentProps {
   projectId: string;
 }
@@ -81,10 +113,12 @@ export default function SubmittalsContent({ projectId }: SubmittalsContentProps)
 
   const columnDefs = useMemo<ColDef[]>(() => [
     { field: "number", headerName: "#", width: 80 },
-    { field: "title", headerName: "Title", minWidth: 200 },
+    { field: "title", headerName: "Title", minWidth: 200, cellRenderer: LinkCellRenderer },
+    { field: "specSection", headerName: "Spec Section", width: 130, filter: "agSetColumnFilter" },
     { field: "type", headerName: "Type", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "status", headerName: "Status", width: 180, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
     { field: "responsibleContractor", headerName: "Responsible Contractor", width: 180, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "createdBy", headerName: "Created By", width: 140, filter: "agSetColumnFilter" },
     { field: "dueDate", headerName: "Due Date", width: 120 },
     {
       colId: "actions",

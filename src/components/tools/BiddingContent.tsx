@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
+import { Button, Dropdown, Pill, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
 import { WrenchHammer as BiddingIcon, Filter, Plus, Sliders } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -49,6 +49,34 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "awardedTo", label: "Awarded To" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Open": "blue",
+  "Awarded": "green",
+  "Closed": "green",
+  "Draft": "gray",
+  "Cancelled": "gray",
+  "Under Review": "yellow",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Open": "Open",
+  "Awarded": "Awarded",
+  "Closed": "Closed",
+  "Draft": "Draft",
+  "Cancelled": "Cancelled",
+  "Under Review": "Under Review",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface BiddingContentProps {
   projectId: string;
 }
@@ -63,7 +91,7 @@ export default function BiddingContent({ projectId }: BiddingContentProps) {
   const columnDefs = useMemo<ColDef[]>(() => [
     { field: "number", headerName: "#", width: 80 },
     { field: "title", headerName: "Title", minWidth: 200 },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "status", headerName: "Status", width: 140, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
     { field: "bidDueDate", headerName: "Bid Due Date", width: 130 },
     { field: "awardedTo", headerName: "Awarded To", width: 150, filter: "agSetColumnFilter", enableRowGroup: true },
     { field: "awardAmount", headerName: "Award Amount", width: 140 },

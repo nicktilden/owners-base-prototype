@@ -19,6 +19,7 @@ import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import styled from "styled-components";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import { documents } from "@/data/seed/documents";
 import { projects } from "@/data/seed/projects";
@@ -169,7 +170,7 @@ export default function DocumentsContent({ projectId }: DocumentsContentProps) {
         headerName: "Title",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
+        cellRenderer: LinkCellRenderer,
       },
       {
         field: "type",

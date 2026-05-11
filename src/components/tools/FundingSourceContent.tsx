@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -13,7 +14,7 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
@@ -61,6 +62,34 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "status", label: "Status" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Active": "green",
+  "Pending": "yellow",
+  "Draft": "gray",
+  "Closed": "green",
+  "Expired": "gray",
+  "Under Review": "yellow",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Active": "Active",
+  "Pending": "Pending",
+  "Draft": "Draft",
+  "Closed": "Closed",
+  "Expired": "Expired",
+  "Under Review": "Under Review",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 export default function FundingSourceContent() {
   const [searchText, setSearchText] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,9 +110,10 @@ export default function FundingSourceContent() {
       {
         field: "status",
         headerName: "Status",
-        width: 120,
+        width: 140,
         filter: "agSetColumnFilter",
         enableRowGroup: true,
+        cellRenderer: StatusPillRenderer,
       },
       { field: "totalAmount", headerName: "Total Amount", width: 140 },
       { field: "drawnToDate", headerName: "Drawn to Date", width: 140 },

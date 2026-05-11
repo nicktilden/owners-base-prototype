@@ -97,7 +97,7 @@ export const specifications: SpecificationDivision[] = [
 // ---------------------------------------------------------------------------
 // FLAT GRID ROWS — per-project specification sections for the Specifications
 // tool grid. Fields: id, projectId, sectionNumber, title, division, status,
-// revision, updated.
+// revision, updated, dateIssued, dateReceived.
 // ---------------------------------------------------------------------------
 
 export interface SpecSectionRow {
@@ -109,6 +109,15 @@ export interface SpecSectionRow {
   status: string;
   revision: string;
   updated: string;
+  dateIssued: string;
+  dateReceived: string;
+}
+
+/** Offset a YYYY-MM-DD string by a number of days. */
+function offsetDate(base: string, days: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
 }
 
 let seq = 0;
@@ -122,7 +131,9 @@ function mk(
   updated: string,
 ): SpecSectionRow {
   seq++;
-  return { id: `ss-${String(seq).padStart(4, '0')}`, projectId, sectionNumber, title, division, status, revision, updated };
+  const dateIssued = offsetDate(updated, -14);
+  const dateReceived = offsetDate(updated, -10);
+  return { id: `ss-${String(seq).padStart(4, '0')}`, projectId, sectionNumber, title, division, status, revision, updated, dateIssued, dateReceived };
 }
 
 export const specificationSections: SpecSectionRow[] = [

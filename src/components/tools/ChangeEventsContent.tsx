@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
+import { Button, Dropdown, Pill, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
 import { File as ChangeEventsIcon, Filter, Plus, Sliders } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -52,6 +53,32 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "origin", label: "Origin" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Open": "blue",
+  "Closed": "green",
+  "Under Review": "yellow",
+  "Void": "gray",
+  "Pending Pricing": "yellow",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Open": "Open",
+  "Closed": "Closed",
+  "Under Review": "Under Review",
+  "Void": "Void",
+  "Pending Pricing": "Pending Pricing",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface ChangeEventsContentProps {
   projectId: string;
 }
@@ -68,10 +95,15 @@ export default function ChangeEventsContent({ projectId }: ChangeEventsContentPr
 
   const columnDefs = useMemo<ColDef[]>(() => [
     { field: "number", headerName: "#", width: 80 },
-    { field: "title", headerName: "Title", minWidth: 200 },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "title", headerName: "Title", minWidth: 200, cellRenderer: LinkCellRenderer },
+    { field: "status", headerName: "Status", width: 150, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
     { field: "scope", headerName: "Scope", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
     { field: "origin", headerName: "Origin", width: 150, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "primeContractMarkup", headerName: "Prime Contract for Markup Estimates", minWidth: 220, filter: "agSetColumnFilter" },
+    { field: "budgetCode", headerName: "Budget Code", minWidth: 180, filter: "agSetColumnFilter" },
+    { field: "costRom", headerName: "Cost ROM", width: 130 },
+    { field: "rfqNumber", headerName: "Request for Quote", width: 160, filter: "agSetColumnFilter" },
+    { field: "rfqTitle", headerName: "RFQ Title", minWidth: 200, filter: "agTextColumnFilter" },
     { field: "created", headerName: "Created", width: 120 },
     {
       colId: "actions",

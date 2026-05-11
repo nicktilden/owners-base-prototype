@@ -1,7 +1,7 @@
 import type { Asset } from '@/types/assets';
 
-// 12 assets across projects
-// Status distribution: 4 active, 2 inactive, 2 in_maintenance, 2 retired, 2 disposed
+// Assets across projects
+// Status distribution: active, inactive, in_maintenance, retired, disposed, ordered, delivered, installed, commissioned, turned_over
 // Healthcare-appropriate types: HVAC systems, medical equipment, emergency generators, elevators
 
 export const assets: Asset[] = [
@@ -540,6 +540,120 @@ export const assets: Asset[] = [
     createdBy: 'user-016',
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date('2024-03-20'),
+  },
+
+  // ── PROJ-006: Chandler Regional Medical Center (new statuses) ────────────
+
+  {
+    id: 'ast-025',
+    assetCode: 'CHILLR-003',
+    accountId: 'acc-001',
+    projectId: 'proj-006',
+    name: 'Centrifugal Chiller — York YZ Magnetic Bearing',
+    type: 'system',
+    trade: 'hvac',
+    status: 'ordered',
+    condition: 'excellent',
+    serialNumber: null,
+    manufacturer: 'York',
+    model: 'YZ Magnetic Bearing',
+    installDate: null,
+    warrantyExpiry: null,
+    description: 'High-efficiency oil-free centrifugal chiller on order for the central plant; expected delivery Q3 2026.',
+    imageUrl: '/images/assets/chiller-york-yz.jpg',
+    createdBy: 'user-016',
+    createdAt: new Date('2026-03-01'),
+    updatedAt: new Date('2026-04-15'),
+  },
+
+  {
+    id: 'ast-026',
+    assetCode: 'GENRT-004',
+    accountId: 'acc-001',
+    projectId: 'proj-006',
+    name: 'Emergency Generator — Kohler 1000REOZDB',
+    type: 'system',
+    trade: 'electrical',
+    status: 'delivered',
+    condition: 'excellent',
+    serialNumber: 'KO-1000REOZDB-2026-0019',
+    manufacturer: 'Kohler',
+    model: '1000REOZDB',
+    installDate: null,
+    warrantyExpiry: new Date('2033-02-01'),
+    description: '1MW diesel standby generator delivered to site and staged in the mechanical yard pending foundation readiness.',
+    imageUrl: '/images/assets/generator-kohler-1000.jpg',
+    createdBy: 'user-016',
+    createdAt: new Date('2026-01-20'),
+    updatedAt: new Date('2026-04-01'),
+  },
+
+  {
+    id: 'ast-027',
+    assetCode: 'AHU-002',
+    accountId: 'acc-001',
+    projectId: 'proj-006',
+    name: 'Air Handling Unit — Daikin Applied Magnitude',
+    type: 'system',
+    trade: 'hvac',
+    status: 'installed',
+    condition: 'excellent',
+    serialNumber: 'DK-MAG-2026-0031',
+    manufacturer: 'Daikin Applied',
+    model: 'Magnitude WMC',
+    installDate: new Date('2026-03-20'),
+    warrantyExpiry: new Date('2031-03-20'),
+    description: 'Variable-volume AHU installed in the penthouse mechanical room; ductwork connections in progress.',
+    imageUrl: '/images/assets/ahu-daikin-magnitude.jpg',
+    createdBy: 'user-016',
+    createdAt: new Date('2026-03-01'),
+    updatedAt: new Date('2026-04-20'),
+  },
+
+  // ── PROJ-001: St. Joseph Medical Center Tower (new statuses) ──────────────
+
+  {
+    id: 'ast-028',
+    assetCode: 'ELEVTR-003',
+    accountId: 'acc-001',
+    projectId: 'proj-001',
+    name: 'Traction Elevator — Schindler 7000',
+    type: 'system',
+    trade: 'mechanical',
+    status: 'commissioned',
+    condition: 'excellent',
+    serialNumber: 'SCH-7000-2025-0088',
+    manufacturer: 'Schindler',
+    model: '7000 High-Rise',
+    installDate: new Date('2025-01-10'),
+    warrantyExpiry: new Date('2030-01-10'),
+    description: 'High-rise traction elevator installed and commissioned in the new tower; final punch list items pending acceptance.',
+    imageUrl: '/images/assets/elevator-schindler-7000.jpg',
+    createdBy: 'user-016',
+    createdAt: new Date('2024-12-01'),
+    updatedAt: new Date('2025-04-15'),
+  },
+
+  {
+    id: 'ast-029',
+    assetCode: 'FIREALM-001',
+    accountId: 'acc-001',
+    projectId: 'proj-001',
+    name: 'Fire Alarm System — Notifier NFS2-3030',
+    type: 'system',
+    trade: 'electrical',
+    status: 'turned_over',
+    condition: 'excellent',
+    serialNumber: 'NOT-NFS2-2024-0211',
+    manufacturer: 'Notifier',
+    model: 'NFS2-3030',
+    installDate: new Date('2024-07-01'),
+    warrantyExpiry: new Date('2029-07-01'),
+    description: 'Addressable fire alarm system fully commissioned and formally turned over to facilities management.',
+    imageUrl: '/images/assets/fire-alarm-notifier-nfs2.jpg',
+    createdBy: 'user-016',
+    createdAt: new Date('2024-06-01'),
+    updatedAt: new Date('2025-02-28'),
   },
 
   // ── PROJ-002: Holy Cross Outpatient Pavilion (additional) ─────────────────

@@ -2,13 +2,15 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
   ToggleButton,
 } from "@procore/core-react";
 import { Wrench as ObservationsIcon, Filter, Plus, Sliders } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
@@ -58,6 +60,32 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "trade", label: "Trade" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Open": "blue",
+  "Closed": "green",
+  "In Progress": "yellow",
+  "Pending Review": "yellow",
+  "Void": "gray",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Open": "Open",
+  "Closed": "Closed",
+  "In Progress": "In Progress",
+  "Pending Review": "Pending Review",
+  "Void": "Void",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface ObservationsContentProps {
   projectId: string;
 }
@@ -74,7 +102,7 @@ export default function ObservationsContent({ projectId }: ObservationsContentPr
   const columnDefs = useMemo<ColDef[]>(
     () => [
       { field: "number", headerName: "#", width: 80 },
-      { field: "name", headerName: "Name", minWidth: 200 },
+      { field: "name", headerName: "Name", minWidth: 200, cellRenderer: LinkCellRenderer },
       {
         field: "type",
         headerName: "Type",
@@ -85,9 +113,10 @@ export default function ObservationsContent({ projectId }: ObservationsContentPr
       {
         field: "status",
         headerName: "Status",
-        width: 120,
+        width: 140,
         filter: "agSetColumnFilter",
         enableRowGroup: true,
+        cellRenderer: StatusPillRenderer,
       },
       {
         field: "trade",
