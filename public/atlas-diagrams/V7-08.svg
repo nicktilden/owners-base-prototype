@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 660" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Health Tearsheet — evidence card pattern</title>
+<desc>Tearsheet anatomy showing the repeating evidence card pattern, sortable by impact.</desc>
+<defs>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+</style>
+</defs>
+
+<rect x="40" y="40" width="600" height="600" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+
+<text class="th" x="56" y="68">Tower Block — Health detail</text>
+<rect x="396" y="56" width="56" height="20" rx="10" fill="#121E0A"/>
+<rect x="424" y="56" width="28" height="20" fill="#281E0D"/>
+<rect x="396" y="56" width="56" height="20" rx="10" fill="none" stroke="#C07A18" stroke-width="0.5"/>
+<line x1="424" y1="58" x2="424" y2="74" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="464" y="70">Healthy now, At Risk forecast</text>
+
+<line x1="56" y1="92" x2="624" y2="92" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="th" x="56" y="116">Trend</text>
+<rect x="56" y="128" width="568" height="60" rx="4" fill="#1E2D3D" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<polyline points="76,176 130,170 184,168 238,164 292,162 346,160 400,156 454,158" fill="none" stroke="#3B6D11" stroke-width="1.5"/>
+<polyline points="454,158 508,168 562,184 604,192" fill="none" stroke="#C07A18" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="454" cy="158" r="3" fill="#90D850"/>
+<text class="tiny" x="76" y="148">12 weeks history</text>
+<text class="tiny" x="604" y="148" text-anchor="end">Now → forecast</text>
+
+<text class="th" x="56" y="216">Why this score?</text>
+<text class="ts" x="56" y="234">Sorted by impact magnitude</text>
+
+<rect x="56" y="246" width="568" height="80" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<rect x="68" y="258" width="56" height="20" rx="10" fill="#121E0A"/>
+<rect x="96" y="258" width="28" height="20" fill="#250E0E"/>
+<rect x="68" y="258" width="56" height="20" rx="10" fill="none" stroke="#D04848" stroke-width="0.5"/>
+<line x1="96" y1="260" x2="96" y2="276" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="140" y="272" fill="#D89040">Cost — biggest forecast risk</text>
+<circle cx="320" cy="268" r="5" fill="rgba(255,255,255,0.6)"/>
+<text class="tiny" x="332" y="272" fill="rgba(255,255,255,0.6)">Automated</text>
+
+<text class="ts" x="68" y="294" fill="#F0B060">Now: 1.8% variance (Healthy). Forecast: 4 high-probability risks total $1.2M exposure</text>
+<text class="ts" x="68" y="312" fill="#F0B060">Linked: 4 Risk Records · 3 pending Change Events  ·  Adjust threshold  ·  View Risk Records →</text>
+
+<rect x="56" y="338" width="568" height="80" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<rect x="68" y="350" width="56" height="20" rx="10" fill="#121E0A"/>
+<rect x="96" y="350" width="28" height="20" fill="#281E0D"/>
+<rect x="68" y="350" width="56" height="20" rx="10" fill="none" stroke="#C07A18" stroke-width="0.5"/>
+<line x1="96" y1="352" x2="96" y2="368" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="140" y="364" fill="#D89040">Schedule</text>
+<circle cx="220" cy="360" r="5" fill="rgba(255,255,255,0.6)"/>
+<text class="tiny" x="232" y="364" fill="rgba(255,255,255,0.6)">Automated</text>
+
+<text class="ts" x="68" y="386" fill="#F0B060">Now: 3 days behind (Healthy). Forecast: 2 risks could push critical path to 18 days behind</text>
+<text class="ts" x="68" y="404" fill="#F0B060">Linked: 2 Risk Records · Permitting milestone in 14 days  ·  View detail →</text>
+
+<rect x="56" y="430" width="568" height="64" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5" opacity="0.7"/>
+<rect x="68" y="442" width="56" height="20" rx="10" fill="#121E0A"/>
+<rect x="96" y="442" width="28" height="20" fill="#121E0A"/>
+<rect x="68" y="442" width="56" height="20" rx="10" fill="none" stroke="#3B6D11" stroke-width="0.5"/>
+<line x1="96" y1="444" x2="96" y2="460" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="140" y="456" fill="#D89040">Safety</text>
+<circle cx="200" cy="452" r="5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<text class="tiny" x="212" y="456" fill="rgba(255,255,255,0.6)">Manual</text>
+<text class="ts" x="68" y="478" fill="#F0B060">Now: 0 incidents (Healthy). Forecast: 0 open risks. No degradation expected.</text>
+
+<rect x="56" y="506" width="568" height="64" rx="6" fill="#281E0D" stroke="#C07A18" stroke-width="0.5" opacity="0.6"/>
+<polygon points="80,520 88,520 84,526" fill="#F0B060"/>
+<rect x="92" y="518" width="56" height="20" rx="10" fill="#121E0A" opacity="0.6"/>
+<rect x="120" y="518" width="28" height="20" fill="#121E0A" opacity="0.6"/>
+<rect x="92" y="518" width="56" height="20" rx="10" fill="none" stroke="#3B6D11" stroke-width="0.5" opacity="0.6"/>
+<line x1="120" y1="520" x2="120" y2="536" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" opacity="0.6"/>
+<text class="th" x="164" y="532" fill="#D89040">Quality — degraded</text>
+
+<text class="ts" x="92" y="554" fill="#F0B060">Inspection data not connected. Resolve in Settings → Health & Risk → Dimensions →</text>
+
+<text class="th" x="56" y="600">Pattern — every dimension is the same evidence card</text>
+<text class="ts" x="56" y="618">Status badge · dimension name · origin icon · "now / forecast" sentence · linked items · contextual action.</text>
+<text class="ts" x="56" y="636">Sorted by impact descending. Degraded cards always at the bottom with a clear resolution path.</text>
+</svg>

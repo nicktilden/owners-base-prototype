@@ -355,7 +355,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "Name",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
+        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" },
       },
       {
         field: "status",
@@ -433,7 +433,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
         headerName: "Name",
         minWidth: 220,
         filter: "agTextColumnFilter",
-        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer" },
+        cellStyle: { fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textDecoration: "underline" },
       },
       {
         field: "status",

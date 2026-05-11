@@ -36,7 +36,7 @@ const AssetImage = styled.img`
   margin-bottom: 20px;
 `;
 
-type PillColor = "green" | "yellow" | "red" | "gray";
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
 
 const STATUS_COLORS: Record<AssetStatus, PillColor> = {
   active: "green",
@@ -44,6 +44,11 @@ const STATUS_COLORS: Record<AssetStatus, PillColor> = {
   in_maintenance: "yellow",
   retired: "red",
   disposed: "gray",
+  ordered: "blue",
+  delivered: "blue",
+  installed: "yellow",
+  commissioned: "yellow",
+  turned_over: "green",
 };
 
 const STATUS_LABELS: Record<AssetStatus, string> = {
@@ -52,6 +57,11 @@ const STATUS_LABELS: Record<AssetStatus, string> = {
   in_maintenance: "In Maintenance",
   retired: "Retired",
   disposed: "Disposed",
+  ordered: "Ordered",
+  delivered: "Delivered",
+  installed: "Installed",
+  commissioned: "Commissioned",
+  turned_over: "Turned Over",
 };
 
 const CONDITION_COLORS: Record<AssetCondition, PillColor> = {

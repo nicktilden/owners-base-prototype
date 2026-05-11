@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 600" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Risk Type editor — three-pane configuration surface</title>
+<desc>Layout for the Risk Type editor with fields, dimension mapping, lifecycle, and live preview.</desc>
+<defs>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.label { font-size: 11px; font-weight: 500; fill:#D8E4EE; }
+</style>
+</defs>
+
+<rect x="40" y="40" width="600" height="32" rx="6" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="60">Settings → Health & Risk → Risk Types → Financial Risk</text>
+<text class="ts" x="540" y="60">Save  ·  Preview</text>
+
+<text class="th" x="40" y="100">Three-pane layout</text>
+
+<rect x="40" y="116" width="200" height="280" rx="6" fill="#131E2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="138">Fields</text>
+<text class="tiny" x="56" y="156">Drag from palette below to build form</text>
+
+<rect x="56" y="166" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="180" fill="#8B84E0">Title (text)</text>
+
+<rect x="56" y="190" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="204" fill="#8B84E0">Description (long text)</text>
+
+<rect x="56" y="214" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="228" fill="#8B84E0">Probability (1–5)</text>
+
+<rect x="56" y="238" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="252" fill="#8B84E0">Impact cost (currency)</text>
+
+<rect x="56" y="262" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="276" fill="#8B84E0">Risk owner (user)</text>
+
+<rect x="56" y="286" width="168" height="20" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="64" y="300" fill="#8B84E0">Mitigation plan (long text)</text>
+
+<rect x="56" y="320" width="168" height="20" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" stroke-dasharray="2 2"/>
+<text class="tiny" x="140" y="334" text-anchor="middle">+ Add field</text>
+
+<text class="tiny" x="56" y="360">Field palette (drag to add)</text>
+<rect x="56" y="368" width="36" height="18" rx="9" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="74" y="380" text-anchor="middle">Text</text>
+<rect x="96" y="368" width="36" height="18" rx="9" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="114" y="380" text-anchor="middle">Date</text>
+<rect x="136" y="368" width="48" height="18" rx="9" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="160" y="380" text-anchor="middle">Number</text>
+
+<rect x="260" y="116" width="200" height="280" rx="6" fill="#131E2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="276" y="138">Dimension mapping</text>
+<text class="tiny" x="276" y="156">How risks of this type contribute</text>
+
+<text class="ts" x="276" y="184">Cost</text>
+<rect x="380" y="172" width="60" height="20" rx="4" fill="#101808" stroke="#3B6D11" stroke-width="0.5"/>
+<text class="tiny" x="410" y="186" text-anchor="middle" fill="#7EC848">Primary</text>
+
+<text class="ts" x="276" y="216">Schedule</text>
+<rect x="380" y="204" width="60" height="20" rx="4" fill="#221A0A" stroke="#C07A18" stroke-width="0.5"/>
+<text class="tiny" x="410" y="218" text-anchor="middle" fill="#D89040">Secondary</text>
+
+<text class="ts" x="276" y="248">Safety</text>
+<rect x="380" y="236" width="60" height="20" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="410" y="250" text-anchor="middle">None</text>
+
+<text class="ts" x="276" y="280">Quality</text>
+<rect x="380" y="268" width="60" height="20" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="410" y="282" text-anchor="middle">None</text>
+
+<text class="ts" x="276" y="312">Delivery</text>
+<rect x="380" y="300" width="60" height="20" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="410" y="314" text-anchor="middle">None</text>
+
+<text class="ts" x="276" y="344">Regulatory</text>
+<rect x="380" y="332" width="60" height="20" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="410" y="346" text-anchor="middle">None</text>
+
+<rect x="480" y="116" width="160" height="280" rx="6" fill="#131E2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="496" y="138">Lifecycle</text>
+<text class="tiny" x="496" y="154">State machine</text>
+<text class="tiny" x="496" y="166">for this type</text>
+
+<rect x="500" y="170" width="120" height="22" rx="4" fill="#171F2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="tiny" x="560" y="184" text-anchor="middle">Identified</text>
+
+<line x1="560" y1="194" x2="560" y2="208" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<rect x="500" y="210" width="120" height="22" rx="4" fill="#221A0A" stroke="#C07A18" stroke-width="0.5"/>
+<text class="tiny" x="560" y="224" text-anchor="middle" fill="#D89040">Open</text>
+
+<line x1="560" y1="234" x2="560" y2="248" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<rect x="500" y="250" width="120" height="22" rx="4" fill="#221A0A" stroke="#C07A18" stroke-width="0.5"/>
+<text class="tiny" x="560" y="264" text-anchor="middle" fill="#D89040">Pending Accept.</text>
+
+<line x1="560" y1="274" x2="560" y2="288" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<rect x="500" y="290" width="120" height="22" rx="4" fill="#1A1730" stroke="#7060E0" stroke-width="0.5"/>
+<text class="tiny" x="560" y="304" text-anchor="middle" fill="#8B84E0">Accepted</text>
+
+<line x1="560" y1="314" x2="560" y2="328" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<rect x="500" y="330" width="120" height="22" rx="4" fill="#0D2018" stroke="#18A878" stroke-width="0.5"/>
+<text class="tiny" x="560" y="344" text-anchor="middle" fill="#2EA888">Closed</text>
+
+<text class="tiny" x="496" y="376">Edit transitions ·</text>
+<text class="tiny" x="496" y="390">Required fields per step</text>
+
+<rect x="40" y="416" width="600" height="100" rx="6" fill="#131E2B" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="438">Live preview</text>
+<text class="tiny" x="56" y="456">What an admin sees as a Risk Record of this type, updated as fields change above</text>
+
+<rect x="56" y="466" width="568" height="40" rx="4" fill="#131E2B" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+<text class="ts" x="68" y="482">Title:  Subcontractor default risk on tower crane</text>
+<text class="tiny" x="68" y="498">Probability: 3  ·  Impact cost: $250K  ·  Owner: Jordan Reyes  ·  + 3 more fields</text>
+
+<text class="th" x="40" y="544">First-run path</text>
+<text class="ts" x="40" y="564">"Start from default" loads the customer-validated convergent schema (the "Risk Identification Default" fieldset)</text>
+<text class="ts" x="40" y="582">— same fields two of our customers built independently. Admin edits from there. Cuts setup from hours to minutes.</text>
+</svg>

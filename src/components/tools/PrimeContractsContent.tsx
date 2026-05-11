@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -13,7 +14,7 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -61,6 +62,34 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "contractor", label: "Contractor" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Approved": "green",
+  "Executed": "green",
+  "Draft": "gray",
+  "Pending Approval": "yellow",
+  "Under Review": "yellow",
+  "Void": "gray",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Approved": "Approved",
+  "Executed": "Executed",
+  "Draft": "Draft",
+  "Pending Approval": "Pending Approval",
+  "Under Review": "Under Review",
+  "Void": "Void",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface PrimeContractsContentProps {
   projectId: string;
 }
@@ -79,9 +108,10 @@ export default function PrimeContractsContent({ projectId }: PrimeContractsConte
       {
         field: "status",
         headerName: "Status",
-        width: 120,
+        width: 160,
         filter: "agSetColumnFilter",
         enableRowGroup: true,
+        cellRenderer: StatusPillRenderer,
       },
       { field: "contractAmount", headerName: "Contract Amount", width: 150 },
       {

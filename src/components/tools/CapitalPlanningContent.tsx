@@ -8,6 +8,7 @@ import {
   MultiSelect,
   Pill,
   Search,
+  SegmentedController,
   Select,
   SplitViewCard,
   Switch,
@@ -34,7 +35,6 @@ import {
   Warning,
 } from "@procore/core-icons";
 import styled from "styled-components";
-import SegmentedControl from "@/components/SegmentedControl";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { useHubFiltersOrNull } from "@/context/HubFilterContext";
@@ -1317,39 +1317,285 @@ export default function CapitalPlanningContent({
                         </Select>
                       </div>
                     </div>
-                  ) : null}
-                  {pageVariant === "future" ? (
-                    <div style={{ flexShrink: 0 }}>
-                      <SegmentedControl>
-                        <SegmentedControl.Segment
-                          icon={<ViewGrid size="sm" aria-hidden />}
-                          label="Grid"
+                    {pageVariant !== "default" && pageVariant !== "mvp" ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flex: "0 1 auto",
+                          minWidth: 0,
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <Typography
+                          id={CAPITAL_PLANNING_COMPARISON_SNAPSHOT_SELECT_LABEL_ID}
+                          intent="small"
+                          weight="semibold"
+                          as="span"
+                          style={{ flexShrink: 0 }}
+                        >
+                          Comparison Snapshot
+                        </Typography>
+                        <div
+                          className="capital-planning-snapshot-select-wrap"
+                          style={{ minWidth: 200, maxWidth: "100%", flex: "1 1 auto", width: 250 }}
+                        >
+                          <Select
+                            aria-labelledby={CAPITAL_PLANNING_COMPARISON_SNAPSHOT_SELECT_LABEL_ID}
+                            className={`capital-planning-snapshot-select${
+                              comparisonHistoricalSnapshotSelected ? " capital-planning-snapshot-select--historical" : ""
+                            }`}
+                            block
+                            placeholder="Select comparison snapshot"
+                            label={comparisonSnapshotSelectDisplayLabel}
+                            onClear={
+                              selectedComparisonSnapshotId != null
+                                ? () => setSelectedComparisonSnapshotId(null)
+                                : undefined
+                            }
+                            onSearch={(e: ChangeEvent<HTMLInputElement>) =>
+                              setComparisonSnapshotSelectSearchQuery(e.target.value)
+                            }
+                            afterHide={() => setComparisonSnapshotSelectSearchQuery("")}
+                            emptyMessage="No snapshots match your search."
+                            onSelect={(selection) => {
+                              if (selection.action !== "selected") return;
+                              const item = selection.item as typeof SNAPSHOT_CURRENT_OPTION | SnapshotHistoryOption;
+                              setSelectedComparisonSnapshotId(item.id);
+                            }}
+                          >
+                            {comparisonSnapshotSearchShowsCurrent ? (
+                              <Select.Option
+                                key="comparison-snapshot-current"
+                                value={SNAPSHOT_CURRENT_OPTION}
+                                selected={selectedComparisonSnapshotId === SNAPSHOT_CURRENT_OPTION.id}
+                              >
+                                <div className="capital-planning-snapshot-select-option-row">
+                                  <span style={{ fontWeight: 600 }}>{SNAPSHOT_CURRENT_OPTION.label}</span>
+                                </div>
+                              </Select.Option>
+                            ) : null}
+                            {filteredComparisonSnapshotHistoryOptions.map((opt, index) => (
+                              <Select.Option key={opt.id} value={opt} selected={selectedComparisonSnapshotId === opt.id}>
+                                <div
+                                  className="capital-planning-snapshot-select-option-row"
+                                  style={
+                                    index === 0 && comparisonSnapshotSearchShowsCurrent
+                                      ? {
+                                          marginTop: 10,
+                                          paddingTop: 10,
+                                          borderTop: "1px solid var(--color-border-separator)",
+                                        }
+                                      : undefined
+                                  }
+                                >
+                                  <span style={{ fontWeight: 600 }}>{opt.label}</span>
+                                  <div className="capital-planning-snapshot-select-option-meta">
+                                    {opt.createdBy} · {opt.dateLabel}
+                                  </div>
+                                </div>
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            )}
+              {!embeddedInHub ? (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    minWidth: 0,
+                    width: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      minWidth: 0,
+                      flex: "1 1 auto",
+                    }}
+                  >
+                    <div style={{ width: 280, maxWidth: "100%", minWidth: 0 }}>
+                      <Search
+                        placeholder="Search Projects"
+                        value={search}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                      />
+                    </div>
+                    <ToggleButton
+                      selected={filterOpen}
+                      icon={<Filter />}
+                      onClick={() => {
+                        setFilterOpen((v) => !v);
+                        if (configureOpen) setConfigureOpen(false);
+                      }}
+                    >
+                      Filter
+                    </ToggleButton>
+                    {headerTab === "capital_plan" && filterStatus.includes("Concept") ? (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 2,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Pill color={STATUS_PILL_COLOR.Concept} style={{ flexShrink: 0 }}>
+                          Concept projects
+                        </Pill>
+                        <Button
+                          type="button"
+                          variant="tertiary"
+                          className="b_tertiary"
+                          size="sm"
+                          icon={<Clear />}
+                          aria-label="Remove Concept from status filter"
+                          onClick={() =>
+                            setFilterStatus((prev) => prev.filter((s) => s !== "Concept"))
+                          }
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      flexShrink: 0,
+                      justifyContent: "flex-end",
+                      minWidth: 0,
+                    }}
+                  >
+                    {headerTab === "capital_plan" && capitalPlanTablePlanView === "gantt" ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flexShrink: 0,
+                          minWidth: 0,
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <Typography
+                          id={CAPITAL_PLANNING_VIEW_BY_LABEL_ID}
+                          intent="small"
+                          weight="semibold"
+                          as="span"
+                          style={{ flexShrink: 0 }}
+                        >
+                          View by
+                        </Typography>
+                        <div
+                          className="capital-planning-view-by-select-wrap"
+                          style={{
+                            boxSizing: "border-box",
+                            minWidth: 100,
+                            maxWidth: "100%",
+                            width: 160,
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          <Select
+                            aria-labelledby={CAPITAL_PLANNING_VIEW_BY_LABEL_ID}
+                            className="capital-planning-view-by-select"
+                            block
+                            placeholder="View by"
+                            label={VIEW_BY_OPTIONS.find((o) => o.value === viewByGranularity)?.label}
+                            onSelect={(s) => {
+                              if (s.action !== "selected") return;
+                              const opt = s.item as (typeof VIEW_BY_OPTIONS)[number];
+                              setViewByGranularity(opt.value);
+                            }}
+                          >
+                            {VIEW_BY_OPTIONS.map((o) => (
+                              <Select.Option key={o.value} value={o} selected={viewByGranularity === o.value}>
+                                {o.label}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </div>
+                      </div>
+                    ) : null}
+                    {headerTab === "capital_plan" && pageVariant === "future" ? (
+                      <SegmentedController className="b_radiogroup" style={{ flexShrink: 0 }}>
+                        <SegmentedController.Segment
                           selected={capitalPlanTablePlanView === "grid"}
                           onClick={() => setPlanView("grid")}
-                        />
-                        <SegmentedControl.Segment
-                          icon={<Gantt size="sm" aria-hidden />}
-                          label="Gantt"
+                        >
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <ViewGrid size="sm" aria-hidden />
+                            Grid
+                          </span>
+                        </SegmentedController.Segment>
+                        <SegmentedController.Segment
                           selected={planView === "gantt"}
                           onClick={() => setPlanView("gantt")}
+                        >
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <Gantt size="sm" aria-hidden />
+                            Gantt
+                          </span>
+                        </SegmentedController.Segment>
+                      </SegmentedController>
+                    ) : null}
+                    {headerTab === "capital_plan" ? (
+                      <div style={{ width: 280, maxWidth: "100%", minWidth: 0 }}>
+                        <MultiSelect
+                          className="capital-planning-group-by-select capital-planning-group-by-multiselect"
+                          block
+                          placeholder="Group by"
+                          options={GROUP_BY_MULTI_OPTIONS}
+                          value={groupBySelection}
+                          onChange={handleGroupBySelectionChange}
+                          getId={(o) => o.id}
+                          getLabel={(o) => o.label}
+                          tokenRenderer={({ option, disabled, focused, getLabel: getOptLabel, removeToken }) => (
+                            <Token
+                              disabled={disabled}
+                              focused={focused}
+                              className="capital-planning-group-by-pill-token"
+                            >
+                              <Token.Label>{getOptLabel(option)}</Token.Label>
+                              <Token.Remove data-close onClick={removeToken} />
+                            </Token>
+                          )}
                         />
-                      </SegmentedControl>
-                    </div>
-                  ) : null}
-                  <div style={{ width: 240, maxWidth: "100%", minWidth: 0 }}>
-                    <Select
-                      className="capital-planning-group-by-select"
-                      block
-                      placeholder="Select Group By"
-                      label={
-                        groupBy
-                          ? CAPITAL_PLANNING_GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label
-                          : undefined
-                      }
-                      onClear={() => setGroupBy(null)}
-                      onSelect={(s) => {
-                        if (s.action !== "selected") return;
-                        setGroupBy(s.item as CapitalPlanningGroupBy);
+                      </div>
+                    ) : null}
+                    <ToggleButton
+                      selected={configureOpen}
+                      icon={<Sliders />}
+                      onClick={() => {
+                        setConfigureOpen((v) => !v);
+                        if (filterOpen) setFilterOpen(false);
                       }}
                     >
                       Configure
@@ -1678,26 +1924,26 @@ export default function CapitalPlanningContent({
                     >
                       Row height
                     </Typography>
-                    <SegmentedControl>
-                      <SegmentedControl.Segment
+                    <SegmentedController>
+                      <SegmentedController.Segment
                         selected={tableRowHeight === "sm"}
                         onClick={() => setTableRowHeight("sm")}
-                        label="Small"
-                        tooltip="Compact row height"
-                      />
-                      <SegmentedControl.Segment
+                      >
+                        Small
+                      </SegmentedController.Segment>
+                      <SegmentedController.Segment
                         selected={tableRowHeight === "md"}
                         onClick={() => setTableRowHeight("md")}
-                        label="Medium"
-                        tooltip="Default row height"
-                      />
-                      <SegmentedControl.Segment
+                      >
+                        Medium
+                      </SegmentedController.Segment>
+                      <SegmentedController.Segment
                         selected={tableRowHeight === "lg"}
                         onClick={() => setTableRowHeight("lg")}
-                        label="Large"
-                        tooltip="Expanded row height"
-                      />
-                    </SegmentedControl>
+                      >
+                        Large
+                      </SegmentedController.Segment>
+                    </SegmentedController>
                   </div>
                   <hr
                     style={{

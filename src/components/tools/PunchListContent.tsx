@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -13,7 +14,8 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -64,6 +66,34 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "assignedTo", label: "Assigned To" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Open": "blue",
+  "In Progress": "yellow",
+  "Ready for Review": "yellow",
+  "Completed": "green",
+  "Void": "gray",
+  "Pending": "blue",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Open": "Open",
+  "In Progress": "In Progress",
+  "Ready for Review": "Ready for Review",
+  "Completed": "Completed",
+  "Void": "Void",
+  "Pending": "Pending",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface PunchListContentProps {
   projectId: string;
 }
@@ -81,7 +111,7 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
   const columnDefs = useMemo<ColDef[]>(
     () => [
       { field: "number", headerName: "#", width: 80 },
-      { field: "description", headerName: "Description", minWidth: 200 },
+      { field: "description", headerName: "Description", minWidth: 200, cellRenderer: LinkCellRenderer },
       {
         field: "location",
         headerName: "Location",
@@ -92,14 +122,28 @@ export default function PunchListContent({ projectId }: PunchListContentProps) {
       {
         field: "status",
         headerName: "Status",
-        width: 120,
+        width: 150,
         filter: "agSetColumnFilter",
         enableRowGroup: true,
+        cellRenderer: StatusPillRenderer,
       },
       {
         field: "assignedTo",
         headerName: "Assigned To",
         width: 150,
+        filter: "agSetColumnFilter",
+        enableRowGroup: true,
+      },
+      {
+        field: "createdBy",
+        headerName: "Created By",
+        width: 150,
+        filter: "agSetColumnFilter",
+      },
+      {
+        field: "trade",
+        headerName: "Trade",
+        width: 140,
         filter: "agSetColumnFilter",
         enableRowGroup: true,
       },

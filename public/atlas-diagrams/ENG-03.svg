@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 640" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Read path: Portfolio Health page render</title>
+<desc>Sequence of operations from URL navigation to rendered pixels.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+</style>
+</defs>
+
+<text class="ts" x="40" y="30">User</text>
+<text class="ts" x="180" y="30">Router</text>
+<text class="ts" x="320" y="30">Hooks</text>
+<text class="ts" x="460" y="30">Engine</text>
+<text class="ts" x="600" y="30">UI</text>
+
+<line x1="80" y1="50" x2="80" y2="600" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+<line x1="220" y1="50" x2="220" y2="600" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+<line x1="360" y1="50" x2="360" y2="600" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+<line x1="500" y1="50" x2="500" y2="600" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+<line x1="640" y1="50" x2="640" y2="600" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+<rect x="40" y="60" width="80" height="40" rx="6" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="80" y="84" text-anchor="middle">Navigate</text>
+
+<line x1="120" y1="80" x2="180" y2="80" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="180" y="60" width="80" height="40" rx="6" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="220" y="84" text-anchor="middle">Match route</text>
+
+<line x1="220" y1="100" x2="220" y2="120" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="160" y="120" width="120" height="40" rx="6" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="220" y="144" text-anchor="middle">Mount HealthPage</text>
+
+<line x1="280" y1="140" x2="320" y2="140" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="320" y="120" width="120" height="56" rx="6" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="380" y="142" text-anchor="middle" fill="#8B84E0">useHealthConfig</text>
+<text class="ts" x="380" y="160" text-anchor="middle" fill="#A89EF0">read thresholds</text>
+
+<line x1="380" y1="176" x2="380" y2="196" stroke="#7060E0" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="320" y="196" width="120" height="56" rx="6" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="380" y="218" text-anchor="middle" fill="#8B84E0">useRiskRecords</text>
+<text class="ts" x="380" y="236" text-anchor="middle" fill="#A89EF0">read records</text>
+
+<line x1="380" y1="252" x2="380" y2="272" stroke="#7060E0" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="320" y="272" width="120" height="56" rx="6" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="ts" x="380" y="294" text-anchor="middle" fill="#8B84E0">useProjects</text>
+<text class="ts" x="380" y="312" text-anchor="middle" fill="#A89EF0">existing context</text>
+
+<line x1="440" y1="300" x2="500" y2="300" stroke="#18A878" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="500" y="272" width="140" height="80" rx="6" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="570" y="298" text-anchor="middle" fill="#2EA888">calculateHealth</text>
+<text class="ts" x="570" y="316" text-anchor="middle" fill="#4EC9A8">per-project loop</text>
+<text class="ts" x="570" y="334" text-anchor="middle" fill="#4EC9A8">memoized by inputs</text>
+
+<line x1="570" y1="352" x2="570" y2="380" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="500" y="380" width="140" height="56" rx="6" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="ts" x="570" y="402" text-anchor="middle" fill="#4D90D8">HealthResult[]</text>
+<text class="ts" x="570" y="420" text-anchor="middle" fill="#0D2540">one per project</text>
+
+<path d="M500 408 Q420 460 220 480" stroke="#2A80D0" stroke-width="0.5" fill="none" marker-end="url(#arrow)"/>
+
+<rect x="160" y="460" width="120" height="56" rx="6" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="ts" x="220" y="482" text-anchor="middle" fill="#E06840">Render KPI bar</text>
+<text class="ts" x="220" y="500" text-anchor="middle" fill="#FF8060">+ project grid</text>
+
+<line x1="220" y1="516" x2="220" y2="540" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="160" y="540" width="120" height="56" rx="6" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="ts" x="220" y="562" text-anchor="middle" fill="#E06840">Each row uses</text>
+<text class="ts" x="220" y="580" text-anchor="middle" fill="#FF8060">HealthBadge primitive</text>
+
+<line x1="280" y1="568" x2="600" y2="568" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="600" y="540" width="40" height="56" rx="6" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="620" y="568" text-anchor="middle">Paint</text>
+
+<text class="th" x="40" y="624">All synchronous in prototype. For prod port, hooks become async data fetches; engine becomes server work; result shape unchanged.</text>
+</svg>

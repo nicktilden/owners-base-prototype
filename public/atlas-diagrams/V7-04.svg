@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 660" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>RiskTag lifecycle v7 — coexisting Pending Acceptance and Pending Approval</title>
+<desc>Lifecycle for tags showing how the manual escalation path and the automatic governance path coexist on the same tag type.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.new { font-size: 11px; font-weight: 500; fill:#FF8060; }
+</style>
+</defs>
+
+<rect x="40" y="60" width="120" height="56" rx="8" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="100" y="84" text-anchor="middle" fill="#D89040">Open</text>
+<text class="ts" x="100" y="102" text-anchor="middle" fill="#F0B060">Active in forecast</text>
+
+<rect x="40" y="180" width="160" height="56" rx="8" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="120" y="204" text-anchor="middle" fill="#D89040">Pending Acceptance</text>
+<text class="ts" x="120" y="222" text-anchor="middle" fill="#F0B060">Manual escalation</text>
+
+<rect x="240" y="180" width="160" height="56" rx="8" fill="#2A1E0A" stroke="#D09820" stroke-width="0.5"/>
+<text class="th" x="320" y="204" text-anchor="middle" fill="#C89028">Pending Approval</text>
+<text class="ts" x="320" y="222" text-anchor="middle" fill="#E8B840">Workflow trigger</text>
+<text class="new" x="405" y="200">v7</text>
+
+<rect x="440" y="60" width="160" height="56" rx="8" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="th" x="520" y="84" text-anchor="middle" fill="#4D90D8">Mitigated</text>
+<text class="ts" x="520" y="102" text-anchor="middle" fill="#0D2540">Plan in place, residual</text>
+
+<rect x="440" y="180" width="120" height="56" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="500" y="204" text-anchor="middle" fill="#8B84E0">Accepted</text>
+<text class="ts" x="500" y="222" text-anchor="middle" fill="#A89EF0">Owner sign-off</text>
+
+<rect x="440" y="300" width="120" height="56" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="500" y="324" text-anchor="middle" fill="#2EA888">Closed</text>
+<text class="ts" x="500" y="342" text-anchor="middle" fill="#4EC9A8">Out of forecast</text>
+
+<line x1="160" y1="88" x2="440" y2="88" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<text class="ts" x="300" y="80" text-anchor="middle">Mitigation plan added</text>
+
+<line x1="100" y1="116" x2="100" y2="180" stroke="#C07A18" stroke-width="0.5" marker-end="url(#arrow)"/>
+<text class="ts" x="50" y="150">PM</text>
+<text class="ts" x="50" y="166">requests</text>
+
+<line x1="160" y1="100" x2="240" y2="200" stroke="#D09820" stroke-width="0.5" marker-end="url(#arrow)"/>
+<text class="ts" x="195" y="148">Threshold</text>
+<text class="ts" x="195" y="164">crossed</text>
+
+<line x1="200" y1="208" x2="440" y2="208" stroke="#7060E0" stroke-width="0.5" marker-end="url(#arrow)"/>
+<text class="ts" x="320" y="200" text-anchor="middle">Owner accepts</text>
+
+<line x1="400" y1="208" x2="440" y2="208" stroke="#7060E0" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<path d="M120 180 Q60 130 80 116" stroke="#C07A18" stroke-width="0.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<text class="ts" x="20" y="148">Returned</text>
+
+<path d="M280 180 Q200 130 140 116" stroke="#D09820" stroke-width="0.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<text class="ts" x="200" y="120">Workflow rejects</text>
+
+<path d="M520 116 Q580 200 540 300" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" fill="none" marker-end="url(#arrow)"/>
+<text class="ts" x="600" y="208">Risk passed</text>
+
+<line x1="500" y1="236" x2="500" y2="300" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<path d="M120 116 Q400 380 440 328" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" fill="none" marker-end="url(#arrow)"/>
+<text class="ts" x="200" y="396">Resolved or no longer relevant</text>
+
+<text class="th" x="40" y="430">The two governance paths — same tag, different triggers</text>
+
+<rect x="40" y="446" width="320" height="120" rx="8" fill="#1A2535" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="56" y="468" fill="#D89040">Pending Acceptance — manual escalation</text>
+<text class="ts" x="56" y="488" fill="#F0B060">Triggered: PM tries to Accept but lacks risk:accept permission</text>
+<text class="ts" x="56" y="506" fill="#F0B060">Mechanism: in-app notification to Owner-tier user</text>
+<text class="ts" x="56" y="524" fill="#F0B060">Configured by: built-in system behavior, no admin setup</text>
+<text class="ts" x="56" y="542" fill="#F0B060">Use case: "I want to accept this risk but I'm not authorized"</text>
+<text class="ts" x="56" y="560" fill="#F0B060">Resolution: Owner accepts → Accepted, returns → Open</text>
+
+<rect x="380" y="446" width="320" height="120" rx="8" fill="#1A2535" stroke="#D09820" stroke-width="0.5"/>
+<text class="th" x="396" y="468" fill="#C89028">Pending Approval — automatic governance</text>
+<text class="ts" x="396" y="488" fill="#E8B840">Triggered: tag's impact crosses configured threshold</text>
+<text class="ts" x="396" y="506" fill="#E8B840">Mechanism: existing Procore Workflows tool</text>
+<text class="ts" x="396" y="524" fill="#E8B840">Configured by: admin per Risk Type via ApprovalTrigger</text>
+<text class="ts" x="396" y="542" fill="#E8B840">Use case: "Any high-impact risk needs sign-off automatically"</text>
+<text class="ts" x="396" y="560" fill="#E8B840">Resolution: workflow approves → Open, rejects → Open + note</text>
+
+<text class="th" x="40" y="600">A tag can be in both states simultaneously</text>
+<text class="ts" x="40" y="620">If a PM tries to Accept a tag that has also crossed the approval threshold, both states apply.</text>
+<text class="ts" x="40" y="638">UI displays both indicators. Both must clear before the tag can move to Accepted.</text>
+<text class="ts" x="40" y="656">For the prototype, build both. They are not redundant — they serve different governance patterns.</text>
+</svg>

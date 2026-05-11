@@ -4321,26 +4321,110 @@ export function CapitalPlanningSmartGrid({
                 ) : null}
               </Table.BodyRow>
               );
-              const plannedSource = plannedAmountSourceByRowId[row.id];
-              const isLumpSumPlannedAmount = isLumpSumPlannedAmountSource(plannedSource);
-              const isHighLevelBudgetItemsPlannedAmount =
-                plannedSource === HIGH_LEVEL_BUDGET_ITEMS_SOURCE;
-              const projectBudgetPlannedAmountTooltip =
-                plannedSource === PROJECT_BUDGET_ORIGINAL_SOURCE
-                  ? "Original Budget"
-                  : plannedSource === PROJECT_BUDGET_REVISED_SOURCE
-                    ? "Revised Budget"
-                    : null;
-              const projectDescription = prototypeProjectDescriptionFromName(row.project);
-              return (
-              <Table.BodyRow key={row.id} className="capital-planning-table-status-group-child">
-                <Table.BodyCell className={baselineCellClasses("project", columnVisibility)}>
-                  <Table.LinkCell href={`/project/${row.projectId}/overview`}>{row.project}</Table.LinkCell>
-                </Table.BodyCell>
-                {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
-                  <Table.BodyCell
-                    className={baselineCellClasses("projectDescription", columnVisibility)}
-                    style={{ verticalAlign: "middle" }}
+  };
+
+  return (
+    <>
+    <Table.Container
+      className={[
+        "capital-planning-table-scroll",
+        showSelectionCheckboxes ? "" : "capital-planning-no-row-selection",
+        ganttFlatForecast ? "capital-planning--gantt-forecast" : "",
+        ganttYearRollingFlat ? "capital-planning--gantt-forecast-rolling-year" : "",
+        show.forecast && ganttQuarterYearBands ? "capital-planning--gantt-forecast-quarter-bands" : "",
+        rowHeight === "sm" ? "capital-planning-row-height--sm" : "",
+        rowHeight === "md" ? "capital-planning-row-height--md" : "",
+        rowHeight === "lg" ? "capital-planning-row-height--lg" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Table>
+        <Table.Header>
+          <Table.HeaderRow>
+            <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("project", columnVisibility)}>
+              <div className="capital-planning-project-header-inner">
+                <span className="capital-planning-project-checkbox-slot">
+                  {showSelectionCheckboxes ? (
+                    <Table.Checkbox
+                      className="capital-planning-project-checkbox"
+                      aria-label="Select all visible projects"
+                      disabled={readOnly}
+                      checked={headerSelectAllChecked}
+                      indeterminate={headerSelectAllIndeterminate}
+                      onChange={toggleSelectAllVisible}
+                    />
+                  ) : (
+                    <span className="capital-planning-project-checkbox-spacer" aria-hidden />
+                  )}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="capital-planning-forecast-fy-toggle capital-planning-project-header-region-toggle"
+                  icon={
+                    toolbarAllGroupsCollapsed ? (
+                      <CaretsOutVertical size="sm" />
+                    ) : (
+                      <CaretsInVertical size="sm" />
+                    )
+                  }
+                  disabled={!toolbarHasGroups}
+                  aria-label={
+                    !toolbarHasGroups
+                      ? isFlatUngroupedProgramTable
+                        ? "Select Group by to show grouped sections"
+                        : capitalPlanningGroupByEmptyToolbarLabel(resolvedGroupBy)
+                      : toolbarAllGroupsExpanded
+                        ? `Collapse all ${capitalPlanningGroupByCollapseNoun(resolvedGroupBy)}`
+                        : `Expand all ${capitalPlanningGroupByCollapseNoun(resolvedGroupBy)}`
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (showRegionCampusBuildingHierarchy) {
+                      toggleAllLocationHierarchyRegions();
+                    } else if (showDynamicMultiHierarchy) {
+                      toggleAllDynamicTopLevel();
+                    } else {
+                      toggleAllRegionGroups();
+                    }
+                  }}
+                />
+                <span className="capital-planning-project-header-label">{formatHeaderLabel("Project")}</span>
+              </div>
+            </Table.HeaderCell>
+            {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
+              <Table.HeaderCell
+                rowSpan={headerBaseRowSpan}
+                className={baselineCellClasses("projectDescription", columnVisibility)}
+              >
+                <Typography intent="small" weight="semibold" as="span">
+                  {formatHeaderLabel("Description")}
+                </Typography>
+              </Table.HeaderCell>
+            ) : null}
+            {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
+              <Table.HeaderCell
+                rowSpan={headerBaseRowSpan}
+                className={baselineCellClasses("estimatedBudget", columnVisibility)}
+              >
+                <Tooltip
+                  trigger="hover"
+                  placement="top"
+                  overlay={
+                    <Tooltip.Content>
+                      <EstimatedBudgetColumnHeaderTooltipBody />
+                    </Tooltip.Content>
+                  }
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "100%",
+                      cursor: "help",
+                    }}
                   >
                     {formatHeaderLabel("Estimated Budget")}
                   </span>

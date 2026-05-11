@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 660" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Observations tool as a risk signal source</title>
+<desc>How existing Procore Observations feed into the Health and Risk system via the normalization layer, avoiding a naming conflict and leveraging existing field workflows.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; fill:#D8E4EE; }
+</style>
+</defs>
+
+<!-- Existing tools layer -->
+<text class="ts" x="40" y="30">Existing Procore tools — unchanged</text>
+
+<rect x="40" y="44" width="130" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="105" y="68" text-anchor="middle">Observations</text>
+<text class="ts" x="105" y="86" text-anchor="middle">Field team files</text>
+
+<rect x="190" y="44" width="130" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="255" y="68" text-anchor="middle">RFIs</text>
+<text class="ts" x="255" y="86" text-anchor="middle">Design questions</text>
+
+<rect x="340" y="44" width="130" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="405" y="68" text-anchor="middle">Change Events</text>
+<text class="ts" x="405" y="86" text-anchor="middle">Cost pressure</text>
+
+<rect x="490" y="44" width="130" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="555" y="68" text-anchor="middle">Budget / Schedule</text>
+<text class="ts" x="555" y="86" text-anchor="middle">Financial data</text>
+
+<!-- Normalization layer -->
+<line x1="105" y1="100" x2="105" y2="134" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="255" y1="100" x2="255" y2="134" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="405" y1="100" x2="405" y2="134" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="555" y1="100" x2="555" y2="134" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="134" width="640" height="72" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="360" y="158" text-anchor="middle" fill="#2EA888">Normalization layer — reads all source data, applies threshold rules</text>
+<text class="ts" x="360" y="178" text-anchor="middle" fill="#4EC9A8">Observation severity: high → flag as risk signal candidate  ·  RFI aging > 14d → flag  ·  Budget variance > 5% → flag</text>
+<text class="ts" x="360" y="196" text-anchor="middle" fill="#4EC9A8">No new Observation fields required — reads type, severity, assignee, status from existing Observation data model</text>
+
+<!-- Signal surfacing -->
+<line x1="360" y1="206" x2="360" y2="232" stroke="#18A878" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="232" width="640" height="72" rx="8" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="360" y="256" text-anchor="middle" fill="#D89040">Signals surface in the tearsheet — origin labelled, user decides</text>
+<text class="ts" x="56" y="278" fill="#F0B060">Observation #OBS-0441 · Severity: High · Assigned to: Casey Ward · "Crane footing soil instability"</text>
+<text class="ts" x="56" y="296" fill="#F0B060">Source: Observations tool (automated detection)  ·  Threshold: High-severity open observation on active project</text>
+
+<!-- Three-way decision -->
+<line x1="180" y1="304" x2="120" y2="344" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="360" y1="304" x2="360" y2="344" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="540" y1="304" x2="600" y2="344" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="344" width="160" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="120" y="368" text-anchor="middle">Dismiss</text>
+<text class="ts" x="120" y="386" text-anchor="middle">False positive</text>
+
+<rect x="280" y="344" width="160" height="56" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="360" y="368" text-anchor="middle">Acknowledge</text>
+<text class="ts" x="360" y="386" text-anchor="middle">Noted, no record</text>
+
+<rect x="520" y="344" width="160" height="56" rx="8" fill="#0D2540" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="th" x="600" y="368" text-anchor="middle" fill="#1E2D3D">Promote</text>
+<text class="ts" x="600" y="386" text-anchor="middle" fill="#0D1E30">Creates Risk Record</text>
+
+<!-- Risk Record created -->
+<line x1="600" y1="400" x2="600" y2="426" stroke="#2A80D0" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="440" y="426" width="280" height="80" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="th" x="580" y="450" text-anchor="middle" fill="#E06840">Risk Record (promoted)</text>
+<text class="ts" x="456" y="470" fill="#FF8060">Type: Site / Safety Risk</text>
+<text class="ts" x="456" y="488" fill="#FF8060">Linked evidence: OBS-0441 (caused_by)</text>
+<text class="ts" x="456" y="506" fill="#FF8060">Origin: promoted</text>
+
+<!-- Naming callout box -->
+<rect x="40" y="430" width="380" height="80" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="56" y="454" fill="#8B84E0">Naming — avoid collision</text>
+<text class="ts" x="56" y="474" fill="#A89EF0">"Observations" is already a Procore tool. Never use</text>
+<text class="ts" x="56" y="492" fill="#A89EF0">"observation" for risk manual entry. Instead: Risk Record</text>
+<text class="ts" x="56" y="510" fill="#A89EF0">(formal), Risk Signal (automated), Manual entry (informal).</text>
+
+<!-- What changes in Observations -->
+<rect x="40" y="540" width="640" height="100" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="562">What changes in the Observations tool (minimal)</text>
+<text class="ts" x="56" y="582">Option A (simpler): No changes to the Observations tool. The normalization layer reads existing fields</text>
+<text class="ts" x="56" y="598">(type, severity, status, assignee) and applies threshold rules automatically.</text>
+<text class="ts" x="56" y="618">Option B (richer): Add an optional "Risk relevance" flag to the Observations form — a single toggle that</text>
+<text class="ts" x="56" y="636">field workers can set to signal "this one matters for risk." Makes the automatic threshold optional.</text>
+</svg>

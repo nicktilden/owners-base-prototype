@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 720" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Automated population — concrete end-to-end example</title>
+<desc>Traces a budget overrun through the four-layer system from raw tool data to a surfaced signal and optional promoted Risk Record.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; fill:#D8E4EE; }
+.layer { font-size: 11px; font-weight: 500; fill:rgba(255,255,255,0.4); }
+</style>
+</defs>
+
+<!-- Layer labels on left -->
+<text class="layer" x="14" y="90" transform="rotate(-90,14,90)">Layer 1 — Source</text>
+<text class="layer" x="14" y="230" transform="rotate(-90,14,230)">Layer 2 — Normalize</text>
+<text class="layer" x="14" y="380" transform="rotate(-90,14,380)">Layer 3 — Calculate</text>
+<text class="layer" x="14" y="530" transform="rotate(-90,14,530)">Layer 4 — Experience</text>
+
+<!-- Layer 1: Raw data -->
+<rect x="40" y="44" width="640" height="100" rx="8" fill="#1E2D3D" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="68">Raw data read from Budget tool</text>
+<text class="mono" x="56" y="90">project: "Tower Block NE1001"</text>
+<text class="mono" x="56" y="108">originalBudget: $4,200,000  |  revisedBudget: $4,410,000  |  forecastToComplete: $4,505,000</text>
+<text class="mono" x="56" y="126">pendingChangeEvents: 6  |  pendingCEExposure: $312,000  |  contingencyRemaining: 18%</text>
+<text class="tiny" x="56" y="142">Source: Budget tool — read directly. No human entry required at this layer.</text>
+
+<!-- Arrow -->
+<line x1="360" y1="144" x2="360" y2="166" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<!-- Layer 2: Normalization -->
+<rect x="40" y="166" width="640" height="100" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="th" x="56" y="190" fill="#2EA888">Normalization — compute derived values, check thresholds</text>
+<text class="mono" x="56" y="212">budgetVariancePct = (forecastToComplete - revisedBudget) / revisedBudget = +2.15%</text>
+<text class="mono" x="56" y="230">contingencyRemainingPct = 18%  →  threshold check: &lt;30% = Yellow</text>
+<text class="mono" x="56" y="248">pendingCEExposure = $312K on $4.41M budget = 7.1%  →  threshold check: &gt;5% of budget = Yellow</text>
+<text class="tiny" x="56" y="262">All three values exceed the account-level ThresholdRules for the Cost dimension.</text>
+
+<!-- Arrow -->
+<line x1="360" y1="266" x2="360" y2="288" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<!-- Layer 3: Calculation -->
+<rect x="40" y="288" width="640" height="120" rx="8" fill="#1E1B3A" stroke="#7060E0" stroke-width="0.5"/>
+<text class="th" x="56" y="312" fill="#8B84E0">Rule engine — current-state path</text>
+<text class="ts" x="56" y="334" fill="#A89EF0">Cost dimension score = worst of contributing rules = Yellow (contingency &lt;30% triggers it)</text>
+<text class="ts" x="56" y="352" fill="#A89EF0">Reasons generated: "Contingency at 18% (threshold: &lt;30% = Yellow)"  ·  "6 pending CEs totalling $312K"</text>
+<text class="ts" x="56" y="370" fill="#A89EF0">No open Risk Records yet → forecastStatus = same as currentStatus (no enrichment)</text>
+<text class="ts" x="56" y="388" fill="#A89EF0">signalOrigin = 'automated'  ·  integrityResult = complete (all fields present)</text>
+
+<!-- Arrow -->
+<line x1="360" y1="408" x2="360" y2="428" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<!-- Layer 4: Surfaces -->
+<rect x="40" y="428" width="640" height="100" rx="8" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="56" y="452" fill="#D89040">Experience layer — signal surfaces in tearsheet, no human action required</text>
+<text class="ts" x="56" y="474" fill="#F0B060">Project "Tower Block" shows Yellow Cost badge in portfolio table  ·  DualStatusBadge: Yellow | Yellow (no forecast)</text>
+<text class="ts" x="56" y="492" fill="#F0B060">Opening tearsheet shows evidence card: "Cost — contingency at 18%, 6 pending change events $312K"</text>
+<text class="ts" x="56" y="510" fill="#F0B060">Promote button available  ·  All three reasons shown  ·  Origin: Automated  ·  No PM action required to get here</text>
+
+<!-- Divider -->
+<line x1="40" y1="550" x2="680" y2="550" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text class="tiny" x="260" y="546">— optional from here — user decides whether to promote —</text>
+
+<!-- Promotion outcome -->
+<line x1="360" y1="550" x2="360" y2="572" stroke="#2A80D0" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="572" width="640" height="120" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="th" x="56" y="596" fill="#E06840">If promoted — Risk Record is created and forecast changes</text>
+<text class="mono" x="56" y="618">type: "Financial Risk"  |  title: "Cost overrun risk — contingency erosion + CE exposure"</text>
+<text class="mono" x="56" y="636">probability: 3 (PM sets this)  |  impactCost: { min: $200K, expected: $312K, max: $450K }</text>
+<text class="mono" x="56" y="654">linkedItems: [CE batch, budget line]  |  origin: 'promoted'  |  status: Open</text>
+<text class="ts" x="56" y="676" fill="#FF8060">Forecast now: probability(3/5) × expected impact($312K) = $187K expected exposure added to Cost forecast</text>
+<text class="ts" x="56" y="694" fill="#FF8060">DualStatusBadge updates: Yellow current | At Risk forecast  →  the "Healthy now, At Risk forecast" demo state</text>
+</svg>

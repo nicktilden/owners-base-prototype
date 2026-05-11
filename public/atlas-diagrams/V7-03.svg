@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 600" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Origin indicator system</title>
+<desc>Three-tier visual treatment for distinguishing automated, manual, and mixed-origin signals.</desc>
+<defs>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.6); }
+.kpi { font-size: 24px; font-weight: 500; fill:#D8E4EE; }
+</style>
+</defs>
+
+<text class="th" x="40" y="40">Tier 1 — Inline icon</text>
+<text class="ts" x="40" y="60">Always visible. 12px. Three states.</text>
+
+<circle cx="60" cy="100" r="6" fill="rgba(255,255,255,0.6)"/>
+<text class="ts" x="78" y="104">Automated — calculated from connected tool data</text>
+
+<circle cx="60" cy="128" r="6" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<text class="ts" x="78" y="132">Manual — entered by a user, or promoted then accepted</text>
+
+<circle cx="60" cy="156" r="6" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<path d="M 54 156 A 6 6 0 0 1 66 156 Z" fill="rgba(255,255,255,0.6)"/>
+<text class="ts" x="78" y="160">Mixed — aggregation includes both origins</text>
+
+<text class="th" x="40" y="210">Tier 2 — In context</text>
+<text class="ts" x="40" y="230">Icon paired with the data it qualifies. Shown in cards, tables, KPI numbers.</text>
+
+<rect x="40" y="244" width="180" height="80" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="56" y="266">Cost variance</text>
+<text class="kpi" x="56" y="296">+4.2%</text>
+<circle cx="200" cy="262" r="6" fill="rgba(255,255,255,0.6)"/>
+
+<rect x="240" y="244" width="180" height="80" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="256" y="266">Risk exposure</text>
+<text class="kpi" x="256" y="296">$2.4M</text>
+<circle cx="400" cy="262" r="6" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+
+<rect x="440" y="244" width="180" height="80" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="ts" x="456" y="266">Total open risks</text>
+<text class="kpi" x="456" y="296">14</text>
+<circle cx="600" cy="262" r="6" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<path d="M 594 262 A 6 6 0 0 1 606 262 Z" fill="rgba(255,255,255,0.6)"/>
+
+<text class="tiny" x="40" y="346">Hover any icon: tooltip reveals the origin detail (e.g., "Calculated from Budget tool, last refresh 2h ago")</text>
+
+<text class="th" x="40" y="396">Tier 3 — In tearsheet</text>
+<text class="ts" x="40" y="416">Full evidence section. Origin per dimension, listed inputs.</text>
+
+<rect x="40" y="430" width="600" height="120" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="56" y="454">Why this score?</text>
+
+<circle cx="60" cy="480" r="5" fill="rgba(255,255,255,0.6)"/>
+<text class="ts" x="74" y="484">Cost: automated — Budget variance 4.2% (Yellow threshold at 2%)</text>
+
+<circle cx="60" cy="500" r="5" fill="rgba(255,255,255,0.6)"/>
+<text class="ts" x="74" y="504">Schedule: automated — 8 days behind baseline, milestone completion 87%</text>
+
+<circle cx="60" cy="520" r="5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<text class="ts" x="74" y="524">Safety: manual — 2 open Risk Records, $180K total exposure</text>
+
+<circle cx="60" cy="540" r="5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+<path d="M 55 540 A 5 5 0 0 1 65 540 Z" fill="rgba(255,255,255,0.6)"/>
+<text class="ts" x="74" y="544">Quality: mixed — 3 inspection failures (auto) + 1 promoted record</text>
+
+<text class="th" x="40" y="582">Filter affordance on hub cards and tables</text>
+<text class="ts" x="40" y="600">Filter dropdown: All sources / Automated only / Manual only / Promoted only — lets users isolate origin types when investigating.</text>
+</svg>

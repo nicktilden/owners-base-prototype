@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 720 580" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Per-type scoring — probability shared, impact type-specific</title>
+<desc>Shows how the 1–5 probability scale is universal, but impact categories and units vary by type, and how they roll up into dimension exposure.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+  <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+<style>
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.tiny { font-size: 11px; fill:rgba(255,255,255,0.4); }
+.big { font-size: 20px; font-weight: 500; fill:#D8E4EE; }
+</style>
+</defs>
+
+<!-- Universal probability -->
+<rect x="40" y="40" width="640" height="72" rx="8" fill="#1A2535" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+<text class="th" x="360" y="64" text-anchor="middle">Probability (1–5) — universal, same for all types</text>
+<text class="ts" x="360" y="84" text-anchor="middle">1 = Rare  ·  2 = Unlikely  ·  3 = Possible  ·  4 = Likely  ·  5 = Almost certain</text>
+<text class="tiny" x="360" y="102" text-anchor="middle">Configured at the account level in HealthConfig. Every Risk Type uses this scale.</text>
+
+<!-- Three type-specific impact columns -->
+<text class="th" x="140" y="144">Impact: Financial Risk</text>
+<rect x="40" y="156" width="200" height="160" rx="8" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="ts" x="56" y="180" fill="#4D90D8">Unit: dollar exposure</text>
+<text class="ts" x="56" y="200" fill="#4D90D8">Min: $50K</text>
+<text class="ts" x="56" y="218" fill="#4D90D8">Expected: $312K</text>
+<text class="ts" x="56" y="236" fill="#4D90D8">Max: $450K</text>
+<line x1="56" y1="248" x2="224" y2="248" stroke="#2A80D0" stroke-width="0.3"/>
+<text class="ts" x="56" y="266" fill="#4D90D8">Schedule impact: excluded</text>
+<text class="ts" x="56" y="284" fill="#4D90D8">Safety impact: excluded</text>
+<text class="ts" x="56" y="302" fill="#4D90D8">Dimension: Cost (primary)</text>
+
+<text class="th" x="290" y="144">Impact: Safety Risk</text>
+<rect x="260" y="156" width="200" height="160" rx="8" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="ts" x="276" y="180" fill="#E06840">Unit: severity level</text>
+<text class="ts" x="276" y="200" fill="#E06840">1 = Minor · 2 = Moderate</text>
+<text class="ts" x="276" y="218" fill="#E06840">3 = Serious · 4 = Critical</text>
+<text class="ts" x="276" y="236" fill="#E06840">5 = Catastrophic</text>
+<line x1="276" y1="248" x2="444" y2="248" stroke="#C84820" stroke-width="0.3"/>
+<text class="ts" x="276" y="266" fill="#E06840">Cost impact: optional</text>
+<text class="ts" x="276" y="284" fill="#E06840">(workers comp, etc.)</text>
+<text class="ts" x="276" y="302" fill="#E06840">Dimension: Safety (primary)</text>
+
+<text class="th" x="490" y="144">Impact: Schedule Risk</text>
+<rect x="480" y="156" width="200" height="160" rx="8" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="ts" x="496" y="180" fill="#2EA888">Unit: days of delay</text>
+<text class="ts" x="496" y="200" fill="#2EA888">Min: 5 days</text>
+<text class="ts" x="496" y="218" fill="#2EA888">Expected: 14 days</text>
+<text class="ts" x="496" y="236" fill="#2EA888">Max: 30 days</text>
+<line x1="496" y1="248" x2="664" y2="248" stroke="#18A878" stroke-width="0.3"/>
+<text class="ts" x="496" y="266" fill="#2EA888">Cost impact: optional</text>
+<text class="ts" x="496" y="284" fill="#2EA888">(liquidated damages)</text>
+<text class="ts" x="496" y="302" fill="#2EA888">Dimension: Schedule (primary)</text>
+
+<!-- Formula row -->
+<line x1="140" y1="316" x2="140" y2="358" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="360" y1="316" x2="360" y2="358" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="580" y1="316" x2="580" y2="358" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="358" width="200" height="44" rx="6" fill="#0D1E30" stroke="#2A80D0" stroke-width="0.5"/>
+<text class="ts" x="140" y="378" text-anchor="middle" fill="#4D90D8">3/5 × $312K = $187K</text>
+<text class="tiny" x="140" y="394" text-anchor="middle" fill="#0D2540">expected cost exposure</text>
+
+<rect x="260" y="358" width="200" height="44" rx="6" fill="#2A1A0E" stroke="#C84820" stroke-width="0.5"/>
+<text class="ts" x="360" y="378" text-anchor="middle" fill="#E06840">4/5 × severity(3) = 2.4</text>
+<text class="tiny" x="360" y="394" text-anchor="middle" fill="#FF8060">safety risk score</text>
+
+<rect x="480" y="358" width="200" height="44" rx="6" fill="#0D2520" stroke="#18A878" stroke-width="0.5"/>
+<text class="ts" x="580" y="378" text-anchor="middle" fill="#2EA888">2/5 × 14 days = 5.6 days</text>
+<text class="tiny" x="580" y="394" text-anchor="middle" fill="#4EC9A8">expected schedule exposure</text>
+
+<!-- Roll-up -->
+<line x1="140" y1="402" x2="280" y2="460" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="360" y1="402" x2="360" y2="460" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+<line x1="580" y1="402" x2="440" y2="460" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="460" width="640" height="80" rx="8" fill="#281E0D" stroke="#C07A18" stroke-width="0.5"/>
+<text class="th" x="360" y="484" text-anchor="middle" fill="#D89040">Portfolio forecast — rolled up per dimension across all records and projects</text>
+<text class="ts" x="56" y="506" fill="#F0B060">Cost dimension:     sum all financial risk exposure across all open records = $1.2M total expected</text>
+<text class="ts" x="56" y="524" fill="#F0B060">Safety dimension:   sum all safety risk scores, weighted by type config = "At Risk" threshold breached</text>
+<text class="ts" x="56" y="542" fill="#F0B060">Schedule dimension: sum all schedule exposure = 22 days total expected delay across portfolio</text>
+</svg>

@@ -4,8 +4,9 @@ import type { ColDef, ValueGetterParams, ValueFormatterParams, ICellRendererPara
 import type { Asset, AssetStatus, AssetCondition } from "@/types/assets";
 import { formatDateMMDDYYYY } from "@/utils/date";
 import AssetActionsCellRenderer from "./AssetActionsCellRenderer";
+import LinkCellRenderer from "./LinkCellRenderer";
 
-type PillColor = "green" | "yellow" | "red" | "gray";
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
 
 const STATUS_COLORS: Record<AssetStatus, PillColor> = {
   active: "green",
@@ -13,6 +14,11 @@ const STATUS_COLORS: Record<AssetStatus, PillColor> = {
   in_maintenance: "yellow",
   retired: "red",
   disposed: "gray",
+  ordered: "blue",
+  delivered: "blue",
+  installed: "yellow",
+  commissioned: "yellow",
+  turned_over: "green",
 };
 
 const STATUS_LABELS: Record<AssetStatus, string> = {
@@ -21,6 +27,11 @@ const STATUS_LABELS: Record<AssetStatus, string> = {
   in_maintenance: "In Maintenance",
   retired: "Retired",
   disposed: "Disposed",
+  ordered: "Ordered",
+  delivered: "Delivered",
+  installed: "Installed",
+  commissioned: "Commissioned",
+  turned_over: "Turned Over",
 };
 
 const CONDITION_COLORS: Record<AssetCondition, PillColor> = {
@@ -83,6 +94,7 @@ export function getAssetColumnDefs(
       headerName: "Name",
       filter: "agTextColumnFilter",
       minWidth: 200,
+      cellRenderer: LinkCellRenderer,
     },
     {
       colId: "project",
@@ -141,7 +153,6 @@ export function getAssetColumnDefs(
       field: "serialNumber",
       headerName: "Serial Number",
       filter: "agTextColumnFilter",
-      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         params.value ?? "—",
     },
@@ -158,7 +169,6 @@ export function getAssetColumnDefs(
       field: "installDate",
       headerName: "Install Date",
       filter: "agDateColumnFilter",
-      hide: true,
       valueFormatter: (params: ValueFormatterParams<Asset>) =>
         formatDateMMDDYYYY(params.value),
     },

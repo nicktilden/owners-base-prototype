@@ -16,21 +16,17 @@ export default function RiskTitleCellRenderer(
         border: 'none',
         padding: 0,
         cursor: 'pointer',
-        color: 'var(--color-action-primary)',
-        fontWeight: 500,
+        color: 'var(--color-text-link)',
+        fontWeight: 600,
         fontSize: 'inherit',
         textAlign: 'left',
         textDecoration: 'underline',
-        textDecorationColor: 'transparent',
-        transition: 'text-decoration-color 0.15s',
         maxWidth: '100%',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         display: 'block',
       }}
-      onMouseEnter={e => (e.currentTarget.style.textDecorationColor = 'var(--color-action-primary)')}
-      onMouseLeave={e => (e.currentTarget.style.textDecorationColor = 'transparent')}
       title={value ?? ''}
     >
       {value}

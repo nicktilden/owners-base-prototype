@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
+import { Button, Dropdown, Pill, Search, Select, SplitViewCard, ToggleButton } from "@procore/core-react";
 import { People as CommitmentsIcon, Filter, Plus, Sliders } from "@procore/core-icons";
-import type { ColDef, GridApi } from "ag-grid-community";
+import type { ColDef, GridApi, ICellRendererParams } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
@@ -41,14 +42,67 @@ const GridArea = styled.div`
 `;
 
 interface GroupByOption {
-  id: "vendor" | "status";
+  id: "contractCompany" | "status" | "ssovStatus";
   label: string;
 }
 
 const GROUP_BY_OPTIONS: GroupByOption[] = [
-  { id: "vendor", label: "Vendor" },
+  { id: "contractCompany", label: "Contract Company" },
   { id: "status", label: "Status" },
+  { id: "ssovStatus", label: "SSOV Status" },
 ];
+
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Approved": "green",
+  "Pending": "yellow",
+  "Executed": "green",
+  "Draft": "gray",
+  "Void": "gray",
+  "Under Review": "yellow",
+  "Complete": "green",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Approved": "Approved",
+  "Pending": "Pending",
+  "Executed": "Executed",
+  "Draft": "Draft",
+  "Void": "Void",
+  "Under Review": "Under Review",
+  "Complete": "Complete",
+};
+
+const SSOV_STATUS_COLORS: Record<string, PillColor> = {
+  "Approved": "green",
+  "Draft": "gray",
+  "Pending": "yellow",
+  "": "gray",
+};
+
+const SSOV_STATUS_LABELS: Record<string, string> = {
+  "Approved": "Approved",
+  "Draft": "Draft",
+  "Pending": "Pending",
+  "": "—",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
+function SSOVStatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = SSOV_STATUS_COLORS[status] ?? "gray";
+  const label = SSOV_STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
 
 interface CommitmentsContentProps {
   projectId: string;
@@ -64,12 +118,22 @@ export default function CommitmentsContent({ projectId }: CommitmentsContentProp
   const rowData = useMemo(() => commitments.filter((c) => c.projectId === projectId), [projectId]);
 
   const columnDefs = useMemo<ColDef[]>(() => [
-    { field: "number", headerName: "#", width: 80 },
-    { field: "title", headerName: "Title", minWidth: 200 },
-    { field: "vendor", headerName: "Vendor", width: 150, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "contractAmount", headerName: "Contract Amount", width: 150 },
-    { field: "executedDate", headerName: "Executed Date", width: 130 },
+    { field: "number", headerName: "Number", width: 130, pinned: "left", filter: "agTextColumnFilter" },
+    { field: "contractCompany", headerName: "Contract Company", minWidth: 180, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "title", headerName: "Title", minWidth: 220, cellRenderer: LinkCellRenderer },
+    { field: "status", headerName: "Status", width: 140, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
+    { field: "executed", headerName: "Executed", width: 110 },
+    { field: "ssovStatus", headerName: "SSOV Status", width: 130, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: SSOVStatusPillRenderer },
+    { field: "originalContractAmount", headerName: "Original Contract Amount", width: 190 },
+    { field: "approvedChangeOrders", headerName: "Approved Change Orders", width: 190 },
+    { field: "revisedContractAmount", headerName: "Revised Contract Amount", width: 190 },
+    { field: "pendingChangeOrders", headerName: "Pending Change Orders", width: 180 },
+    { field: "draftChangeOrders", headerName: "Draft Change Orders", width: 170 },
+    { field: "invoiced", headerName: "Invoiced", width: 140 },
+    { field: "paymentsIssued", headerName: "Payments Issued", width: 150 },
+    { field: "percentPaid", headerName: "% Paid", width: 100 },
+    { field: "remainingBalance", headerName: "Remaining Balance Outstanding", width: 230 },
+    { field: "private", headerName: "Private", width: 100 },
     {
       colId: "actions",
       headerName: "Actions",

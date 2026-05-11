@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dropdown,
+  Pill,
   Search,
   Select,
   SplitViewCard,
@@ -13,10 +14,11 @@ import {
   Plus,
   Sliders,
 } from "@procore/core-icons";
-import type { GridApi } from "ag-grid-community";
+import type { GridApi, ICellRendererParams } from "ag-grid-community";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import { SmartGridWrapper } from "@/components/SmartGrid";
 import type { ColDef } from "ag-grid-community";
+import LinkCellRenderer from "@/components/SmartGrid/LinkCellRenderer";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import styled from "styled-components";
@@ -63,6 +65,26 @@ const GROUP_BY_OPTIONS: GroupByOption[] = [
   { id: "status", label: "Status" },
 ];
 
+type PillColor = "green" | "yellow" | "red" | "gray" | "blue";
+
+const STATUS_COLORS: Record<string, PillColor> = {
+  "Current": "green",
+  "Superseded": "gray",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  "Current": "Current",
+  "Superseded": "Superseded",
+};
+
+function StatusPillRenderer(params: ICellRendererParams) {
+  const status = params.value as string | undefined;
+  if (!status) return null;
+  const color: PillColor = STATUS_COLORS[status] ?? "gray";
+  const label = STATUS_LABELS[status] ?? status;
+  return React.createElement(Pill, { color }, label);
+}
+
 interface SpecificationsContentProps {
   projectId: string;
 }
@@ -78,10 +100,12 @@ export default function SpecificationsContent({ projectId }: SpecificationsConte
 
   const columnDefs = useMemo<ColDef[]>(() => [
     { field: "sectionNumber", headerName: "Section #", width: 100 },
-    { field: "title", headerName: "Title", minWidth: 200 },
+    { field: "title", headerName: "Title", minWidth: 200, cellRenderer: LinkCellRenderer },
     { field: "division", headerName: "Division", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
-    { field: "status", headerName: "Status", width: 120, filter: "agSetColumnFilter", enableRowGroup: true },
+    { field: "status", headerName: "Status", width: 130, filter: "agSetColumnFilter", enableRowGroup: true, cellRenderer: StatusPillRenderer },
     { field: "revision", headerName: "Revision", width: 100 },
+    { field: "dateIssued", headerName: "Date Issued", width: 130, filter: "agDateColumnFilter" },
+    { field: "dateReceived", headerName: "Date Received", width: 140, filter: "agDateColumnFilter" },
     { field: "updated", headerName: "Updated", width: 120 },
     {
       colId: "actions",

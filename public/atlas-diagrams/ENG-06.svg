@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 680 580" role="img" font-family="system-ui, -apple-system, sans-serif" height="100%">
+<title>Risk capability matrix by persona</title>
+<desc>Which personas can perform which risk-related actions.</desc>
+<defs>
+<style>
+.t { font-size: 14px; fill:#D8E4EE; }
+.th { font-size: 14px; font-weight: 500; fill:#D8E4EE; }
+.ts { font-size: 12px; fill:rgba(255,255,255,0.6); }
+.cell { font-size: 12px; }
+</style>
+</defs>
+
+<text class="th" x="40" y="50">Capability</text>
+<text class="th" x="270" y="50" text-anchor="middle">CEO / CFO</text>
+<text class="th" x="370" y="50" text-anchor="middle">PM</text>
+<text class="th" x="450" y="50" text-anchor="middle">Super</text>
+<text class="th" x="530" y="50" text-anchor="middle">IT Admin</text>
+<text class="th" x="620" y="50" text-anchor="middle">Board</text>
+
+<line x1="40" y1="60" x2="640" y2="60" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="t" x="40" y="84">View portfolio Risk Signals</text>
+<text class="cell" x="270" y="84" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="370" y="84" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="84" text-anchor="middle" fill="rgba(255,255,255,0.6)">Limited</text>
+<text class="cell" x="530" y="84" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="84" text-anchor="middle" fill="#4EC9A8">Yes</text>
+
+<text class="t" x="40" y="106">View project Risk Records</text>
+<text class="cell" x="270" y="106" text-anchor="middle" fill="#4EC9A8">All</text>
+<text class="cell" x="370" y="106" text-anchor="middle" fill="#4EC9A8">Assigned</text>
+<text class="cell" x="450" y="106" text-anchor="middle" fill="rgba(255,255,255,0.6)">Safety only</text>
+<text class="cell" x="530" y="106" text-anchor="middle" fill="#4EC9A8">All</text>
+<text class="cell" x="620" y="106" text-anchor="middle" fill="rgba(255,255,255,0.6)">Read</text>
+
+<text class="t" x="40" y="128">Create Risk Record manually</text>
+<text class="cell" x="270" y="128" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="370" y="128" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="128" text-anchor="middle" fill="#4EC9A8">Safety only</text>
+<text class="cell" x="530" y="128" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="128" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="150">Promote signal to record</text>
+<text class="cell" x="270" y="150" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="370" y="150" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="150" text-anchor="middle" fill="#4EC9A8">Safety only</text>
+<text class="cell" x="530" y="150" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="150" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="172">Transition Open → Mitigated</text>
+<text class="cell" x="270" y="172" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="370" y="172" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="172" text-anchor="middle" fill="#4EC9A8">Safety only</text>
+<text class="cell" x="530" y="172" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="172" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="194">Accept risk (sign-off)</text>
+<text class="cell" x="270" y="194" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="370" y="194" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="450" y="194" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="530" y="194" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="620" y="194" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="216">Close Risk Record</text>
+<text class="cell" x="270" y="216" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="370" y="216" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="216" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="530" y="216" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="216" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="238">Edit thresholds (project)</text>
+<text class="cell" x="270" y="238" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="370" y="238" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="450" y="238" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="530" y="238" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="238" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="260">Edit Risk Types (account)</text>
+<text class="cell" x="270" y="260" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="370" y="260" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="450" y="260" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="530" y="260" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="260" text-anchor="middle" fill="#FF8060">No</text>
+
+<text class="t" x="40" y="282">Edit account thresholds</text>
+<text class="cell" x="270" y="282" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="370" y="282" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="450" y="282" text-anchor="middle" fill="#FF8060">No</text>
+<text class="cell" x="530" y="282" text-anchor="middle" fill="#4EC9A8">Yes</text>
+<text class="cell" x="620" y="282" text-anchor="middle" fill="#FF8060">No</text>
+
+<line x1="40" y1="300" x2="640" y2="300" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+
+<text class="th" x="40" y="330">How this maps to existing permission model</text>
+<text class="ts" x="40" y="352">The existing model in data-model.ts has two layers — tool access (none/read/update/create/admin) and</text>
+<text class="ts" x="40" y="370">PermissionKey for non-tool actions. Risk capabilities map to both:</text>
+<text class="ts" x="56" y="392">— View / Create map to ToolPermissionLevel on a new 'risk' tool key</text>
+<text class="ts" x="56" y="410">— Promote, Transition, Close all require ToolPermissionLevel ≥ 'update' on 'risk'</text>
+<text class="ts" x="56" y="428">— Accept needs a new PermissionKey: 'risk:accept' — only EXECUTIVE role group has it by default</text>
+<text class="ts" x="56" y="446">— Edit thresholds (project) needs ToolPermissionLevel ≥ 'admin' on 'risk' for that project</text>
+<text class="ts" x="56" y="464">— Edit Risk Types and account thresholds need 'risk:configure' — IT Admin only</text>
+
+<text class="th" x="40" y="494">Implementation note</text>
+<text class="ts" x="40" y="514">All gates use the existing hasToolPermission() and hasPermissionKey() helpers. No new utilities needed —</text>
+<text class="ts" x="40" y="532">just register 'risk' as a tool key and add 'risk:accept' / 'risk:configure' to the PermissionKey union.</text>
+<text class="ts" x="40" y="550">UI hides actions the user can't perform; the engine ignores attempts that arrive without permission.</text>
+<text class="ts" x="40" y="568">Superintendent's "Safety only" rows enforced at the engine — filter records by dimension before returning.</text>
+</svg>
