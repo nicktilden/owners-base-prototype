@@ -30,7 +30,6 @@ import {
   Envelope,
   NotepadPencil,
   Home,
-  Warning,
   ShieldStar,
 } from '@procore/core-icons';
 import styled, { keyframes, css } from 'styled-components';
@@ -166,8 +165,7 @@ const NavItemEl = styled.a<{ $active?: boolean }>`
 
 const TOOL_ICONS: Partial<Record<ToolKey, React.ReactNode>> = {
   hubs:             <Home size="sm" />,
-  health:           <Warning size="sm" />,
-  health_risk:      <ShieldStar size="sm" />,
+  risk_register:    <ShieldStar size="sm" />,
   documents:        <FileList size="sm" />,
   schedule:         <Calendar size="sm" />,
   assets:           <Assets size="sm" />,

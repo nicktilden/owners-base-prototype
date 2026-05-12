@@ -43,7 +43,7 @@ export const PERMISSION_TIER: Record<ToolPermissionLevel, number> = {
 // Role tool permission defaults
 export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
-  health:            'read',
+  risk_register:     'read',
   documents:         'read',
   schedule:          'read',
   assets:            'read',
@@ -67,7 +67,7 @@ export const EXECUTIVE_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'admin',
-  health:            'admin',
+  risk_register:     'admin',
   documents:         'admin',
   schedule:          'admin',
   assets:            'admin',
@@ -91,7 +91,7 @@ export const ADMIN_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
-  health:            'create',
+  risk_register:     'create',
   documents:         'create',
   schedule:          'create',
   assets:            'create',
@@ -115,7 +115,7 @@ export const MANAGER_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'create',
-  health:            'read',
+  risk_register:     'read',
   documents:         'create',
   schedule:          'create',
   assets:            'create',
@@ -139,7 +139,7 @@ export const FIELD_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'read',
-  health:            'read',
+  risk_register:     'read',
   documents:         'read',
   schedule:          'read',
   assets:            'none',
@@ -163,7 +163,7 @@ export const BOARD_TOOL_PERMISSIONS: UserToolPermissions = {
 
 export const OPERATOR_TOOL_PERMISSIONS: UserToolPermissions = {
   hubs:              'update',
-  health:            'read',
+  risk_register:     'read',
   documents:         'update',
   schedule:          'read',
   assets:            'read',

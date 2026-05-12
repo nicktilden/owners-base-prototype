@@ -1,10 +1,11 @@
 import Head from "next/head";
 import { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import styled from "styled-components";
 import { Button, MenuImperative, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
-import { Home, Plus, EllipsisVertical } from "@procore/core-icons";
+import { Home, Plus, EllipsisVertical, Check } from "@procore/core-icons";
 import { HubFilterProvider } from "@/context/HubFilterContext";
 import HubsContentLayout from "@/components/hubs/HubsContentLayout";
 import MyOpenItemsCard from "@/components/MyOpenItemsCard";
@@ -21,6 +22,7 @@ import CostHealthCard from "@/components/health/cards/CostHealthCard";
 import ScheduleHealthCard from "@/components/health/cards/ScheduleHealthCard";
 import DeliveryRiskCard from "@/components/health/cards/DeliveryRiskCard";
 import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
+import ProjectRiskLevelCard from "@/components/health/cards/ProjectRiskLevelCard";
 import { sampleProjectRows } from "@/data/projects";
 
 /** Convert numeric projectRowId (1–50) to seed string format ('proj-001'…). */
@@ -98,15 +100,67 @@ const EllipsisBtn = styled.button`
   }
 `;
 
+const ViewsMenuWrap = styled.div<{ $top: number; $left: number }>`
+  position: fixed;
+  top: ${({ $top }) => $top}px;
+  left: ${({ $left }) => $left}px;
+  z-index: 1000;
+  min-width: 220px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-separator);
+  overflow: hidden;
+  padding: 4px 0;
+`;
+
+const ViewsMenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  text-align: left;
+  gap: 8px;
+
+  &:hover {
+    background: var(--color-surface-secondary);
+  }
+`;
+
+const ViewsMenuLabel = styled.span`
+  flex: 1;
+`;
+
+const CheckIconWrap = styled.span`
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-primary);
+  width: 16px;
+  flex-shrink: 0;
+`;
+
+const AddViewBtnWrap = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+`;
+
 const TAB_CARDS: Record<TabName, string[]> = {
   Overview: [
     "Project Info",
-    "Project Links",
+    "Project Risk Level",
     "Site Safety & Information",
     "Project Dates",
     "My Open Items",
     "All Open Items",
     "Project Team",
+    "Project Links",
   ],
   "Health & Risk": [
     "Project Health",
@@ -130,6 +184,54 @@ function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectR
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
   const [hiddenCards, setHiddenCards] = useState<HiddenCards>(makeEmptyHidden);
   const [menuOpenTab, setMenuOpenTab] = useState<TabName | null>(null);
+
+  // Hub views visibility
+  const [hiddenTabs, setHiddenTabs] = useState<Set<TabName>>(new Set());
+  const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const viewsMenuRef = useRef<HTMLDivElement>(null);
+  const viewsBtnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!viewsMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        viewsMenuRef.current && !viewsMenuRef.current.contains(e.target as Node) &&
+        viewsBtnRef.current && !viewsBtnRef.current.contains(e.target as Node)
+      ) {
+        setViewsMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [viewsMenuOpen]);
+
+  function openViewsMenu() {
+    if (viewsBtnRef.current) {
+      const rect = viewsBtnRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 6,
+        left: rect.left,
+      });
+    }
+    setViewsMenuOpen(v => !v);
+  }
+
+  function toggleTabVisibility(tab: TabName) {
+    setHiddenTabs(prev => {
+      const next = new Set(prev);
+      if (next.has(tab)) {
+        next.delete(tab);
+      } else {
+        next.add(tab);
+        if (activeTab === tab) {
+          const firstVisible = tabs.find(t => !next.has(t));
+          if (firstVisible) setActiveTab(firstVisible);
+        }
+      }
+      return next;
+    });
+  }
 
   const menuRef = useRef<HTMLDivElement>(null);
   const ellipsisBtnRefs = useRef<Partial<Record<TabName, HTMLButtonElement>>>({});
@@ -224,7 +326,7 @@ function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectR
               <ToolLandingPage.Tabs>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <TabBarList className="Tabs__TabsList">
-                    {tabs.map((tab) => {
+                    {tabs.filter(tab => !hiddenTabs.has(tab)).map((tab) => {
                       const isActive = activeTab === tab;
                       return (
                         <TabItem
@@ -290,19 +392,52 @@ function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectR
                       );
                     })}
                   </TabBarList>
+                  <div style={{ width: 2, height: 20, background: 'var(--color-border-separator)', borderRadius: 1, flexShrink: 0 }} />
+                  <AddViewBtnWrap ref={viewsBtnRef}>
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      icon={<Plus size="sm" />}
+                      aria-label="Manage hub views"
+                      aria-haspopup="menu"
+                      aria-expanded={viewsMenuOpen}
+                      onClick={openViewsMenu}
+                    />
+                  </AddViewBtnWrap>
+                  {viewsMenuOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
+                    <ViewsMenuWrap ref={viewsMenuRef} role="menu" $top={menuPos.top} $left={menuPos.left}>
+                      {tabs.map(tab => {
+                        const isVisible = !hiddenTabs.has(tab);
+                        return (
+                          <ViewsMenuItem
+                            key={tab}
+                            role="menuitemcheckbox"
+                            aria-checked={isVisible}
+                            onClick={() => toggleTabVisibility(tab)}
+                          >
+                            <ViewsMenuLabel>{tab}</ViewsMenuLabel>
+                            <CheckIconWrap>
+                              {isVisible && <Check size="sm" />}
+                            </CheckIconWrap>
+                          </ViewsMenuItem>
+                        );
+                      })}
+                    </ViewsMenuWrap>,
+                    document.body
+                  )}
                 </div>
               </ToolLandingPage.Tabs>
             </ToolLandingPage.Header>
             <ToolLandingPage.Body>
               {activeTab === "Overview" && (
                 <HubsContentLayout>
-                  {visible("Project Info") || visible("Project Links") ? (
+                  {visible("Project Info") || visible("Project Risk Level") ? (
                     <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
                       {visible("Project Info") && (
                         <ProjectInfoCard projectRowId={projectRowId} />
                       )}
-                      {visible("Project Links") && (
-                        <ProjectLinksCard projectRowId={projectRowId} />
+                      {visible("Project Risk Level") && (
+                        <ProjectRiskLevelCard projectId={seedProjectId} />
                       )}
                     </HubsContentLayout.Row>
                   ) : null}
@@ -329,11 +464,16 @@ function ProjectOverviewContentInner({ projectRowId, seedProjectId }: { projectR
                     </HubsContentLayout.Row>
                   ) : null}
 
-                  {visible("Project Team") && (
-                    <HubsContentLayout.Row variant="table">
-                      <ProjectTeamCard projectRowId={projectRowId} />
+                  {visible("Project Team") || visible("Project Links") ? (
+                    <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
+                      {visible("Project Team") && (
+                        <ProjectTeamCard projectRowId={projectRowId} />
+                      )}
+                      {visible("Project Links") && (
+                        <ProjectLinksCard projectRowId={projectRowId} />
+                      )}
                     </HubsContentLayout.Row>
-                  )}
+                  ) : null}
                 </HubsContentLayout>
               )}
               {activeTab === "Health & Risk" && (

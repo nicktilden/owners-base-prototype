@@ -1,28 +1,16 @@
 /**
  * RISK BY TOOL BAR CARD
- * Highcharts horizontal bar chart showing active risk count per source tool.
- * Groups by sourceType on RiskTag; ManualRiskItem gets "Manual Entry".
+ * HTML horizontal bar chart showing active risk count per source tool.
+ * Matches the Assets by Type card layout: label left, bar middle, count right.
  * Works at both portfolio and project scope.
  */
 
 import React, { useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import type { Options } from 'highcharts';
-import { HC_COLORS } from '@/lib/highcharts';
+import { Typography } from '@procore/core-react';
 import HubCardFrame from '@/components/hubs/HubCardFrame';
 import { useRiskTags } from '@/context/RiskTagsContext';
 import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
 import type { RiskTag, ManualRiskItem } from '@/types/health';
-
-// ─── SSR-safe Highcharts import ───────────────────────────────────────────────
-
-const HighchartsReact = dynamic(() => import('highcharts-react-official'), { ssr: false });
-
-let Highcharts: typeof import('highcharts') | null = null;
-if (typeof window !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  Highcharts = require('@/lib/highcharts').default as typeof import('highcharts');
-}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -42,7 +30,15 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   milestone:      'Milestones',
   budget_line:    'Budget',
   manual:         'Manual Entry',
+  observation:    'Observations',
+  incident:       'Incidents',
+  inspection:     'Inspections',
+  task:           'Tasks',
+  document:       'Documents',
 };
+
+// Assets by Type palette — same bar color
+const BAR_COLOR = '#1d5cc9';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -73,55 +69,7 @@ export default function RiskByTypeBarCard({ scope = 'portfolio', projectId }: Ri
       .sort((a, b) => b.count - a.count);
   }, [scope, projectId, riskTags, manualRiskItems, getRiskTagsForProject, getManualRiskItemsForProject]);
 
-  const chartHeight = Math.max(140, buckets.length * 36 + 40);
-
-  const options = useMemo<Options>(() => ({
-    chart: {
-      type: 'bar',
-      height: chartHeight,
-      margin: [8, 24, 8, 0],
-      spacing: [8, 8, 8, 8],
-    },
-    xAxis: {
-      categories: buckets.map(b => b.label),
-      lineWidth: 0,
-      tickWidth: 0,
-      labels: {
-        style: { fontSize: '12px', color: HC_COLORS.text },
-        align: 'right',
-      },
-    },
-    yAxis: {
-      title: { text: undefined },
-      gridLineColor: HC_COLORS.gridLine,
-      tickAmount: 4,
-      labels: {
-        style: { fontSize: '11px', color: HC_COLORS.textLight },
-        formatter() { return Number.isInteger(this.value) ? String(this.value) : ''; },
-      },
-      allowDecimals: false,
-    },
-    tooltip: {
-      pointFormat: '<b>{point.y}</b> risk{point.y !== 1 ? "s" : ""}',
-    },
-    plotOptions: {
-      bar: {
-        borderRadius: 3,
-        color: HC_COLORS.green,
-        dataLabels: {
-          enabled: true,
-          style: { fontSize: '11px', fontWeight: '600', color: HC_COLORS.text, textOutline: 'none' },
-        },
-        pointPadding: 0.1,
-        groupPadding: 0.1,
-      },
-    },
-    series: [{
-      type: 'bar',
-      name: 'Risks',
-      data: buckets.map(b => b.count),
-    }],
-  }), [buckets, chartHeight]);
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
 
   return (
     <HubCardFrame
@@ -129,14 +77,62 @@ export default function RiskByTypeBarCard({ scope = 'portfolio', projectId }: Ri
       infoTooltip="Active risk tags grouped by the source tool they were tagged from."
     >
       <div style={{ padding: '0 8px 8px' }}>
-        {Highcharts && buckets.length > 0 ? (
-          <HighchartsReact
-            highcharts={Highcharts}
-            options={options}
-            containerProps={{ style: { width: '100%' } }}
-          />
+        {buckets.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {buckets.map(row => (
+              <div
+                key={row.label}
+                style={{ display: 'grid', gridTemplateColumns: '100px 1fr 32px', gap: 8, alignItems: 'center' }}
+              >
+                <Typography
+                  intent="small"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    textAlign: 'right',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={row.label}
+                >
+                  {row.label}
+                </Typography>
+                <div
+                  style={{
+                    display: 'flex',
+                    height: 20,
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    background: 'var(--color-surface-secondary)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${(row.count / maxCount) * 100}%`,
+                      background: BAR_COLOR,
+                      borderRadius: 4,
+                      transition: 'opacity 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    title={`${row.label}: ${row.count} risk${row.count !== 1 ? 's' : ''}`}
+                  />
+                </div>
+                <Typography
+                  intent="small"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                    fontVariantNumeric: 'tabular-nums',
+                    textAlign: 'right',
+                  }}
+                >
+                  {String(row.count)}
+                </Typography>
+              </div>
+            ))}
+          </div>
         ) : (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: HC_COLORS.textLight, fontSize: 13 }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
             No active risk tags to display.
           </div>
         )}

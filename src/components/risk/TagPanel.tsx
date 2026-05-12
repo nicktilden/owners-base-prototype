@@ -58,8 +58,12 @@ const TagRow = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  &:last-child { border-bottom: none; }
+`;
+
+const TagDivider = styled.div`
+  height: 1px;
+  background: var(--color-border-separator);
+  margin: 0;
 `;
 
 const TagMeta = styled.div`
@@ -99,6 +103,22 @@ const AddButton = styled.button`
   padding: 4px 0;
   &:hover { text-decoration: underline; }
   &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+`;
+
+const AutoBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-action-primary);
+  background: color-mix(in srgb, var(--color-action-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 30%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+  flex-shrink: 0;
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -169,8 +189,9 @@ export default function TagPanel({
 
   return (
     <PanelWrapper>
-      {tags.map(tag => (
+      {tags.map((tag, index) => (
         <React.Fragment key={tag.id}>
+          {index > 0 && <TagDivider />}
           {editingTagId === tag.id ? (
             <TagForm
               sourceType={sourceType}
@@ -185,10 +206,14 @@ export default function TagPanel({
           ) : (
             <TagRow>
               <TagMeta>
-                <TagType>{getRiskTypeLabel(tag.riskTypeId)}</TagType>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <TagType>{getRiskTypeLabel(tag.riskTypeId)}</TagType>
+                  {tag.origin !== 'manual' && <AutoBadge>Auto</AutoBadge>}
+                </div>
                 <TagDetail>
                   Probability {tag.probability}/5
-                  {tag.impact > 0 && ` · $${tag.impact.toLocaleString()} expected`}
+                  {tag.impact > 0 && ` · $${tag.impact.toLocaleString()} cost`}
+                  {tag.scheduleImpact != null && tag.scheduleImpact > 0 && ` · ${tag.scheduleImpact}d schedule`}
                 </TagDetail>
               </TagMeta>
               <Pill color={STATUS_STYLES[tag.status].color}>

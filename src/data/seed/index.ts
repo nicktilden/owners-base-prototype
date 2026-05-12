@@ -32,7 +32,7 @@ export { observations } from './observations';
 export { correspondence } from './correspondence';
 export { commitments } from './commitments';
 export { capitalPlanning } from './capital_planning';
-export { fundingSources } from './funding_source';
+export { fundingSource as fundingSources } from './funding_source';
 
 // v7 Health & Risk
 export { riskTags } from './riskTags';

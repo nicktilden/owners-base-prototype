@@ -6,7 +6,7 @@
  * Data source resolution order:
  *   connected (ProjectConnection) > seed (project fields) > unavailable
  *
- * Risk Records are normalized separately: each carries origin ('manual' | 'promoted')
+ * Risk Records are normalized separately: each carries origin ('manual' | 'automated')
  * and a completeness check (title + probability required).
  *
  * healthEngine.ts consumes NormalizedProjectData instead of accessing
@@ -30,7 +30,7 @@ export interface NormalizedField<T> {
 
 export interface NormalizedRisk {
   risk: Risk;
-  origin: 'manual' | 'promoted';
+  origin: 'manual' | 'automated';
   isComplete: boolean;
 }
 
@@ -216,7 +216,7 @@ export function normalizeProjectData(
 
 /**
  * Normalizes a list of Risk records: validates completeness (title + probability required)
- * and preserves the origin field ('manual' | 'promoted').
+ * and preserves the origin field ('manual' | 'automated').
  */
 export function normalizeRiskRecords(risks: Risk[]): NormalizedRisk[] {
   return risks.map(risk => ({

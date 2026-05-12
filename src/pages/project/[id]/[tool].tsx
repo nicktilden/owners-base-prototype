@@ -34,15 +34,15 @@ export default function ProjectToolPage() {
   const rawId = typeof id === 'string' ? id : '';
   const toolKey   = typeof tool === 'string' ? tool.replace(/-/g, '_') : '';
 
-  // If the URL uses a numeric id (e.g. /project/4/rfis from the portfolio table),
-  // resolve it to the corresponding seed project id (e.g. "proj-004").
-  const numeric = rawId !== '' && /^\d+$/.test(rawId) ? parseInt(rawId, 10) : null;
-  const projectId = numeric !== null ? `proj-${String(numeric).padStart(3, '0')}` : rawId;
-
+  // Pass the raw URL id so LevelContext stores it correctly for GlobalHeader lookup.
   const { setProject } = useLevel();
   useEffect(() => {
-    if (projectId) setProject(projectId);
-  }, [projectId]);
+    if (rawId) setProject(rawId);
+  }, [rawId]);
+
+  // Resolve numeric ids to seed project ids for data lookups within this page.
+  const numeric = rawId !== '' && /^\d+$/.test(rawId) ? parseInt(rawId, 10) : null;
+  const projectId = numeric !== null ? `proj-${String(numeric).padStart(3, '0')}` : rawId;
 
   const toolName = TOOL_DISPLAY_NAMES[toolKey as keyof typeof TOOL_DISPLAY_NAMES] ?? tool;
 
@@ -50,7 +50,7 @@ export default function ProjectToolPage() {
   if (!router.isReady) return null;
 
   // ── Tool-specific pages ──────────────────────────────────────────────────
-  if (toolKey === 'health' && projectId) {
+  if (toolKey === 'risk_register' && projectId) {
     return (
       <>
         <Head><title>Risk Register — Owner Prototype</title></Head>

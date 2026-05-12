@@ -19,6 +19,8 @@ export interface RiskGridRow {
   riskScore: number;     // probability × impact (normalized)
   impactSummary: string; // formatted impact string, e.g. "$320,000" or "21 days"
   impactRaw: number;     // numeric for sorting
+  costImpact: string;    // formatted dollar cost impact, e.g. "$320K" or "—"
+  scheduleImpact: string;// formatted schedule impact in days, e.g. "21 days" or "—"
   status: string;        // RiskTagStatus
   assignedTo: string;    // risk owner display name
   origin: string;
@@ -75,13 +77,20 @@ export const riskColumnDefs: ColDef<RiskGridRow>[] = [
     cellRenderer: 'riskScoreCellRenderer',
   },
   {
-    field: 'impactSummary',
-    headerName: 'Impact',
+    field: 'costImpact',
+    headerName: 'Cost Impact',
     width: 130,
     filter: 'agTextColumnFilter',
     sortable: true,
-    comparator: (_a, _b, nodeA, nodeB) =>
-      (nodeA.data?.impactRaw ?? 0) - (nodeB.data?.impactRaw ?? 0),
+    cellStyle: { fontWeight: 500 },
+    valueFormatter: (p) => (p.value as string) || '—',
+  },
+  {
+    field: 'scheduleImpact',
+    headerName: 'Schedule Impact',
+    width: 145,
+    filter: 'agTextColumnFilter',
+    sortable: true,
     cellStyle: { fontWeight: 500 },
     valueFormatter: (p) => (p.value as string) || '—',
   },

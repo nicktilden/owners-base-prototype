@@ -24,6 +24,7 @@ import { scheduleEntries } from "@/data/seed/schedule";
 import { projects } from "@/data/seed/projects";
 import type { ScheduleEntry, ScheduleItem, Milestone, ScheduleStatus } from "@/types/schedule";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import ScheduleDetailTearsheet from "@/components/tools/ScheduleDetailTearsheet";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import { formatDateMMDDYYYY } from "@/utils/date";
 
@@ -180,6 +181,15 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
   const [milestoneConfigOpen, setMilestoneConfigOpen] = useState(false);
   const [milestoneGroupBy, setMilestoneGroupBy] = useState<MilestoneGroupByOption | null>(null);
   const milestoneGridApiRef = useRef<GridApi<Milestone> | null>(null);
+  const [selectedScheduleItem, setSelectedScheduleItem] = useState<ScheduleEntry | null>(null);
+
+  const handleScheduleRowClick = useCallback((event: { data?: ScheduleItem }) => {
+    if (event.data) setSelectedScheduleItem(event.data);
+  }, []);
+
+  const handleMilestoneRowClick = useCallback((event: { data?: Milestone }) => {
+    if (event.data) setSelectedScheduleItem(event.data);
+  }, []);
 
   const projectMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -595,6 +605,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     groupDisplayType="groupRows"
                     autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
+                    onRowClicked={handleScheduleRowClick}
                     onGridReady={(event) => {
                       scheduleGridApiRef.current = event.api;
                     }}
@@ -685,6 +696,7 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
                     groupDisplayType="groupRows"
                     autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                     sideBar={false}
+                    onRowClicked={handleMilestoneRowClick}
                     onGridReady={(event) => {
                       milestoneGridApiRef.current = event.api;
                     }}
@@ -706,6 +718,11 @@ export default function ScheduleContent({ projectId }: ScheduleContentProps) {
           </SplitViewCard.Main>
         </SplitViewCard>
       )}
+      <ScheduleDetailTearsheet
+        item={selectedScheduleItem}
+        open={selectedScheduleItem !== null}
+        onClose={() => setSelectedScheduleItem(null)}
+      />
     </ToolPageLayout>
   );
 }

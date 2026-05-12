@@ -488,7 +488,7 @@ export const users: User[] = [
       keyGranted: [],
       keyDenied: [],
     },
-    favorites: { projectIds: ['proj-001','proj-003','proj-007','proj-011'], toolKeys: ['health'] },
+    favorites: { projectIds: ['proj-001','proj-003','proj-007','proj-011'], toolKeys: ['risk_register'] },
     createdAt: new Date('2024-02-01'),
     updatedAt: new Date('2026-04-01'),
     lastActiveAt: new Date('2026-05-01'),

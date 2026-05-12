@@ -312,7 +312,7 @@ export default function GlobalHeader() {
     : activeProjectRow
     ? `${activeProjectRow.number} — ${activeProjectRow.name}`
     : 'Select Project';
-  const pickerLabel = rawLabel.length > 30 ? rawLabel.slice(0, 30) + '…' : rawLabel;
+  const pickerLabel = rawLabel.length > 25 ? rawLabel.slice(0, 25) + '…' : rawLabel;
   const pickerSublabel = companyName;
 
   return (

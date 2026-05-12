@@ -1,13 +1,13 @@
 /**
- * PORTFOLIO RISK GAUGE CARD
- * Highcharts solid gauge showing overall portfolio risk level (0–100).
- * Score = % of active projects that are red or yellow.
- * Clicking the gauge label or summary opens HealthDetailTearsheet for the worst project.
+ * PROJECT RISK LEVEL CARD
+ * Solid gauge showing the overall risk level for a single project (0–100).
+ * Score = composite health score mapped to a 0–100 range.
+ * Clicking the summary opens the HealthDetailTearsheet.
  */
 
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Button, Typography } from '@procore/core-react';
+import { Typography } from '@procore/core-react';
 import styled from 'styled-components';
 import type { Options } from 'highcharts';
 import HubCardFrame from '@/components/hubs/HubCardFrame';
@@ -27,7 +27,6 @@ const HighchartsReact = dynamic(
   { ssr: false }
 );
 
-// Highcharts + modules loaded client-side only
 let Highcharts: typeof import('highcharts') | null = null;
 if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -55,7 +54,9 @@ const SummaryText = styled.button`
   &:hover { color: var(--color-text-primary); }
 `;
 
-// ─── Gauge score → color ──────────────────────────────────────────────────────
+// ─── Score helpers ────────────────────────────────────────────────────────────
+
+const SCORE_MAP: Record<string, number> = { red: 90, yellow: 55, green: 15, unavailable: 0 };
 
 function gaugeColor(score: number): string {
   if (score <= 33) return HC_COLORS.green;
@@ -127,37 +128,28 @@ function buildGaugeOptions(score: number): Options {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+interface ProjectRiskLevelCardProps {
+  projectId: string;
+}
+
 type TearsheetEntry = { project: Project; result: HealthResult };
 
-export default function PortfolioRiskGaugeCard() {
+export default function ProjectRiskLevelCard({ projectId }: ProjectRiskLevelCardProps) {
   const { data } = useData();
   const [tearsheetEntry, setTearsheetEntry] = useState<TearsheetEntry | null>(null);
 
-  const { score, needAttention, total, worstEntry } = useMemo(() => {
-    if (!data.account) return { score: 0, needAttention: 0, total: 0, worstEntry: null };
+  const { score, entry } = useMemo(() => {
+    if (!data.account) return { score: 0, entry: null };
     const healthConfig = data.account.healthConfig;
-    const activeProjects = allProjects.filter((p) => p.status === 'active');
+    const project = allProjects.find((p) => p.id === projectId);
+    if (!project) return { score: 0, entry: null };
 
-    const entries = activeProjects.map((project) => {
-      const risks = getRisksForProject(project.id);
-      const result = buildHealthResult(project, healthConfig, undefined, risks);
-      return { project, result };
-    });
+    const risks = getRisksForProject(projectId);
+    const result = buildHealthResult(project, healthConfig, undefined, risks);
+    const score = SCORE_MAP[result.compositeScore] ?? 0;
 
-    const needAttention = entries.filter(
-      (e) => e.result.compositeScore === 'red' || e.result.compositeScore === 'yellow'
-    ).length;
-
-    const total = entries.length;
-    const score = total > 0 ? Math.round((needAttention / total) * 100) : 0;
-
-    const worstEntry = entries.sort((a, b) => {
-      const order: Record<string, number> = { red: 0, yellow: 1, green: 2, unavailable: 3 };
-      return (order[a.result.compositeScore] ?? 3) - (order[b.result.compositeScore] ?? 3);
-    })[0] ?? null;
-
-    return { score, needAttention, total, worstEntry };
-  }, [data.account]);
+    return { score, entry: { project, result } };
+  }, [data.account, projectId]);
 
   const options = useMemo(() => buildGaugeOptions(score), [score]);
   const label = gaugeLabel(score);
@@ -165,13 +157,13 @@ export default function PortfolioRiskGaugeCard() {
   return (
     <>
       <HubCardFrame
-        title="Portfolio Risk Level"
+        title="Project Risk Level"
         infoTooltip={
           <span>
-            Reflects the percentage of active projects with elevated risk across cost, schedule, and open risk items.<br /><br />
-            <strong>Low (0–33):</strong> Most projects are on track with no significant flags.<br />
-            <strong>Moderate (34–66):</strong> A portion of projects have cost overruns, schedule delays, or unresolved risks.<br />
-            <strong>High (67–100):</strong> Most projects require immediate attention.
+            Composite risk score based on cost performance, schedule health, and open risk items for this project.<br /><br />
+            <strong>Low Risk:</strong> Project is on track with no significant flags.<br />
+            <strong>Moderate Risk:</strong> Some cost overruns, schedule delays, or unresolved risks require monitoring.<br />
+            <strong>High Risk:</strong> Significant issues present — immediate attention recommended.
           </span>
         }
       >
@@ -191,8 +183,8 @@ export default function PortfolioRiskGaugeCard() {
             {label}
           </Typography>
 
-          <SummaryText onClick={() => worstEntry && setTearsheetEntry(worstEntry)}>
-            {needAttention} of {total} project{total !== 1 ? 's' : ''} need{needAttention === 1 ? 's' : ''} attention
+          <SummaryText onClick={() => entry && setTearsheetEntry(entry)}>
+            View risk details
           </SummaryText>
         </GaugeWrap>
       </HubCardFrame>

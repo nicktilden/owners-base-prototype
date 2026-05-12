@@ -124,7 +124,7 @@ export function buildKpiColumns(activeKPIs: KPIKey[]): ColDef<PortfolioRiskRow>[
         colId: key,
         field: key,
         headerName: KPI_LABELS[key],
-        width: 150,
+        width: 210,
         sortable: true,
         filter: 'agSetColumnFilter',
         cellRendererParams: { kpiKey: key },
@@ -162,7 +162,7 @@ export function buildOverallHealthCol(): ColDef<PortfolioRiskRow> {
     colId: 'overallHealth',
     field: 'overallHealth',
     headerName: 'Overall',
-    width: 150,
+    width: 210,
     pinned: 'left',
     filter: 'agSetColumnFilter',
     filterParams: {

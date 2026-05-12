@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Button } from '@procore/core-react';
+import { Button, Select, TextArea, TextInput } from '@procore/core-react';
 import type { RiskTag, RiskTagStatus, SourceType, ResponseStrategy } from '@/types/health';
 import { useData } from '@/context/DataContext';
 import { usePersona } from '@/context/PersonaContext';
@@ -39,7 +39,7 @@ const FieldLabel = styled.label`
 const TwoCol = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 16px;
 `;
 
 const ButtonRow = styled.div`
@@ -48,50 +48,17 @@ const ButtonRow = styled.div`
   justify-content: flex-end;
 `;
 
-const NativeSelect = styled.select`
-  border: 1px solid var(--color-border-default);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  background: var(--color-surface-card);
-  outline: none;
-  width: 100%;
-  &:focus { border-color: var(--color-border-focus); }
-`;
-
-const NativeInput = styled.input`
-  border: 1px solid var(--color-border-default);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  background: var(--color-surface-card);
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  &:focus { border-color: var(--color-border-focus); }
-`;
-
-const NativeTextarea = styled.textarea`
-  border: 1px solid var(--color-border-default);
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  background: var(--color-surface-card);
-  resize: vertical;
-  font-family: inherit;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  &:focus { border-color: var(--color-border-focus); }
-`;
-
 const SliderRow = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+`;
+
+const ProbLabel = styled.span`
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  display: block;
 `;
 
 const RatingDot = styled.button<{ $active: boolean; $level: number }>`
@@ -120,14 +87,16 @@ const RatingDot = styled.button<{ $active: boolean; $level: number }>`
   &:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
 `;
 
-const ProbLabel = styled.span`
-  font-size: 11px;
-  color: var(--color-text-secondary);
-`;
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PROBABILITY_LABELS = ['Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'];
+
+const RESPONSE_OPTIONS: { value: ResponseStrategy | ''; label: string }[] = [
+  { value: 'mitigate', label: 'Mitigate' },
+  { value: 'transfer', label: 'Transfer' },
+  { value: 'accept',   label: 'Accept'   },
+  { value: 'avoid',    label: 'Avoid'    },
+];
 
 interface TagFormProps {
   sourceType: SourceType;
@@ -155,9 +124,10 @@ export default function TagForm({
 
   const riskTypes = data.account?.riskTypes ?? [];
 
-  const [riskTypeId, setRiskTypeId] = useState<string>(existingTag?.riskTypeId ?? '');
-  const [probability, setProbability] = useState<number>(existingTag?.probability ?? prefillProbability ?? 2);
-  const [impact, setImpact] = useState<number>(existingTag?.impact ?? prefillImpact ?? 0);
+  const [riskTypeId, setRiskTypeId]         = useState<string>(existingTag?.riskTypeId ?? '');
+  const [probability, setProbability]       = useState<number>(existingTag?.probability ?? prefillProbability ?? 2);
+  const [impact, setImpact]                 = useState<number>(existingTag?.impact ?? prefillImpact ?? 0);
+  const [scheduleImpact, setScheduleImpact] = useState<number>(existingTag?.scheduleImpact ?? 0);
   const [responseStrategy, setResponseStrategy] = useState<ResponseStrategy | ''>(existingTag?.responseStrategy ?? '');
   const [mitigationPlan, setMitigationPlan] = useState<string>(existingTag?.mitigationPlan ?? '');
 
@@ -170,6 +140,7 @@ export default function TagForm({
       riskTypeId,
       probability: probability as 1 | 2 | 3 | 4 | 5,
       impact,
+      scheduleImpact: scheduleImpact > 0 ? scheduleImpact : undefined,
       status: (existingTag?.status as RiskTagStatus) ?? 'open',
       riskOwner: activeUser?.id ?? '',
       responseStrategy: responseStrategy || undefined,
@@ -181,79 +152,110 @@ export default function TagForm({
   }
 
   const canSave = !!riskTypeId;
+  const selectedRiskType = riskTypes.find(rt => rt.id === riskTypeId);
+  const selectedResponse = RESPONSE_OPTIONS.find(o => o.value === responseStrategy);
 
   return (
     <FormWrapper>
+
+      {/* Risk Type */}
       <FieldRow>
         <FieldLabel htmlFor="tag-risk-type">Risk Type</FieldLabel>
-        <NativeSelect
-          id="tag-risk-type"
-          value={riskTypeId}
-          onChange={e => setRiskTypeId(e.target.value)}
+        <Select
+          placeholder="Select a risk type…"
+          label={selectedRiskType?.label}
+          block
+          onSelect={(s: { item: unknown }) => {
+            const item = s.item as { value: string };
+            setRiskTypeId(item.value);
+          }}
+          onClear={riskTypeId ? () => setRiskTypeId('') : undefined}
         >
-          <option value="">Select a risk type…</option>
           {riskTypes.map(rt => (
-            <option key={rt.id} value={rt.id}>{rt.label}</option>
+            <Select.Option key={rt.id} value={{ value: rt.id }} selected={riskTypeId === rt.id}>
+              {rt.label}
+            </Select.Option>
           ))}
-        </NativeSelect>
+        </Select>
       </FieldRow>
 
+      {/* Probability */}
+      <FieldRow>
+        <FieldLabel>Probability</FieldLabel>
+        <SliderRow>
+          {[1, 2, 3, 4, 5].map(val => (
+            <RatingDot
+              key={val}
+              type="button"
+              $active={probability === val}
+              $level={val}
+              aria-label={`Probability ${val} — ${PROBABILITY_LABELS[val - 1]}`}
+              aria-pressed={probability === val}
+              onClick={() => setProbability(val)}
+            >
+              {val}
+            </RatingDot>
+          ))}
+        </SliderRow>
+        <ProbLabel>{PROBABILITY_LABELS[probability - 1]}</ProbLabel>
+      </FieldRow>
+
+      {/* Cost Impact + Schedule Impact */}
       <TwoCol>
         <FieldRow>
-          <FieldLabel>Probability</FieldLabel>
-          <SliderRow>
-            {[1, 2, 3, 4, 5].map(val => (
-              <RatingDot
-                key={val}
-                type="button"
-                $active={probability === val}
-                $level={val}
-                aria-label={`Probability ${val} — ${PROBABILITY_LABELS[val - 1]}`}
-                aria-pressed={probability === val}
-                onClick={() => setProbability(val)}
-              >
-                {val}
-              </RatingDot>
-            ))}
-          </SliderRow>
-          <ProbLabel>{PROBABILITY_LABELS[probability - 1]}</ProbLabel>
+          <FieldLabel htmlFor="tag-impact">Cost Impact ($)</FieldLabel>
+          <TextInput
+            id="tag-impact"
+            type="number"
+            value={String(impact)}
+            min={0}
+            step={1000}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImpact(Number(e.target.value))}
+          />
         </FieldRow>
 
         <FieldRow>
-          <FieldLabel htmlFor="tag-impact">Expected Impact ($)</FieldLabel>
-          <NativeInput
-            id="tag-impact"
+          <FieldLabel htmlFor="tag-schedule-impact">Schedule Impact (days)</FieldLabel>
+          <TextInput
+            id="tag-schedule-impact"
             type="number"
-            value={impact}
+            value={String(scheduleImpact)}
             min={0}
-            step={1000}
-            onChange={e => setImpact(Number(e.target.value))}
+            step={1}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setScheduleImpact(Number(e.target.value))}
           />
         </FieldRow>
       </TwoCol>
 
+      {/* Response Strategy */}
       <FieldRow>
         <FieldLabel htmlFor="tag-response">Response Strategy</FieldLabel>
-        <NativeSelect
-          id="tag-response"
-          value={responseStrategy}
-          onChange={e => setResponseStrategy(e.target.value as ResponseStrategy | '')}
+        <Select
+          placeholder="Optional"
+          label={selectedResponse?.label}
+          block
+          onSelect={(s: { item: unknown }) => {
+            const item = s.item as { value: string };
+            setResponseStrategy(item.value as ResponseStrategy | '');
+          }}
+          onClear={responseStrategy ? () => setResponseStrategy('') : undefined}
         >
-          <option value="">Optional</option>
-          <option value="mitigate">Mitigate</option>
-          <option value="transfer">Transfer</option>
-          <option value="accept">Accept</option>
-          <option value="avoid">Avoid</option>
-        </NativeSelect>
+          {RESPONSE_OPTIONS.map(opt => (
+            <Select.Option key={opt.value} value={{ value: opt.value }} selected={responseStrategy === opt.value}>
+              {opt.label}
+            </Select.Option>
+          ))}
+        </Select>
       </FieldRow>
 
+      {/* Mitigation Plan (conditional) */}
       {responseStrategy === 'mitigate' && (
         <FieldRow>
           <FieldLabel htmlFor="tag-mitigation">Mitigation Plan</FieldLabel>
-          <NativeTextarea
+          <TextArea
             id="tag-mitigation"
             value={mitigationPlan}
-            onChange={e => setMitigationPlan(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMitigationPlan(e.target.value)}
             rows={2}
             placeholder="Describe the mitigation approach…"
           />
@@ -262,7 +264,7 @@ export default function TagForm({
 
       <ButtonRow>
         <Button variant="tertiary" size="sm" onClick={onCancel}>Cancel</Button>
-        <Button variant="primary" size="sm" onClick={handleSave} disabled={!canSave}>
+        <Button variant="secondary" size="sm" onClick={handleSave} disabled={!canSave}>
           {existingTag?.riskTypeId ? 'Update tag' : 'Tag as risk'}
         </Button>
       </ButtonRow>

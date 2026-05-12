@@ -2,7 +2,7 @@
  * ASSETS TYPES
  */
 
-export type AssetType = 'equipment' | 'vehicle' | 'tool' | 'material' | 'fixture' | 'system' | 'other';
+export type AssetType = 'equipment' | 'vehicle' | 'tool' | 'material' | 'fixture' | 'system' | 'transformer' | 'generator' | 'hvac_system' | 'fire_protection' | 'electrical' | 'other';
 export type AssetTrade = 'general' | 'electrical' | 'mechanical' | 'plumbing' | 'hvac' | 'civil' | 'structural' | 'other';
 export type AssetStatus = 'active' | 'inactive' | 'in_maintenance' | 'retired' | 'disposed' | 'ordered' | 'delivered' | 'installed' | 'commissioned' | 'turned_over';
 export type AssetCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'critical';

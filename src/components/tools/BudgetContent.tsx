@@ -23,6 +23,7 @@ import { projects } from "@/data/seed/projects";
 import type { BudgetLineItem } from "@/types/budget";
 import { calculateBudget } from "@/types/budget";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import BudgetDetailTearsheet from "@/components/tools/BudgetDetailTearsheet";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,11 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const gridApiRef = useRef<GridApi<BudgetLineItem> | null>(null);
+  const [selectedBudgetItem, setSelectedBudgetItem] = useState<BudgetLineItem | null>(null);
+
+  const handleRowClick = useCallback((event: { data?: BudgetLineItem }) => {
+    if (event.data) setSelectedBudgetItem(event.data);
+  }, []);
 
   const project = useMemo(() => projects.find((p) => p.id === projectId), [projectId]);
   const projectLabel = project ? `${project.number} ${project.name}` : projectId;
@@ -423,6 +429,7 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
                   height="100%"
                   rowData={rowData}
                   columnDefs={columnDefs}
+                  onRowClicked={handleRowClick}
                   getRowId={getRowId}
                   groupDisplayType="groupRows"
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
@@ -448,6 +455,11 @@ export default function BudgetContent({ projectId }: BudgetContentProps) {
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>
+      <BudgetDetailTearsheet
+        item={selectedBudgetItem}
+        open={selectedBudgetItem !== null}
+        onClose={() => setSelectedBudgetItem(null)}
+      />
     </ToolPageLayout>
   );
 }

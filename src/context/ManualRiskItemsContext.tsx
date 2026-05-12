@@ -3,7 +3,7 @@
  * Owns ManualRiskItem[] state — the escape hatch for risks without source objects.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ManualRiskItem, RiskTagStatus } from '@/types/health';
 import { useData } from './DataContext';
 
@@ -28,25 +28,25 @@ export function ManualRiskItemsProvider({ children }: { children: React.ReactNod
     }
   }, [data.manualRiskItems]);
 
-  function getManualRiskItemsForProject(projectId: string): ManualRiskItem[] {
+  const getManualRiskItemsForProject = useCallback((projectId: string): ManualRiskItem[] => {
     return manualRiskItems.filter(m => m.projectId === projectId);
-  }
+  }, [manualRiskItems]);
 
-  function addManualRiskItem(item: ManualRiskItem) {
+  const addManualRiskItem = useCallback((item: ManualRiskItem) => {
     setManualRiskItems(prev => [...prev, item]);
-  }
+  }, []);
 
-  function updateManualRiskItem(id: string, updates: Partial<ManualRiskItem>) {
+  const updateManualRiskItem = useCallback((id: string, updates: Partial<ManualRiskItem>) => {
     setManualRiskItems(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
-  }
+  }, []);
 
-  function transitionStatus(id: string, newStatus: RiskTagStatus) {
+  const transitionStatus = useCallback((id: string, newStatus: RiskTagStatus) => {
     setManualRiskItems(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
-  }
+  }, []);
 
-  function removeManualRiskItem(id: string) {
+  const removeManualRiskItem = useCallback((id: string) => {
     setManualRiskItems(prev => prev.filter(m => m.id !== id));
-  }
+  }, []);
 
   return (
     <ManualRiskItemsContext.Provider value={{

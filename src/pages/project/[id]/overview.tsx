@@ -14,13 +14,11 @@ export default function ProjectOverviewPage() {
   const rawId = typeof id === 'string' ? id : '';
   const { setProject } = useLevel();
 
-  // Resolve numeric ids (from portfolio table) to seed project ids.
-  const numeric = rawId !== '' && /^\d+$/.test(rawId) ? parseInt(rawId, 10) : null;
-  const projectId = numeric !== null ? `proj-${String(numeric).padStart(3, '0')}` : rawId;
-
+  // Pass the raw URL id so LevelContext stores it correctly for GlobalHeader lookup.
+  // "proj-001" → seed project, "2" → numeric sample project row.
   useEffect(() => {
-    if (projectId) setProject(projectId);
-  }, [projectId]);
+    if (rawId) setProject(rawId);
+  }, [rawId]);
 
   return <ProjectOverviewContent />;
 }
