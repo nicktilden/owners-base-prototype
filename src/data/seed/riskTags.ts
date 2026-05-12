@@ -1321,4 +1321,24 @@ export const riskTags: RiskTag[] = [
     createdAt: new Date('2025-01-25'),
     autoCloseOnSourceClose: false,
   },
+
+  // proj-002: CE-0014 FF&E scope addition — large owner-requested cost cutting into contingency
+  {
+    id: 'tag-077',
+    sourceType: 'change_event',
+    sourceId: 'ce-0014',
+    projectId: 'proj-002',
+    riskTypeId: 'rt-001',
+    probability: 4,
+    impact: 487500,
+    status: 'open',
+    riskOwner: 'user-004',
+    responseStrategy: 'mitigate',
+    mitigationPlan: 'Review FF&E package scope against remaining contingency balance. Evaluate phasing or value-engineering options to reduce contingency draw.',
+    residualImpact: 200000,
+    origin: 'automated',
+    createdBy: 'system',
+    createdAt: new Date('2024-05-15'),
+    autoCloseOnSourceClose: true,
+  },
 ];

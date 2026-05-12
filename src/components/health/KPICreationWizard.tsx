@@ -1,122 +1,47 @@
 /**
  * KPI CREATION WIZARD
- * 6-step tearsheet wizard for creating custom KPI cards.
- * Steps: Data Source → Calculation → Filters → Thresholds → Visualization → Name + Save
- * Saves a placeholder CustomKPICard to data.account.healthConfig.customKPIs.
+ * Single-page tearsheet for creating custom KPI cards.
+ * Risk Type selection auto-populates data sources; "Custom" allows manual selection.
+ * Filters and thresholds are conditional on data source / calc type.
  */
 
-import React, { useState } from 'react';
-import { Banner, Button, Pill, Select, Tearsheet, Typography } from '@procore/core-react';
-import { Check } from '@procore/core-icons';
+import React, { useEffect, useState } from 'react';
+import { Banner, Button, Card, H2, Pill, Select, Switch, Tearsheet, Typography } from '@procore/core-react';
 import styled, { createGlobalStyle } from 'styled-components';
-import type { CalcType, CustomKPICard, KPIThreshold, VisualizationMode } from '@/types/health';
+import type { CalcType, CustomKPICard, VisualizationMode } from '@/types/health';
 import { useData } from '@/context/DataContext';
 
 // ─── Tearsheet width ──────────────────────────────────────────────────────────
 
 const KPITearsheetWidth = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .kpi-creation-wizard-root) {
-    flex: 0 0 60vw !important;
+    flex: 0 0 auto !important;
+    width: 60vw !important;
+    max-width: 900px !important;
   }
 `;
 
 // ─── Styled ───────────────────────────────────────────────────────────────────
 
-const WizardRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-`;
-
-const WizardHeader = styled.div`
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--color-border-separator);
-  flex-shrink: 0;
-`;
-
-// ── Stepper — matches ConnectStepper pattern from ProjectEditTearsheet ─────────
-
-const StepperRow = styled.div`
-  display: flex;
-  align-items: flex-start;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--color-border-separator);
-  flex-shrink: 0;
-`;
-
-const StepItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-`;
-
-const StepCircle = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  background: ${({ $state }) =>
-    $state === 'done' ? 'var(--color-action-primary)' :
-    $state === 'active' ? 'var(--color-surface-primary)' :
-    'var(--color-surface-secondary)'};
-  color: ${({ $state }) =>
-    $state === 'done' ? '#fff' :
-    $state === 'active' ? 'var(--color-action-primary)' :
-    'var(--color-text-disabled)'};
-  border: 2px solid ${({ $state }) =>
-    $state === 'pending' ? 'var(--color-border-default)' : 'var(--color-action-primary)'};
-`;
-
-const StepLabel = styled.div<{ $active: boolean }>`
-  font-size: 10px;
-  font-weight: ${({ $active }) => ($active ? 700 : 400)};
-  color: ${({ $active }) => ($active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)')};
-  white-space: nowrap;
-  text-align: center;
-`;
-
-const StepConnector = styled.div<{ $done: boolean }>`
-  flex: 1;
-  height: 2px;
-  background: ${({ $done }) => $done ? 'var(--color-action-primary)' : 'var(--color-border-default)'};
-  margin-top: 14px; /* vertically align with center of 28px circle */
-`;
-
-// ── Rest of styled components ─────────────────────────────────────────────────
-
-const WizardBody = styled.div`
+const Body = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  background: var(--color-surface-secondary);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 `;
 
-const OptionGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
+const SectionCard = styled(Card)`
+  padding: 24px;
+  background: var(--color-surface-primary);
 `;
 
-const OptionCard = styled.button<{ $selected: boolean }>`
-  padding: 12px;
-  border-radius: 6px;
-  border: 2px solid ${({ $selected }) => $selected ? 'var(--color-action-primary)' : 'var(--color-border-default)'};
-  background: ${({ $selected }) => $selected ? 'var(--color-surface-hover)' : 'var(--color-surface-primary)'};
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.12s;
-  &:hover { border-color: var(--color-border-strong); }
-`;
-
-const FormField = styled.div`
+const SectionTitle = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-bottom: 16px;
 `;
 
@@ -126,6 +51,18 @@ const FieldLabel = styled.label`
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: 6px;
+`;
+
+const FieldHint = styled.span`
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+`;
+
+const FormField = styled.div`
+  margin-bottom: 16px;
+  &:last-child { margin-bottom: 0; }
 `;
 
 const TextInput = styled.input`
@@ -140,6 +77,27 @@ const TextInput = styled.input`
   &:focus { outline: 2px solid var(--color-border-focus); }
 `;
 
+const OptionGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+`;
+
+const OptionCard = styled.button<{ $selected: boolean; $locked?: boolean; $disabled?: boolean }>`
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 2px solid ${({ $selected, $disabled }) => $disabled ? 'var(--color-border-separator)' : $selected ? 'var(--color-action-primary)' : 'var(--color-border-default)'};
+  background: ${({ $selected, $locked, $disabled }) =>
+    $disabled ? 'var(--color-surface-secondary)' :
+    $locked ? 'var(--color-surface-secondary)' :
+    $selected ? 'var(--color-surface-hover)' : 'var(--color-surface-primary)'};
+  text-align: left;
+  cursor: ${({ $locked, $disabled }) => ($locked || $disabled) ? 'default' : 'pointer'};
+  opacity: ${({ $locked, $selected, $disabled }) => $disabled ? 0.4 : ($locked && !$selected ? 0.45 : 1)};
+  transition: border-color 0.12s;
+  &:hover:not(:disabled) { border-color: ${({ $locked, $disabled }) => ($locked || $disabled) ? 'var(--color-border-separator)' : 'var(--color-border-strong)'}; }
+`;
+
 const ThresholdRow = styled.div`
   display: flex;
   align-items: center;
@@ -148,10 +106,14 @@ const ThresholdRow = styled.div`
   background: var(--color-surface-secondary);
   border-radius: 6px;
   border: 1px solid var(--color-border-separator);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 `;
 
-const ThresholdNumberInput = styled.input`
+const ThresholdLabel = styled.div`
+  flex: 1;
+`;
+
+const ThresholdInput = styled.input`
   width: 72px;
   padding: 6px 10px;
   border: 1px solid var(--color-border-default);
@@ -163,78 +125,115 @@ const ThresholdNumberInput = styled.input`
   &:focus { outline: 2px solid var(--color-border-focus); }
 `;
 
-const ThresholdLabel = styled.div`
-  flex: 1;
-`;
-
-const PreviewCard = styled.div`
-  padding: 16px;
-  border: 2px dashed var(--color-border-default);
-  border-radius: 8px;
-  background: var(--color-surface-secondary);
-  text-align: center;
-`;
-
 const FooterBar = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 8px;
   padding: 16px 24px;
   border-top: 1px solid var(--color-border-separator);
   flex-shrink: 0;
+  background: var(--color-surface-primary);
+`;
+
+const LockedBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-left: 8px;
 `;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DATA_SOURCES = [
-  { key: 'budget', label: 'Budget', description: 'Cost, variance, contingency' },
-  { key: 'schedule', label: 'Schedule', description: 'Dates, float, baseline' },
-  { key: 'rfis', label: 'RFIs', description: 'Open, overdue, response time' },
-  { key: 'submittals', label: 'Submittals', description: 'Pending, late, approval rate' },
+const DATA_SOURCES: { key: string; label: string; description: string }[] = [
+  { key: 'budget',        label: 'Budget',        description: 'Cost, variance, contingency' },
+  { key: 'schedule',      label: 'Schedule',      description: 'Dates, float, baseline' },
+  { key: 'rfis',          label: 'RFIs',          description: 'Open, overdue, response time' },
+  { key: 'submittals',    label: 'Submittals',    description: 'Pending, late, approval rate' },
   { key: 'change_events', label: 'Change Events', description: 'Pending, approved, exposure' },
-  { key: 'risk_records', label: 'Risk Records', description: 'Open risks, probability, impact' },
-] as const;
+  { key: 'risk_records',  label: 'Risk Records',  description: 'Open risks, probability, impact' },
+  { key: 'punch_list',    label: 'Punch List',    description: 'Open, overdue items' },
+  { key: 'observations',  label: 'Observations',  description: 'Safety, quality findings' },
+];
 
 const CALC_TYPES: { key: CalcType; label: string; description: string }[] = [
-  { key: 'Count', label: 'Count', description: 'Total number of records' },
-  { key: 'Sum', label: 'Sum', description: 'Total sum of a numeric field' },
-  { key: 'Average', label: 'Average', description: 'Mean value across records' },
-  { key: 'Ratio', label: 'Ratio', description: 'Percentage or ratio between two values' },
+  { key: 'Count',    label: 'Count',    description: 'Total number of records' },
+  { key: 'Sum',      label: 'Sum',      description: 'Total sum of a numeric field' },
+  { key: 'Average',  label: 'Average',  description: 'Mean value across records' },
+  { key: 'Ratio',    label: 'Ratio',    description: 'Percentage or ratio between two values' },
   { key: 'Variance', label: 'Variance', description: 'Delta from a baseline or budget' },
-  { key: 'Trend', label: 'Trend', description: 'Direction of change over time' },
+  { key: 'Trend',    label: 'Trend',    description: 'Direction of change over time' },
 ];
 
-const VIZ_MODES: { key: VisualizationMode; label: string; description: string }[] = [
-  { key: 'card', label: 'Card', description: 'Status chip with value + label' },
-  { key: 'table-column', label: 'Table Column', description: 'Column in portfolio table view' },
-  { key: 'sparkline', label: 'Sparkline', description: 'Trend line over last 6 periods' },
-];
+// Status options keyed by data source
+const SOURCE_STATUS_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  rfis:          [{ value: 'all', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }, { value: 'overdue', label: 'Overdue' }],
+  submittals:    [{ value: 'all', label: 'All' }, { value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }, { value: 'overdue', label: 'Overdue' }],
+  change_events: [{ value: 'all', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }],
+  punch_list:    [{ value: 'all', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }, { value: 'overdue', label: 'Overdue' }],
+  observations:  [{ value: 'all', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }, { value: 'in_progress', label: 'In Progress' }],
+  risk_records:  [{ value: 'all', label: 'All' }, { value: 'open', label: 'Open' }, { value: 'mitigated', label: 'Mitigated' }, { value: 'accepted', label: 'Accepted' }, { value: 'closed', label: 'Closed' }],
+};
 
-const STEP_LABELS = ['Data Source', 'Calculation', 'Filters', 'Thresholds', 'Visualization', 'Name & Save'];
-
-// ── Filter select options ──────────────────────────────────────────────────────
-
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'open', label: 'Open only' },
-  { value: 'pending', label: 'Pending only' },
-  { value: 'overdue', label: 'Overdue only' },
-];
+// Threshold unit hint keyed by calc type
+const THRESHOLD_UNIT: Record<CalcType, string> = {
+  Count:    'count (e.g. 5 items)',
+  Sum:      'dollar amount (e.g. 100000)',
+  Average:  'average value (e.g. 3.5)',
+  Ratio:    'percentage (e.g. 25 for 25%)',
+  Variance: 'variance % (e.g. 10 for 10%)',
+  Trend:    'periods of decline (e.g. 3)',
+};
 
 const DATE_RANGE_OPTIONS = [
-  { value: 'all', label: 'All time' },
-  { value: 'last_7', label: 'Last 7 days' },
-  { value: 'last_30', label: 'Last 30 days' },
-  { value: 'last_90', label: 'Last 90 days' },
+  { value: 'all',            label: 'All time' },
+  { value: 'last_7',         label: 'Last 7 days' },
+  { value: 'last_30',        label: 'Last 30 days' },
+  { value: 'last_90',        label: 'Last 90 days' },
   { value: 'current_period', label: 'Current period' },
 ];
 
-const PROJECT_TYPE_OPTIONS = [
-  { value: 'all', label: 'All project types' },
-  { value: 'capital', label: 'Capital' },
-  { value: 'renovation', label: 'Renovation' },
-  { value: 'new_construction', label: 'New Construction' },
-];
+// Normalize riskType sourceData keys → DATA_SOURCES keys
+const SOURCE_DATA_MAP: Record<string, string> = {
+  budget:       'budget',
+  schedule:     'schedule',
+  rfis:         'rfis',
+  submittals:   'submittals',
+  change_events:'change_events',
+  risk_records: 'risk_records',
+  punch_list:   'punch_list',
+  observations: 'observations',
+  inspections:  'observations', // map inspections → observations for display
+  action_plans: 'risk_records', // map action_plans → risk_records for display
+};
+
+// ─── Form state ───────────────────────────────────────────────────────────────
+
+interface FormState {
+  name: string;
+  riskTypeId: string; // '' = custom
+  dataSources: string[];
+  calcType: CalcType | '';
+  filterStatus: string;
+  filterDateRange: string;
+  thresholdYellow: number;
+  thresholdRed: number;
+  active: boolean;
+}
+
+const INITIAL: FormState = {
+  name: '',
+  riskTypeId: '',
+  dataSources: [],
+  calcType: '',
+  filterStatus: 'all',
+  filterDateRange: 'last_30',
+  thresholdYellow: 5,
+  thresholdRed: 10,
+  active: true,
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -244,138 +243,189 @@ interface KPICreationWizardProps {
   onSaved?: (kpi: CustomKPICard) => void;
 }
 
-interface WizardState {
-  dataSource: string;
-  calcType: CalcType | '';
-  filterStatus: string;
-  filterDateRange: string;
-  filterProjectType: string;
-  thresholdYellow: number;
-  thresholdRed: number;
-  visualization: VisualizationMode | '';
-  name: string;
-}
-
-const INITIAL_STATE: WizardState = {
-  dataSource: '',
-  calcType: '',
-  filterStatus: 'all',
-  filterDateRange: 'last_30',
-  filterProjectType: 'all',
-  thresholdYellow: 5,
-  thresholdRed: 10,
-  visualization: '',
-  name: '',
-};
-
 export default function KPICreationWizard({ open, onClose, onSaved }: KPICreationWizardProps) {
   const { data, setData } = useData();
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState<WizardState>(INITIAL_STATE);
+  const [form, setForm] = useState<FormState>(INITIAL);
 
-  function canAdvance(): boolean {
-    if (step === 1) return !!form.dataSource;
-    if (step === 2) return !!form.calcType;
-    if (step === 3) return true; // filters always optional
-    if (step === 4) return form.thresholdYellow > 0 && form.thresholdRed > 0;
-    if (step === 5) return !!form.visualization;
-    if (step === 6) return !!form.name.trim();
-    return false;
+  const riskTypes = data.account?.riskTypes ?? [];
+  const noRiskTypeSelected = form.riskTypeId === '';
+  const isCustom = form.riskTypeId === 'custom';
+  // Sources are locked (read-only, pre-populated) when a specific risk type is chosen
+  const lockedSources = !noRiskTypeSelected && !isCustom;
+  // Sources are disabled (unselectable) until a risk type is chosen
+  const sourcesDisabled = noRiskTypeSelected;
+
+  // When risk type changes, auto-populate data sources
+  useEffect(() => {
+    if (form.riskTypeId === '') return; // no selection yet — leave sources empty
+    if (form.riskTypeId === 'custom') {
+      setForm(f => ({ ...f, dataSources: [] }));
+      return;
+    }
+    const rt = riskTypes.find(r => r.id === form.riskTypeId);
+    if (!rt) return;
+    const mapped = [...new Set(rt.sourceData.map(s => SOURCE_DATA_MAP[s] ?? s).filter(s => DATA_SOURCES.some(d => d.key === s)))];
+    setForm(f => ({ ...f, dataSources: mapped, filterStatus: 'all' }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.riskTypeId]);
+
+  // Reset status filter when data sources change
+  useEffect(() => {
+    setForm(f => ({ ...f, filterStatus: 'all' }));
+  }, [form.dataSources.join(',')]);
+
+  const primarySource = form.dataSources[0] ?? '';
+  const statusOptions = SOURCE_STATUS_OPTIONS[primarySource] ?? [{ value: 'all', label: 'All' }];
+  const showStatusFilter = primarySource && SOURCE_STATUS_OPTIONS[primarySource];
+  const thresholdUnit = form.calcType ? THRESHOLD_UNIT[form.calcType as CalcType] : null;
+
+  const canSave = !!form.name.trim() && form.dataSources.length > 0 && !!form.calcType && form.thresholdYellow > 0 && form.thresholdRed > 0;
+
+  function toggleDataSource(key: string) {
+    if (sourcesDisabled || lockedSources) return;
+    setForm(f => {
+      const next = f.dataSources.includes(key)
+        ? f.dataSources.filter(s => s !== key)
+        : [...f.dataSources, key];
+      // If this is a risk-type-backed selection and the user diverges, switch to custom
+      const wasRiskTypeBacked = f.riskTypeId !== '' && f.riskTypeId !== 'custom';
+      if (wasRiskTypeBacked) {
+        // adding a source not in the current set triggers auto-switch to custom
+        const isAdding = !f.dataSources.includes(key);
+        if (isAdding) return { ...f, dataSources: next, riskTypeId: 'custom' };
+      }
+      return { ...f, dataSources: next };
+    });
   }
 
   function handleSave() {
-    if (!data.account) return;
-    const filters: Record<string, string> = {};
-    if (form.filterStatus !== 'all') filters.status = form.filterStatus;
-    if (form.filterDateRange !== 'all') filters.dateRange = form.filterDateRange;
-    if (form.filterProjectType !== 'all') filters.projectType = form.filterProjectType;
-
+    if (!data.account || !canSave) return;
     const newKPI: CustomKPICard = {
       id: `custom-kpi-${Date.now()}`,
       name: form.name.trim(),
-      dataSource: form.dataSource,
+      dataSource: form.dataSources[0] ?? '',
       calcType: form.calcType as CalcType,
-      filters,
+      filters: {
+        ...(form.filterStatus !== 'all' && { status: form.filterStatus }),
+        ...(form.filterDateRange !== 'all' && { dateRange: form.filterDateRange }),
+      },
       thresholds: { yellow: form.thresholdYellow, red: form.thresholdRed },
-      visualization: form.visualization as VisualizationMode,
+      visualization: [],
       placeholderValue: '—',
       placeholderStatus: 'green',
     };
-
     const existing = data.account.healthConfig.customKPIs ?? [];
-    setData({
-      ...data,
-      account: {
-        ...data.account,
-        healthConfig: {
-          ...data.account.healthConfig,
-          customKPIs: [...existing, newKPI],
-        },
-      },
-    });
-
+    setData({ ...data, account: { ...data.account, healthConfig: { ...data.account.healthConfig, customKPIs: [...existing, newKPI] } } });
     onSaved?.(newKPI);
-    setStep(1);
-    setForm(INITIAL_STATE);
+    setForm(INITIAL);
     onClose();
   }
 
   function handleClose() {
-    setStep(1);
-    setForm(INITIAL_STATE);
+    setForm(INITIAL);
     onClose();
   }
+
+  const selectedRiskType = riskTypes.find(r => r.id === form.riskTypeId);
 
   return (
     <>
       <KPITearsheetWidth />
-      <Tearsheet open={open} onClose={handleClose} aria-label="Create KPI wizard" placement="right">
+      <Tearsheet open={open} onClose={handleClose} aria-label="Create Custom KPI" placement="right">
         <div className="kpi-creation-wizard-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
           {/* Header */}
-          <WizardHeader>
-            <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
-              Create Custom KPI
-            </Typography>
-          </WizardHeader>
-
-          {/* Step progress — matches ConnectStepper layout */}
-          <StepperRow>
-            {STEP_LABELS.map((label, i) => {
-              const num = i + 1;
-              const state: 'done' | 'active' | 'pending' = num < step ? 'done' : num === step ? 'active' : 'pending';
-              return (
-                <React.Fragment key={label}>
-                  {i > 0 && <StepConnector $done={num <= step} />}
-                  <StepItem>
-                    <StepCircle $state={state}>
-                      {state === 'done' ? <Check size="sm" /> : num}
-                    </StepCircle>
-                    <StepLabel $active={state === 'active'}>{label}</StepLabel>
-                  </StepItem>
-                </React.Fragment>
-              );
-            })}
-          </StepperRow>
+          <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--color-border-separator)', flexShrink: 0, background: 'var(--color-surface-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <Typography intent="h2" style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'block' }}>
+                Create Custom KPI
+              </Typography>
+              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginTop: 2 }}>
+                Define a new KPI to track and score project health.
+              </Typography>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="tertiary" className="b_tertiary" onClick={handleClose}>Cancel</Button>
+              <Button variant="primary" className="b_primary" onClick={handleSave} disabled={!canSave}>Create KPI</Button>
+            </div>
+          </div>
 
           {/* Body */}
-          <WizardBody>
-            {/* ── Step 1: Data Source ── */}
-            {step === 1 && (
-              <>
+          <Body>
+
+            {/* ── Identity ── */}
+            <SectionCard>
+              <SectionTitle>
+                <Typography intent="h3" style={{ color: 'var(--color-text-primary)', display: 'block' }}>Identity</Typography>
+              </SectionTitle>
+              <FormField>
+                <FieldLabel htmlFor="kpi-name">KPI Name *</FieldLabel>
+                <TextInput
+                  id="kpi-name"
+                  type="text"
+                  value={form.name}
+                  placeholder="e.g. Overdue Change Events"
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  autoFocus
+                />
+              </FormField>
+              <FormField>
+                <FieldLabel>Risk Type</FieldLabel>
+                <FieldHint>Selecting a Risk Type auto-populates its data sources. Choose Custom to configure manually.</FieldHint>
+                <Select
+                  block
+                  label={form.riskTypeId === 'custom' ? 'Custom' : (selectedRiskType?.label ?? 'Select a Risk Type…')}
+                  onSelect={({ item }) => {
+                    const id = (item as { id: string }).id;
+                    setForm(f => ({ ...f, riskTypeId: id, calcType: '' }));
+                  }}
+                >
+                  <Select.Option value={{ id: 'custom' }} selected={form.riskTypeId === 'custom'}>
+                    Custom
+                  </Select.Option>
+                  {riskTypes.filter(rt => !rt.isHidden).map(rt => (
+                    <Select.Option key={rt.id} value={{ id: rt.id }} selected={form.riskTypeId === rt.id}>
+                      {rt.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}>
                 <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Select Data Source</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    Choose the tool data that this KPI will measure.
-                  </Typography>
+                  <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>Active</Typography>
+                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>Include in composite health scoring.</Typography>
                 </div>
-                <OptionGrid>
-                  {DATA_SOURCES.map(src => (
+                <Switch checked={form.active} onChange={() => setForm(f => ({ ...f, active: !f.active }))} aria-label="KPI active" />
+              </FormField>
+            </SectionCard>
+
+            {/* ── Data Sources ── */}
+            <SectionCard style={{ opacity: sourcesDisabled ? 0.6 : 1, transition: 'opacity 0.15s' }}>
+              <SectionTitle>
+                <Typography intent="h3" style={{ color: 'var(--color-text-primary)', display: 'block' }}>
+                  Data Sources
+                  {lockedSources && <LockedBadge>— set by Risk Type</LockedBadge>}
+                </Typography>
+                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                  {sourcesDisabled
+                    ? 'Select a Risk Type above to configure data sources.'
+                    : lockedSources
+                      ? `Pre-selected by the ${selectedRiskType?.label} risk type. Select an additional source to switch to Custom.`
+                      : 'Choose one or more tools whose data this KPI will measure.'}
+                </Typography>
+              </SectionTitle>
+              <OptionGrid>
+                {DATA_SOURCES.map(src => {
+                  const selected = form.dataSources.includes(src.key);
+                  return (
                     <OptionCard
                       key={src.key}
-                      $selected={form.dataSource === src.key}
-                      onClick={() => setForm(f => ({ ...f, dataSource: src.key }))}
-                      aria-pressed={form.dataSource === src.key}
+                      $selected={selected}
+                      $locked={lockedSources}
+                      $disabled={sourcesDisabled}
+                      onClick={() => toggleDataSource(src.key)}
+                      aria-pressed={selected}
+                      disabled={sourcesDisabled || lockedSources}
                     >
                       <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: 2 }}>
                         {src.label}
@@ -384,73 +434,69 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                         {src.description}
                       </Typography>
                     </OptionCard>
-                  ))}
-                </OptionGrid>
-              </>
-            )}
+                  );
+                })}
+              </OptionGrid>
+            </SectionCard>
 
-            {/* ── Step 2: Calculation Type ── */}
-            {step === 2 && (
-              <>
-                <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Calculation Type</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    How should the KPI value be derived from {DATA_SOURCES.find(s => s.key === form.dataSource)?.label ?? 'the selected'} data?
-                  </Typography>
-                </div>
-                <OptionGrid>
-                  {CALC_TYPES.map(ct => (
-                    <OptionCard
-                      key={ct.key}
-                      $selected={form.calcType === ct.key}
-                      onClick={() => setForm(f => ({ ...f, calcType: ct.key }))}
-                      aria-pressed={form.calcType === ct.key}
-                    >
-                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: 2 }}>
-                        {ct.label}
-                      </Typography>
-                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                        {ct.description}
-                      </Typography>
-                    </OptionCard>
-                  ))}
-                </OptionGrid>
-              </>
-            )}
-
-            {/* ── Step 3: Filters ── */}
-            {step === 3 && (
-              <>
-                <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Filters</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    Optionally narrow the data scope. All filters default to no restriction.
-                  </Typography>
-                </div>
-                <FormField>
-                  <FieldLabel>Status</FieldLabel>
-                  <Select
-                    label={STATUS_OPTIONS.find(o => o.value === form.filterStatus)?.label ?? 'All statuses'}
-                    onSelect={({ item }) => {
-                      const opt = item as typeof STATUS_OPTIONS[0];
-                      setForm(f => ({ ...f, filterStatus: opt.value }));
-                    }}
+            {/* ── Calculation ── */}
+            <SectionCard>
+              <SectionTitle>
+                <Typography intent="h3" style={{ color: 'var(--color-text-primary)', display: 'block' }}>Calculation</Typography>
+                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                  How should the KPI value be derived{primarySource ? ` from ${DATA_SOURCES.find(s => s.key === primarySource)?.label ?? primarySource}` : ''}?
+                </Typography>
+              </SectionTitle>
+              <OptionGrid>
+                {CALC_TYPES.map(ct => (
+                  <OptionCard
+                    key={ct.key}
+                    $selected={form.calcType === ct.key}
+                    onClick={() => setForm(f => ({ ...f, calcType: ct.key }))}
+                    aria-pressed={form.calcType === ct.key}
                   >
-                    {STATUS_OPTIONS.map(opt => (
-                      <Select.Option key={opt.value} value={opt} selected={form.filterStatus === opt.value}>
-                        {opt.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </FormField>
+                    <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: 2 }}>
+                      {ct.label}
+                    </Typography>
+                    <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
+                      {ct.description}
+                    </Typography>
+                  </OptionCard>
+                ))}
+              </OptionGrid>
+            </SectionCard>
+
+            {/* ── Filters — only when data sources are selected ── */}
+            {form.dataSources.length > 0 && (
+              <SectionCard>
+                <SectionTitle>
+                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', display: 'block' }}>Filters</Typography>
+                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                    Narrow which records count toward this KPI. All filters default to no restriction.
+                  </Typography>
+                </SectionTitle>
+                {showStatusFilter && (
+                  <FormField>
+                    <FieldLabel>Status</FieldLabel>
+                    <Select
+                      block
+                      label={statusOptions.find(o => o.value === form.filterStatus)?.label ?? 'All'}
+                      onSelect={({ item }) => setForm(f => ({ ...f, filterStatus: (item as { value: string }).value }))}
+                    >
+                      {statusOptions.map(opt => (
+                        <Select.Option key={opt.value} value={opt} selected={form.filterStatus === opt.value}>
+                          {opt.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </FormField>
+                )}
                 <FormField>
                   <FieldLabel>Date Range</FieldLabel>
                   <Select
-                    label={DATE_RANGE_OPTIONS.find(o => o.value === form.filterDateRange)?.label ?? 'All time'}
-                    onSelect={({ item }) => {
-                      const opt = item as typeof DATE_RANGE_OPTIONS[0];
-                      setForm(f => ({ ...f, filterDateRange: opt.value }));
-                    }}
+                    block
+                    label={DATE_RANGE_OPTIONS.find(o => o.value === form.filterDateRange)?.label ?? 'Last 30 days'}
+                    onSelect={({ item }) => setForm(f => ({ ...f, filterDateRange: (item as { value: string }).value }))}
                   >
                     {DATE_RANGE_OPTIONS.map(opt => (
                       <Select.Option key={opt.value} value={opt} selected={form.filterDateRange === opt.value}>
@@ -459,209 +505,51 @@ export default function KPICreationWizard({ open, onClose, onSaved }: KPICreatio
                     ))}
                   </Select>
                 </FormField>
-                <FormField>
-                  <FieldLabel>Project Type</FieldLabel>
-                  <Select
-                    label={PROJECT_TYPE_OPTIONS.find(o => o.value === form.filterProjectType)?.label ?? 'All project types'}
-                    onSelect={({ item }) => {
-                      const opt = item as typeof PROJECT_TYPE_OPTIONS[0];
-                      setForm(f => ({ ...f, filterProjectType: opt.value }));
-                    }}
-                  >
-                    {PROJECT_TYPE_OPTIONS.map(opt => (
-                      <Select.Option key={opt.value} value={opt} selected={form.filterProjectType === opt.value}>
-                        {opt.label}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </FormField>
-              </>
+              </SectionCard>
             )}
 
-            {/* ── Step 4: Thresholds ── */}
-            {step === 4 && (
-              <>
-                <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Thresholds</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    Set the values at which this KPI turns yellow (at risk) or red (critical).
+            {/* ── Thresholds — only when calc type is selected ── */}
+            {form.calcType && (
+              <SectionCard>
+                <SectionTitle>
+                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', display: 'block' }}>Thresholds</Typography>
+                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                    Set when this KPI turns At Risk or Critical.
+                    {thresholdUnit && <> Enter as {thresholdUnit}.</>}
                   </Typography>
-                </div>
-                <Banner variant="info">
-                  <Banner.Content>
-                    <Banner.Body>
-                      Higher values are treated as worse. Use the same unit as your selected calculation ({form.calcType || 'selected type'}).
-                    </Banner.Body>
-                  </Banner.Content>
-                </Banner>
-                <div>
-                  <ThresholdRow>
-                    <ThresholdLabel>
-                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>
-                        Yellow at
-                      </Typography>
-                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-                        KPI turns At Risk
-                      </Typography>
-                    </ThresholdLabel>
-                    <ThresholdNumberInput
-                      type="number"
-                      min={0}
-                      value={form.thresholdYellow}
-                      onChange={e => setForm(f => ({ ...f, thresholdYellow: parseFloat(e.target.value) || 0 }))}
-                      aria-label="Yellow threshold"
-                    />
-                    <Pill color="yellow">At Risk</Pill>
-                  </ThresholdRow>
-                  <ThresholdRow>
-                    <ThresholdLabel>
-                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>
-                        Red at
-                      </Typography>
-                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
-                        KPI turns Critical
-                      </Typography>
-                    </ThresholdLabel>
-                    <ThresholdNumberInput
-                      type="number"
-                      min={0}
-                      value={form.thresholdRed}
-                      onChange={e => setForm(f => ({ ...f, thresholdRed: parseFloat(e.target.value) || 0 }))}
-                      aria-label="Red threshold"
-                    />
-                    <Pill color="red">Critical</Pill>
-                  </ThresholdRow>
-                </div>
-              </>
-            )}
-
-            {/* ── Step 5: Visualization ── */}
-            {step === 5 && (
-              <>
-                <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Visualization Mode</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    Choose how this KPI is displayed on hub cards and the portfolio table.
-                  </Typography>
-                </div>
-                <OptionGrid>
-                  {VIZ_MODES.map(viz => (
-                    <OptionCard
-                      key={viz.key}
-                      $selected={form.visualization === viz.key}
-                      onClick={() => setForm(f => ({ ...f, visualization: viz.key }))}
-                      aria-pressed={form.visualization === viz.key}
-                    >
-                      <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: 2 }}>
-                        {viz.label}
-                      </Typography>
-                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                        {viz.description}
-                      </Typography>
-                    </OptionCard>
-                  ))}
-                </OptionGrid>
-                {form.visualization && (
-                  <PreviewCard>
-                    <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 8 }}>Preview</Typography>
-                    {form.visualization === 'card' && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--color-surface-primary)', borderRadius: 6, border: '1px solid var(--color-border-separator)' }}>
-                        <Pill color="green">Good</Pill>
-                        <Typography intent="body" style={{ fontWeight: 700 }}>—</Typography>
-                        <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>{form.name || 'KPI Name'}</Typography>
-                      </div>
-                    )}
-                    {form.visualization === 'table-column' && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: 'var(--color-surface-primary)', borderRadius: 4, border: '1px solid var(--color-border-separator)' }}>
-                        <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>{form.name || 'KPI'}</Typography>
-                        <Pill color="green" style={{ fontSize: 11 }}>—</Pill>
-                      </div>
-                    )}
-                    {form.visualization === 'sparkline' && (
-                      <svg width={120} height={40} style={{ display: 'block', margin: '0 auto' }}>
-                        <polyline points="0,30 20,25 40,28 60,18 80,20 100,15 120,10" fill="none" stroke="var(--color-action-primary)" strokeWidth={2} />
-                      </svg>
-                    )}
-                  </PreviewCard>
-                )}
-              </>
-            )}
-
-            {/* ── Step 6: Name + Save ── */}
-            {step === 6 && (
-              <>
-                <div>
-                  <Typography intent="h3" style={{ color: 'var(--color-text-primary)', marginBottom: 4 }}>Name &amp; Save</Typography>
-                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                    Give your KPI a clear name. It will appear on hub cards and the portfolio table.
-                  </Typography>
-                </div>
-                <FormField>
-                  <FieldLabel htmlFor="kpi-name">KPI Name *</FieldLabel>
-                  <TextInput
-                    id="kpi-name"
-                    type="text"
-                    value={form.name}
-                    placeholder="e.g. Overdue Change Events"
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    autoFocus
+                </SectionTitle>
+                <ThresholdRow>
+                  <ThresholdLabel>
+                    <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>At Risk at</Typography>
+                    <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>KPI turns At Risk</Typography>
+                  </ThresholdLabel>
+                  <ThresholdInput
+                    type="number"
+                    min={0}
+                    value={form.thresholdYellow}
+                    onChange={e => setForm(f => ({ ...f, thresholdYellow: parseFloat(e.target.value) || 0 }))}
+                    aria-label="At Risk threshold"
                   />
-                </FormField>
-
-                <Banner variant="info">
-                  <Banner.Content>
-                    <Banner.Title>Summary</Banner.Title>
-                    <Banner.Body>
-                      <strong>{form.name || '(unnamed)'}</strong> — {DATA_SOURCES.find(s => s.key === form.dataSource)?.label} · {form.calcType} · {form.visualization} view.
-                      Yellow at {form.thresholdYellow}, Red at {form.thresholdRed}.
-                    </Banner.Body>
-                  </Banner.Content>
-                </Banner>
-
-                <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                  This will create a placeholder KPI card visible in your Health hub. Data will populate once connected to a live source.
-                </Typography>
-              </>
+                  <Pill color="yellow">At Risk</Pill>
+                </ThresholdRow>
+                <ThresholdRow>
+                  <ThresholdLabel>
+                    <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', display: 'block' }}>Critical at</Typography>
+                    <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>KPI turns Critical</Typography>
+                  </ThresholdLabel>
+                  <ThresholdInput
+                    type="number"
+                    min={0}
+                    value={form.thresholdRed}
+                    onChange={e => setForm(f => ({ ...f, thresholdRed: parseFloat(e.target.value) || 0 }))}
+                    aria-label="Critical threshold"
+                  />
+                  <Pill color="red">Critical</Pill>
+                </ThresholdRow>
+              </SectionCard>
             )}
-          </WizardBody>
 
-          {/* Footer */}
-          <FooterBar>
-            <div>
-              {step > 1 && (
-                <Button variant="secondary" className="b_secondary" onClick={() => setStep(s => s - 1)}>
-                  Back
-                </Button>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Typography intent="small" style={{ color: 'var(--color-text-secondary)' }}>
-                Step {step} of {STEP_LABELS.length}
-              </Typography>
-              <Button variant="secondary" className="b_secondary" onClick={handleClose}>
-                Cancel
-              </Button>
-              {step < STEP_LABELS.length ? (
-                <Button
-                  variant="primary"
-                  className="b_primary"
-                  onClick={() => setStep(s => s + 1)}
-                  disabled={!canAdvance()}
-                >
-                  Next
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  className="b_primary"
-                  onClick={handleSave}
-                  disabled={!canAdvance()}
-                >
-                  Create KPI
-                </Button>
-              )}
-            </div>
-          </FooterBar>
+          </Body>
 
         </div>
       </Tearsheet>

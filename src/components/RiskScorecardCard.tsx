@@ -102,9 +102,9 @@ const SectionTitle = styled.div`
   &:first-child { margin-top: 0; }
 `;
 
-const BreakdownTable = styled.div`
+const BreakdownTable = styled.div<{ $cols?: number }>`
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: ${p => p.$cols === 4 ? '1fr auto auto auto' : '1fr auto auto'};
   gap: 0;
   border: 1px solid var(--color-border-separator);
   border-radius: 6px;
@@ -254,9 +254,26 @@ const SettingsBannerText = styled.div`
   min-width: 0;
 `;
 
+// ─── Status label helpers ─────────────────────────────────────────────────────
+
+function statusLabel(status: KPIResult['status']): string {
+  if (status === 'red') return 'Critical';
+  if (status === 'yellow') return 'At Risk';
+  if (status === 'green') return 'On Track';
+  return '—';
+}
+
+function fmtCostImpact(value: number | null | undefined): string {
+  if (value == null || value === 0) return '—';
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `$${Math.round(value / 1_000)}K`;
+  return `$${value.toLocaleString()}`;
+}
+
 // ─── Tearsheet detail content ──────────────────────────────────────────────────
 
-function KPIDetailContent({ kpi, allResults }: { kpi: KPIResult; allResults: Array<{ projectName: string; kpi: KPIResult }> }) {
+function KPIDetailContent({ kpi, allResults }: { kpi: KPIResult; allResults: Array<{ projectName: string; kpi: KPIResult; costImpact?: number | null }> }) {
+  const showCostImpact = kpi.key === 'changeEvents';
   return (
     <>
       <SectionTitle>Definition</SectionTitle>
@@ -264,25 +281,31 @@ function KPIDetailContent({ kpi, allResults }: { kpi: KPIResult; allResults: Arr
         {KPI_DESCRIPTIONS[kpi.key]}
       </Typography>
       <SectionTitle>By Project</SectionTitle>
-      <BreakdownTable>
+      <BreakdownTable $cols={showCostImpact ? 4 : 3}>
         <BreakdownHead>
           <div>Project</div>
           <div style={{ textAlign: 'right' }}>Value</div>
+          {showCostImpact && <div style={{ textAlign: 'right' }}>Cost Impact</div>}
           <div style={{ textAlign: 'right' }}>Status</div>
         </BreakdownHead>
-        {allResults.map(({ projectName, kpi: pk }) => (
+        {allResults.map(({ projectName, kpi: pk, costImpact }) => (
           <BreakdownRow key={projectName}>
             <div style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {projectName.length > 28 ? projectName.slice(0, 28) + '…' : projectName}
             </div>
             <div style={{ justifyContent: 'flex-end', fontWeight: 600 }}>{pk.displayValue}</div>
+            {showCostImpact && (
+              <div style={{ justifyContent: 'flex-end', fontWeight: 600 }}>
+                {fmtCostImpact(costImpact)}
+              </div>
+            )}
             <div style={{ justifyContent: 'flex-end' }}>
               <span style={{
                 padding: '2px 8px', borderRadius: 10, fontSize: 12, fontWeight: 600,
                 background: pk.status === 'red' ? 'var(--color-pill-bg-red)' : pk.status === 'yellow' ? 'var(--color-pill-bg-yellow)' : pk.status === 'green' ? 'var(--color-pill-bg-green)' : 'var(--color-surface-secondary)',
                 color: pk.status === 'red' ? 'var(--color-pill-text-red)' : pk.status === 'yellow' ? 'var(--color-pill-text-yellow)' : pk.status === 'green' ? 'var(--color-pill-text-green)' : 'var(--color-text-secondary)',
               }}>
-                {pk.status === 'unavailable' ? '—' : pk.status.charAt(0).toUpperCase() + pk.status.slice(1)}
+                {statusLabel(pk.status)}
               </span>
             </div>
           </BreakdownRow>
@@ -359,28 +382,44 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
   // ── Aggregate KPIs across all active projects ────────────────────────────────
 
   const { portfolioKPIs, perProjectByKey } = useMemo(() => {
-    if (!config) return { portfolioKPIs: [], perProjectByKey: {} as Record<KPIKey, Array<{ projectName: string; kpi: KPIResult }>> };
+    if (!config) return { portfolioKPIs: [], perProjectByKey: {} as Record<KPIKey, Array<{ projectName: string; kpi: KPIResult; costImpact?: number | null }>> };
 
     const activeProjects = allProjects.filter(p => p.status === 'active');
+
+    // Pre-compute pending CE cost impact per project from seed data
+    const pendingStatuses = new Set(['Open', 'Under Review', 'Pending Pricing']);
+    const ceCostByProject: Record<string, number> = {};
+    (data.changeEvents ?? []).forEach((ce: any) => {
+      if (pendingStatuses.has(ce.status) && ce.costRom && ce.costRom !== '--') {
+        const val = typeof ce.costRom === 'number' ? ce.costRom : parseFloat(String(ce.costRom).replace(/[^0-9.-]/g, ''));
+        if (!isNaN(val) && val > 0) {
+          ceCostByProject[ce.projectId] = (ceCostByProject[ce.projectId] ?? 0) + val;
+        }
+      }
+    });
+
     const projectResults = activeProjects.map(p => {
       const risks = getRisksForProject(p.id);
       const kpis = resolveKPIs(p, config, undefined, risks);
-      return { projectName: p.name, kpis, risks };
+      return { projectName: p.name, projectId: p.id, kpis, risks };
     });
 
     const portfolioKPIs = aggregatePortfolioKPIs(projectResults, config);
 
     // Build per-project lookup by KPI key for tearsheet drill-down
-    const perProjectByKey: Record<string, Array<{ projectName: string; kpi: KPIResult }>> = {};
+    const perProjectByKey: Record<string, Array<{ projectName: string; kpi: KPIResult; costImpact?: number | null }>> = {};
     portfolioKPIs.forEach(pk => {
-      perProjectByKey[pk.key] = projectResults.map(({ projectName, kpis }) => {
+      perProjectByKey[pk.key] = projectResults.map(({ projectName, projectId, kpis }) => {
         const found = kpis.find(k => k.key === pk.key);
-        return { projectName, kpi: found ?? { ...pk, status: 'unavailable' as const, displayValue: '—', numericValue: null } };
+        const costImpact = pk.key === 'changeEvents'
+          ? (ceCostByProject[projectId] ?? null)
+          : undefined;
+        return { projectName, kpi: found ?? { ...pk, status: 'unavailable' as const, displayValue: '—', numericValue: null }, costImpact };
       });
     });
 
     return { portfolioKPIs, perProjectByKey };
-  }, [config]);
+  }, [config, data.changeEvents]);
 
   // KPIs available in the configure modal = all active KPIs from settings
   const availableKPIKeys: KPIKey[] = config?.activeKPIs ?? [];
@@ -410,7 +449,7 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
   return (
     <>
       <HubCardFrame
-        title="Risk Signals"
+        title="Risk KPIs"
         actions={
           <HeaderActions>
             {displayedKPIs.length > 0 && (
@@ -427,7 +466,7 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
                   color: colors.gray15,
                 }}
                 onClick={() => openPanel({
-                  itemName: 'Risk Signals',
+                  itemName: 'Risk KPIs',
                   cardType: 'risk_scorecard',
                   aiSummary: displayedKPIs.map(k =>
                     `${k.label}: ${k.displayValue} (${k.status === 'unavailable' ? 'No data' : k.status === 'green' ? 'On Track' : k.status === 'yellow' ? 'At Risk' : 'Critical'})`
@@ -494,6 +533,7 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
                     <MetricValue>{kpi.displayValue}</MetricValue>
                     <TrendRow>
                       <KPIPill tone={toneFromStatus(kpi.status)} trendValue={0} value={kpi.status === 'unavailable' ? 'No data' : kpi.status === 'green' ? 'On Track' : kpi.status === 'yellow' ? 'At Risk' : 'Critical'} />
+                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>Last 30 days</Typography>
                     </TrendRow>
                   </KPITile>
                 ))}

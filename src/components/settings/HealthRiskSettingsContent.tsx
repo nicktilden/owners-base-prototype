@@ -10,16 +10,23 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import {
   Banner,
+  Box,
   Breadcrumbs,
   Button,
+  Card,
   DetailPage,
   H1,
+  H2,
   Modal,
+  Page,
   Pill,
+  NumberInput,
   Select,
   Switch,
   Table,
+  TextInput,
   Tabs,
+  Tearsheet,
   Title,
   Toast,
   ToolLandingPage,
@@ -29,13 +36,15 @@ import {
 import { Info, Pencil, Plus, Trash, Warning } from '@procore/core-icons';
 import type { AutomationRule } from '@/types/automation';
 import { automationRules as seedAutomationRules } from '@/data/seed/automationRules';
-import styled from 'styled-components';
+import styled, { createGlobalStyle } from 'styled-components';
 import { KPI_LABELS, KPI_CATEGORY_MAP, DEFAULT_THRESHOLDS } from '@/types/health';
 import type { KPIKey, KPIThreshold, AccountHealthConfig, RiskType, RiskTypeCategory } from '@/types/health';
 import { useData } from '@/context/DataContext';
 import AppLayout from '@/components/nav/AppLayout';
 import KPICreationWizard from '@/components/health/KPICreationWizard';
 import RiskTypeTearsheet from '@/components/settings/RiskTypeTearsheet';
+import KPIEditTearsheet from '@/components/settings/KPIEditTearsheet';
+import type { KPIEditValues } from '@/components/settings/KPIEditTearsheet';
 
 const GlobalHeader = dynamic(() => import('@/components/nav/GlobalHeader'), { ssr: false });
 
@@ -450,24 +459,67 @@ function ConnectAccountsTable() {
 
 // ─── Automation Rules Tab ─────────────────────────────────────────────────────
 
-const RuleRow = styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr 2fr 1fr 80px 100px 40px;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border-separator);
-  font-size: 13px;
-  &:first-child { border-top: none; }
-  &:hover { background: var(--color-surface-secondary); }
+// ─── Automation tearsheet width ───────────────────────────────────────────────
+
+const AutomationTearsheetWidth = createGlobalStyle`
+  [class*="StyledTearsheetBody"]:has(> .automation-rule-editor-root) {
+    flex: 0 0 auto !important;
+    width: 60vw !important;
+    max-width: 900px !important;
+  }
 `;
 
-const RuleHeaderRow = styled(RuleRow)`
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  padding: 8px 16px;
-  &:hover { background: transparent; }
+// ─── Condition formatter ──────────────────────────────────────────────────────
+
+const FIELD_LABELS: Record<string, string> = {
+  currentEstimate:      'Current Estimate',
+  criticalPath:         'Critical Path',
+  daysInCurrentReview:  'Days In Current Review',
+  status:               'Status',
+  cause:                'Cause',
+  oshaRecordable:       'OSHA Recordable',
+  incidentType:         'Incident Type',
+  daysOpen:             'Days Open',
+  overdueDays:          'Overdue Days',
+  probability:          'Probability',
+  impact:               'Impact',
+};
+
+const OPERATOR_LABELS: Record<string, string> = {
+  gt:       '>',
+  lt:       '<',
+  gte:      '≥',
+  lte:      '≤',
+  eq:       '=',
+  neq:      '≠',
+  contains: 'contains',
+  aging_gt: 'aging >',
+};
+
+function formatConditionValue(value: number | string | boolean): string {
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (typeof value === 'number') return value >= 1000 ? `$${value.toLocaleString()}` : String(value);
+  // snake_case → Title Case
+  return value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatConditions(conditions: { field: string; operator: string; value: number | string | boolean }[]): string {
+  return conditions
+    .map(c => {
+      const field = FIELD_LABELS[c.field] ?? c.field.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+      const op = OPERATOR_LABELS[c.operator] ?? c.operator;
+      const val = formatConditionValue(c.value);
+      return `${field} ${op} ${val}`;
+    })
+    .join(' AND ');
+}
+
+// ─── Editor section card ──────────────────────────────────────────────────────
+
+const EditorSectionCard = styled(Card)`
+  padding: 20px 24px;
+  background: var(--color-surface-primary);
+  margin-bottom: 16px;
 `;
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -475,6 +527,14 @@ const SOURCE_LABELS: Record<string, string> = {
   punch_list: 'Punch List', milestone: 'Milestone', incident: 'Incident',
   observation: 'Observation', correspondence: 'Correspondence', budget_line: 'Budget Line',
 };
+
+const WORKFLOW_OPTIONS: { value: string; label: string }[] = [
+  { value: 'wf-change-mgmt',   label: 'Change Management Approval' },
+  { value: 'wf-budget-change', label: 'Budget Change Approval' },
+  { value: 'wf-schedule-esc',  label: 'Schedule Escalation' },
+  { value: 'wf-scope-change',  label: 'Scope Change Approval' },
+  { value: 'wf-csuite',        label: 'C-Suite Override' },
+];
 
 const STATUS_PILL: Record<string, 'green' | 'gray' | 'blue'> = {
   active: 'green', inactive: 'gray', draft: 'blue',
@@ -490,15 +550,18 @@ function formatLastFired(rule: AutomationRule): string {
   return `${diffDays}d ago`;
 }
 
-function AutomationRulesTab() {
+function AutomationRulesTab({ triggerCreate }: { triggerCreate: number }) {
   const [rules, setRules] = useState<AutomationRule[]>(seedAutomationRules);
   const [editRule, setEditRule] = useState<AutomationRule | null>(null);
   const [showEditor, setShowEditor] = useState(false);
 
-  function openNew() {
-    setEditRule(null);
-    setShowEditor(true);
-  }
+  React.useEffect(() => {
+    if (triggerCreate > 0) {
+      setEditRule(null);
+      setShowEditor(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerCreate]);
 
   function openEdit(rule: AutomationRule) {
     setEditRule(rule);
@@ -512,51 +575,68 @@ function AutomationRulesTab() {
   return (
     <TabBody>
       <DetailPage.Card>
-        <DetailPage.Section
-          heading="Automation Rules"
-          actions={
-            <Button variant="primary" className="b_primary" size="sm" icon={<Plus />} onClick={openNew}>
-              Create rule
-            </Button>
-          }
-        >
+        <DetailPage.Section heading="Automation Rules">
           <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 16 }}>
             Rules evaluate source items automatically. When conditions match, the rule creates a risk tag and optionally triggers an approval workflow.
           </Typography>
-          <div style={{ border: '1px solid var(--color-border-separator)', borderRadius: 8, overflow: 'hidden' }}>
-            <RuleHeaderRow>
-              <span>Rule</span>
-              <span>Source</span>
-              <span>Conditions</span>
-              <span>Actions</span>
-              <span>Status</span>
-              <span>Last fired</span>
-              <span />
-            </RuleHeaderRow>
-            {rules.map(rule => (
-              <RuleRow key={rule.id}>
-                <Typography style={{ fontSize: 13, fontWeight: 500 }}>{rule.name}</Typography>
-                <Typography style={{ fontSize: 13 }}>{SOURCE_LABELS[rule.sourceType] ?? rule.sourceType}</Typography>
-                <Typography style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                  {rule.conditions.map(c => `${c.field} ${c.operator} ${c.value}`).join(' AND ')}
-                </Typography>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {rule.taggingAction && <Pill color="blue" style={{ fontSize: 11 }}>Tag</Pill>}
-                  {rule.workflowAction && <Pill color="yellow" style={{ fontSize: 11 }}>Workflow</Pill>}
-                </div>
-                <Pill color={STATUS_PILL[rule.status] ?? 'gray'} style={{ fontSize: 11 }}>
-                  {rule.status.charAt(0).toUpperCase() + rule.status.slice(1)}
-                </Pill>
-                <Typography style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                  {formatLastFired(rule)}{rule.fireCount > 0 ? ` · ${rule.fireCount}×` : ''}
-                </Typography>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Pencil />} onClick={() => openEdit(rule)} aria-label="Edit rule" />
-                  <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Trash />} onClick={() => handleDelete(rule.id)} aria-label="Delete rule" />
-                </div>
-              </RuleRow>
-            ))}
-          </div>
+          <SettingsTableWrap>
+            <Table.Container>
+              <Table>
+                <Table.Header>
+                  <Table.HeaderRow>
+                    <Table.HeaderCell>Rule</Table.HeaderCell>
+                    <Table.HeaderCell>Source</Table.HeaderCell>
+                    <Table.HeaderCell>Conditions</Table.HeaderCell>
+                    <Table.HeaderCell>Actions</Table.HeaderCell>
+                    <Table.HeaderCell>Status</Table.HeaderCell>
+                    <Table.HeaderCell>Last Fired</Table.HeaderCell>
+                    <Table.HeaderCell snugfit aria-label="Actions" />
+                  </Table.HeaderRow>
+                </Table.Header>
+                <Table.Body>
+                  {rules.map(rule => (
+                    <Table.BodyRow key={rule.id}>
+                      <Table.BodyCell>
+                        <span style={{ fontWeight: 500, fontSize: 13 }}>{rule.name}</span>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <span style={{ fontSize: 13 }}>{SOURCE_LABELS[rule.sourceType] ?? rule.sourceType}</span>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                          {formatConditions(rule.conditions)}
+                        </span>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <span style={{ fontSize: 13, color: 'var(--color-text-primary)' }}>
+                          {[
+                            rule.taggingAction ? 'Tagged' : null,
+                            rule.workflowAction ? 'Workflow' : null,
+                          ].filter(Boolean).join(' + ') || '—'}
+                        </span>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <Pill color={STATUS_PILL[rule.status] ?? 'gray'} style={{ fontSize: 11, display: 'inline-flex' }}>
+                          {rule.status.charAt(0).toUpperCase() + rule.status.slice(1)}
+                        </Pill>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                          {formatLastFired(rule)}{rule.fireCount > 0 ? ` · ${rule.fireCount}×` : ''}
+                        </span>
+                      </Table.BodyCell>
+                      <Table.BodyCell>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Pencil />} onClick={() => openEdit(rule)} aria-label="Edit rule" />
+                          <Button variant="tertiary" size="sm" className="b_tertiary" icon={<Trash />} onClick={() => handleDelete(rule.id)} aria-label="Delete rule" />
+                        </div>
+                      </Table.BodyCell>
+                    </Table.BodyRow>
+                  ))}
+                </Table.Body>
+              </Table>
+            </Table.Container>
+          </SettingsTableWrap>
         </DetailPage.Section>
       </DetailPage.Card>
 
@@ -600,18 +680,366 @@ const CONDITION_OPERATORS = [
   { value: 'aging_gt', label: 'is aging >' },
 ];
 
+// ─── Per-source attribute definitions ────────────────────────────────────────
+//
+// Each attribute has:
+//   label      – human-readable name shown in "Select Attribute" dropdown
+//   operators  – which operators apply
+//   valueType  – 'number' | 'boolean' | 'select' | 'text'
+//   options    – for valueType === 'select', the list of choices
+//   placeholder – hint for number/text inputs
+
+interface AttrDef {
+  field: string;
+  label: string;
+  operators: string[];
+  valueType: 'number' | 'boolean' | 'select' | 'text';
+  options?: { value: string | number | boolean; label: string }[];
+  placeholder?: string;
+}
+
+const NUMERIC_OPS = ['gt', 'lt', 'gte', 'lte', 'eq', 'neq'];
+const AGING_OPS   = ['aging_gt', 'gt', 'lt'];
+const EQ_OPS      = ['eq', 'neq'];
+
+const SOURCE_ATTRIBUTES: Record<string, AttrDef[]> = {
+  change_event: [
+    { field: 'currentEstimate', label: 'Current Estimate ($)', operators: NUMERIC_OPS, valueType: 'number', placeholder: 'e.g. 250000' },
+    { field: 'cause', label: 'Cause', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'owner_driven', label: 'Owner Driven' },
+      { value: 'design_error', label: 'Design Error' },
+      { value: 'differing_site_conditions', label: 'Differing Site Conditions' },
+      { value: 'scope_change', label: 'Scope Change' },
+      { value: 'unforeseen', label: 'Unforeseen Conditions' },
+    ]},
+    { field: 'status', label: 'Status', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'pending', label: 'Pending' },
+      { value: 'approved', label: 'Approved' },
+      { value: 'rejected', label: 'Rejected' },
+    ]},
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 30' },
+  ],
+  rfi: [
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 21' },
+    { field: 'criticalPath', label: 'Critical Path', operators: EQ_OPS, valueType: 'boolean' },
+    { field: 'daysInCurrentReview', label: 'Days In Current Review', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 14' },
+    { field: 'status', label: 'Status', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'open', label: 'Open' },
+      { value: 'closed', label: 'Closed' },
+      { value: 'overdue', label: 'Overdue' },
+    ]},
+  ],
+  submittal: [
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 14' },
+    { field: 'criticalPath', label: 'Critical Path', operators: EQ_OPS, valueType: 'boolean' },
+    { field: 'daysInCurrentReview', label: 'Days In Current Review', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 14' },
+    { field: 'status', label: 'Status', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'open', label: 'Open' },
+      { value: 'pending_approval', label: 'Pending Approval' },
+      { value: 'approved', label: 'Approved' },
+      { value: 'revise_resubmit', label: 'Revise & Resubmit' },
+    ]},
+  ],
+  punch_list: [
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 30' },
+    { field: 'status', label: 'Status', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'open', label: 'Open' },
+      { value: 'closed', label: 'Closed' },
+      { value: 'ready_for_review', label: 'Ready for Review' },
+    ]},
+  ],
+  milestone: [
+    { field: 'startsInDays', label: 'Starts In Days', operators: NUMERIC_OPS, valueType: 'number', placeholder: 'e.g. 14' },
+    { field: 'safetyPlanCompleted', label: 'Safety Plan Completed', operators: EQ_OPS, valueType: 'boolean' },
+    { field: 'hazardousActivityType', label: 'Hazardous Activity Type', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'null', label: 'None' },
+      { value: 'excavation', label: 'Excavation' },
+      { value: 'electrical', label: 'Electrical' },
+      { value: 'confined_space', label: 'Confined Space' },
+      { value: 'heights', label: 'Heights' },
+    ]},
+    { field: 'daysLate', label: 'Days Late', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 7' },
+  ],
+  incident: [
+    { field: 'oshaRecordable', label: 'OSHA Recordable', operators: EQ_OPS, valueType: 'boolean' },
+    { field: 'incidentType', label: 'Incident Type', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'near_miss', label: 'Near Miss' },
+      { value: 'first_aid', label: 'First Aid' },
+      { value: 'recordable', label: 'Recordable Injury' },
+      { value: 'lost_time', label: 'Lost Time' },
+      { value: 'property_damage', label: 'Property Damage' },
+    ]},
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 7' },
+  ],
+  observation: [
+    { field: 'daysOpen', label: 'Days Open', operators: AGING_OPS, valueType: 'number', placeholder: 'e.g. 14' },
+    { field: 'status', label: 'Status', operators: EQ_OPS, valueType: 'select', options: [
+      { value: 'open', label: 'Open' },
+      { value: 'closed', label: 'Closed' },
+      { value: 'in_review', label: 'In Review' },
+    ]},
+  ],
+};
+
+// ─── Styled: Condition builder ────────────────────────────────────────────────
+
+const ConditionBlock = styled.div`
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+`;
+
+const ConditionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--color-surface-secondary);
+  border-bottom: 1px solid var(--color-border-default);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+`;
+
+const ConditionRow = styled.div`
+  display: grid;
+  grid-template-columns: 72px 1fr 160px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border-separator);
+  &:first-of-type { border-top: none; }
+  background: var(--color-surface-primary);
+`;
+
+const ConditionLabel = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+`;
+
+// Wrapper to make core-react Select fill its grid cell and work at small sizes
+const ConditionSelectWrap = styled.div`
+  width: 100%;
+  > div, > button { width: 100% !important; }
+`;
+
+const AddConditionBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 14px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  &:hover { background: var(--color-surface-hover); color: var(--color-text-primary); }
+`;
+
+// ─── ConditionsBuilder component ─────────────────────────────────────────────
+
+interface DraftCondition {
+  field: string;
+  operator: string;
+  value: string; // always string in UI; parsed on save
+}
+
+interface ConditionsBuilderProps {
+  sourceType: string;
+  conditions: DraftCondition[];
+  onChange: (conditions: DraftCondition[]) => void;
+}
+
+function blankCondition(): DraftCondition {
+  return { field: '', operator: 'eq', value: '' };
+}
+
+function ConditionsBuilder({ sourceType, conditions, onChange }: ConditionsBuilderProps) {
+  const attrs = SOURCE_ATTRIBUTES[sourceType] ?? [];
+
+  function updateCondition(idx: number, patch: Partial<DraftCondition>) {
+    const next = conditions.map((c, i) => i === idx ? { ...c, ...patch } : c);
+    // Reset operator/value when field changes
+    if (patch.field !== undefined && patch.field !== conditions[idx].field) {
+      const attr = attrs.find(a => a.field === patch.field);
+      next[idx] = { field: patch.field, operator: attr?.operators[0] ?? 'eq', value: '' };
+    }
+    onChange(next);
+  }
+
+  function removeCondition(idx: number) {
+    onChange(conditions.filter((_, i) => i !== idx));
+  }
+
+  function addCondition() {
+    onChange([...conditions, blankCondition()]);
+  }
+
+  return (
+    <ConditionBlock>
+      <ConditionHeader>
+        <span style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--color-border-default)', display: 'inline-block', flexShrink: 0 }} />
+        Rule 1
+      </ConditionHeader>
+
+      {conditions.map((cond, idx) => {
+        const attr = attrs.find(a => a.field === cond.field);
+        const applicableOps = attr ? CONDITION_OPERATORS.filter(op => attr.operators.includes(op.value)) : CONDITION_OPERATORS;
+        const selectedAttrLabel = attrs.find(a => a.field === cond.field)?.label;
+        const selectedOpLabel = applicableOps.find(op => op.value === cond.operator)?.label;
+        const selectedValLabel = attr?.options?.find(o => String(o.value) === cond.value)?.label;
+
+        return (
+          <ConditionRow key={idx}>
+            <ConditionLabel>{idx === 0 ? 'WHEN' : 'AND'}</ConditionLabel>
+
+            {/* Attribute picker */}
+            <ConditionSelectWrap>
+              <Select
+                placeholder="Select Attribute"
+                label={selectedAttrLabel}
+                block
+                onSelect={(item) => updateCondition(idx, { field: (item as unknown as { id: string }).id })}
+              >
+                {attrs.map(a => (
+                  <Select.Option key={a.field} value={{ id: a.field }} selected={cond.field === a.field}>
+                    {a.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </ConditionSelectWrap>
+
+            {/* Operator picker */}
+            <ConditionSelectWrap>
+              <Select
+                label={selectedOpLabel}
+                placeholder="IS"
+                block
+                disabled={!cond.field}
+                onSelect={(item) => updateCondition(idx, { operator: (item as unknown as { id: string }).id, value: '' })}
+              >
+                {applicableOps.map(op => (
+                  <Select.Option key={op.value} value={{ id: op.value }} selected={cond.operator === op.value}>
+                    {op.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </ConditionSelectWrap>
+
+            {/* Value input — adapts to attribute type */}
+            {!attr || attr.valueType === 'number' ? (
+              <NumberInput
+                placeholder={attr?.placeholder ?? 'Enter value'}
+                value={cond.value !== '' ? Number(cond.value) : undefined}
+                disabled={!cond.field}
+                onChange={(val) => updateCondition(idx, { value: val.value })}
+              />
+            ) : attr.valueType === 'boolean' ? (
+              <ConditionSelectWrap>
+                <Select
+                  placeholder="Select values"
+                  label={cond.value === 'true' ? 'True' : cond.value === 'false' ? 'False' : undefined}
+                  block
+                  disabled={!cond.field}
+                  onSelect={(item) => updateCondition(idx, { value: (item as unknown as { id: string }).id })}
+                >
+                  <Select.Option value={{ id: 'true' }} selected={cond.value === 'true'}>True</Select.Option>
+                  <Select.Option value={{ id: 'false' }} selected={cond.value === 'false'}>False</Select.Option>
+                </Select>
+              </ConditionSelectWrap>
+            ) : attr.valueType === 'select' ? (
+              <ConditionSelectWrap>
+                <Select
+                  placeholder="Select values"
+                  label={selectedValLabel}
+                  block
+                  disabled={!cond.field}
+                  onSelect={(item) => updateCondition(idx, { value: (item as unknown as { id: string }).id })}
+                >
+                  {attr.options?.map(opt => (
+                    <Select.Option key={String(opt.value)} value={{ id: String(opt.value) }} selected={cond.value === String(opt.value)}>
+                      {opt.label}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </ConditionSelectWrap>
+            ) : (
+              <TextInput
+                placeholder={attr?.placeholder ?? 'Enter value'}
+                value={cond.value}
+                disabled={!cond.field}
+                onChange={(e) => updateCondition(idx, { value: e.target.value })}
+              />
+            )}
+
+            {/* Delete row */}
+            <Button
+              variant="tertiary"
+              size="sm"
+              icon={<Trash />}
+              onClick={() => removeCondition(idx)}
+              aria-label="Remove condition"
+            />
+          </ConditionRow>
+        );
+      })}
+
+      <AddConditionBtn onClick={addCondition} type="button">
+        <Plus size="sm" /> AND
+      </AddConditionBtn>
+    </ConditionBlock>
+  );
+}
+
 interface EditorProps {
   rule: AutomationRule | null;
   onClose: () => void;
   onSave: (rule: AutomationRule) => void;
 }
 
+function conditionsToDraft(conditions: AutomationRule['conditions']): DraftCondition[] {
+  return conditions.map(c => ({ field: c.field, operator: c.operator, value: String(c.value) }));
+}
+
+function draftToConditions(drafts: DraftCondition[]): AutomationRule['conditions'] {
+  return drafts
+    .filter(d => d.field && d.value !== '')
+    .map(d => {
+      const attrs = Object.values(SOURCE_ATTRIBUTES).flat();
+      const attr = attrs.find(a => a.field === d.field);
+      let parsed: number | string | boolean = d.value;
+      if (attr?.valueType === 'boolean') parsed = d.value === 'true';
+      else if (attr?.valueType === 'number') parsed = parseFloat(d.value) || 0;
+      return { field: d.field, operator: d.operator as AutomationRule['conditions'][0]['operator'], value: parsed };
+    });
+}
+
 function AutomationRuleEditor({ rule, onClose, onSave }: EditorProps) {
   const [name, setName] = useState(rule?.name ?? '');
   const [status, setStatus] = useState<AutomationRule['status']>(rule?.status ?? 'draft');
-  const [sourceType, setSourceType] = useState(rule?.sourceType ?? 'change_event');
+  const [sourceType, setSourceType] = useState<string>(rule?.sourceType ?? 'change_event');
+  const [conditions, setConditions] = useState<DraftCondition[]>(
+    rule?.conditions?.length ? conditionsToDraft(rule.conditions) : [blankCondition()]
+  );
   const [enableTagging, setEnableTagging] = useState(!!rule?.taggingAction);
   const [enableWorkflow, setEnableWorkflow] = useState(!!rule?.workflowAction);
+  const [workflowId, setWorkflowId] = useState<string>(rule?.workflowAction?.workflowId ?? WORKFLOW_OPTIONS[0].value);
+
+  // Reset conditions only when sourceType changes away from the initial value
+  const initialSourceType = React.useRef(sourceType);
+  React.useEffect(() => {
+    if (sourceType === initialSourceType.current) return;
+    setConditions([blankCondition()]);
+  }, [sourceType]);
 
   function handleSave() {
     const saved: AutomationRule = {
@@ -619,9 +1047,9 @@ function AutomationRuleEditor({ rule, onClose, onSave }: EditorProps) {
       name: name || 'Untitled Rule',
       status,
       sourceType: sourceType as AutomationRule['sourceType'],
-      conditions: rule?.conditions ?? [],
+      conditions: draftToConditions(conditions),
       taggingAction: enableTagging ? (rule?.taggingAction ?? { riskTypeId: 'rt-001', defaultProbability: 3, defaultImpact: 'inherit_from_source', behavior: 'auto_create' }) : undefined,
-      workflowAction: enableWorkflow ? (rule?.workflowAction ?? { workflowId: 'wf-default', tagStateOnTrigger: 'pending_approval' }) : undefined,
+      workflowAction: enableWorkflow ? { workflowId, tagStateOnTrigger: rule?.workflowAction?.tagStateOnTrigger ?? 'pending_approval' } : undefined,
       fireCount: rule?.fireCount ?? 0,
       lastFiredAt: rule?.lastFiredAt,
       createdBy: 'user-001',
@@ -631,73 +1059,137 @@ function AutomationRuleEditor({ rule, onClose, onSave }: EditorProps) {
   }
 
   return (
-    <Modal open onClose={onClose} aria-label="Automation Rule Editor" style={{ width: 640 }}>
-      <Modal.Header>{rule ? 'Edit rule' : 'Create rule'}</Modal.Header>
-      <Modal.Body>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div>
-            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Rule name *</Typography>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Large CE auto-approval"
-              style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
-            />
-          </div>
+    <>
+      <AutomationTearsheetWidth />
+      <Tearsheet open onClose={onClose} aria-label={rule ? 'Edit rule' : 'Create rule'} placement="right">
+        <div className="automation-rule-editor-root" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Page style={{ height: '100%', background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}>
+            <Page.Main style={{ height: '100%', overflow: 'hidden', background: 'var(--color-surface-primary)' }}>
 
-          <div style={{ display: 'flex', gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Status</Typography>
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as AutomationRule['status'])}
-                style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="draft">Draft</option>
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>Source type</Typography>
-              <select
-                value={sourceType}
-                onChange={e => setSourceType(e.target.value as AutomationRule['sourceType'])}
-                style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)' }}
-              >
-                {RULE_SOURCE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+              <Page.Header style={{ background: 'var(--color-surface-primary)', borderColor: 'var(--color-border-separator)' }}>
+                <Page.Title>
+                  <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                    <H2 style={{ margin: 0, color: 'var(--color-text-primary)' }}>
+                      {rule ? 'Edit rule' : 'Create rule'}
+                    </H2>
+                    <Box style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <Button variant="secondary" className="b_secondary" onClick={onClose}>Cancel</Button>
+                      <Button variant="primary" className="b_primary" onClick={handleSave}>Save rule</Button>
+                    </Box>
+                  </Box>
+                </Page.Title>
+              </Page.Header>
 
-          <div style={{ borderTop: '1px solid var(--color-border-separator)', paddingTop: 16 }}>
-            <Typography style={{ fontWeight: 600, marginBottom: 12, display: 'block' }}>THEN — actions to take</Typography>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Switch checked={enableTagging} onChange={() => setEnableTagging(v => !v)} aria-label="Enable risk tagging" />
-                <Typography>Create risk association</Typography>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Switch checked={enableWorkflow} onChange={() => setEnableWorkflow(v => !v)} aria-label="Enable workflow trigger" />
-                <Typography>Trigger approval workflow</Typography>
-              </div>
-            </div>
-          </div>
+              <Page.Body style={{ padding: 24, overflowY: 'auto', background: 'var(--color-surface-secondary)' }}>
+
+                {/* ── Identity ── */}
+                <EditorSectionCard>
+                  <H2 style={{ marginBottom: 16 }}>Rule details</H2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>Rule name *</Typography>
+                      <input
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="e.g. Large CE auto-approval"
+                        style={{ width: '100%', padding: '8px 10px', fontSize: 14, border: '1px solid var(--color-border-default)', borderRadius: 4, background: 'var(--color-surface-primary)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>Status</Typography>
+                        <Select
+                          label={status.charAt(0).toUpperCase() + status.slice(1)}
+                          onSelect={(item) => setStatus((item as unknown as { id: string }).id as AutomationRule['status'])}
+                        >
+                          {(['active', 'inactive', 'draft'] as const).map(s => (
+                            <Select.Option key={s} value={{ id: s }} selected={status === s}>
+                              {s.charAt(0).toUpperCase() + s.slice(1)}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>Source type</Typography>
+                        <Select
+                          label={RULE_SOURCE_OPTIONS.find(o => o.value === sourceType)?.label ?? sourceType}
+                          onSelect={(item) => { setSourceType((item as unknown as { id: string }).id); }}
+                        >
+                          {RULE_SOURCE_OPTIONS.map(opt => (
+                            <Select.Option key={opt.value} value={{ id: opt.value }} selected={sourceType === opt.value}>
+                              {opt.label}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </EditorSectionCard>
+
+                {/* ── Conditions ── */}
+                <EditorSectionCard>
+                  <H2 style={{ marginBottom: 4 }}>Set Conditional Rules</H2>
+                  <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block', marginBottom: 16 }}>
+                    Define when this rule fires. All conditions must be met.
+                  </Typography>
+                  <ConditionsBuilder
+                    sourceType={sourceType}
+                    conditions={conditions}
+                    onChange={setConditions}
+                  />
+                </EditorSectionCard>
+
+                {/* ── Actions ── */}
+                <EditorSectionCard>
+                  <H2 style={{ marginBottom: 16 }}>Actions</H2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+                      <div>
+                        <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Create risk association</Typography>
+                        <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>Automatically tag the source item with a risk type when conditions match.</Typography>
+                      </div>
+                      <Switch checked={enableTagging} onChange={() => setEnableTagging(v => !v)} aria-label="Enable risk tagging" />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+                        <div>
+                          <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>Trigger approval workflow</Typography>
+                          <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>Start an approval workflow when the rule fires.</Typography>
+                        </div>
+                        <Switch checked={enableWorkflow} onChange={() => setEnableWorkflow(v => !v)} aria-label="Enable workflow trigger" />
+                      </div>
+                      {enableWorkflow && (
+                        <div style={{ paddingLeft: 0 }}>
+                          <Typography intent="small" style={{ fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 6 }}>Workflow</Typography>
+                          <Select
+                            block
+                            label={WORKFLOW_OPTIONS.find(o => o.value === workflowId)?.label ?? 'Select workflow'}
+                            onSelect={(item) => setWorkflowId((item as unknown as { id: string }).id)}
+                          >
+                            {WORKFLOW_OPTIONS.map(opt => (
+                              <Select.Option key={opt.value} value={{ id: opt.value }} selected={workflowId === opt.value}>
+                                {opt.label}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </EditorSectionCard>
+
+              </Page.Body>
+            </Page.Main>
+          </Page>
         </div>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" className="b_secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" className="b_primary" onClick={handleSave}>Save rule</Button>
-      </Modal.Footer>
-    </Modal>
+      </Tearsheet>
+    </>
   );
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TABS = ['Risk Types', 'KPIs', 'Scope', 'Connect', 'Automation Rules'] as const;
+const TABS = ['KPIs', 'Automation Rules', 'Risk Types', 'Scope'] as const;
 type SettingsTab = typeof TABS[number];
 
 const KPI_CALC_LABELS: Record<KPIKey, string> = {
@@ -733,14 +1225,15 @@ const CALC_TYPE_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const KPI_COLUMN_TOOLTIPS: { header: string; tooltip: string }[] = [
-  { header: 'KPI',               tooltip: 'Name of the key performance indicator' },
-  { header: 'Category',          tooltip: 'Health category this KPI belongs to' },
-  { header: 'Calc Type',         tooltip: 'How the KPI value is derived from source data' },
-  { header: 'Active',            tooltip: 'Toggle to include or exclude from portfolio health scoring' },
-  { header: 'Yellow at',         tooltip: 'Threshold value that turns the KPI yellow (At Risk)' },
-  { header: 'Red at',            tooltip: 'Threshold value that turns the KPI red (Critical)' },
-  { header: 'Weight',            tooltip: 'Relative importance of this KPI in the composite health score (higher = more impact)' },
-  { header: 'Linked Risk Types', tooltip: 'Risk types that use this KPI as a contributing factor' },
+  { header: 'KPI',         tooltip: 'Name of the key performance indicator' },
+  { header: 'Calc Type',   tooltip: 'How the KPI value is derived from source data' },
+  { header: 'Active',      tooltip: 'Toggle to include or exclude from portfolio health scoring' },
+  { header: 'At Risk at',  tooltip: 'Threshold value that turns the KPI yellow (At Risk)' },
+  { header: 'Critical at', tooltip: 'Threshold value that turns the KPI red (Critical)' },
+  { header: 'Weight',      tooltip: 'Relative importance of this KPI in the composite health score (higher = more impact)' },
+  { header: 'Risk Types',   tooltip: 'Risk types that use this KPI as a contributing factor' },
+  { header: 'Date Range',   tooltip: 'The time window used to filter records when calculating this KPI' },
+  { header: 'Actions',      tooltip: '' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -764,7 +1257,7 @@ export default function HealthRiskSettingsContent() {
   const router = useRouter();
   const { data, setData } = useData();
   const config = data.account?.healthConfig;
-  const [activeTab, setActiveTab] = useState<SettingsTab>('Risk Types');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('KPIs');
   const [showToast, setShowToast] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
@@ -785,13 +1278,28 @@ export default function HealthRiskSettingsContent() {
       return init;
     }
   );
+  const [kpiDateRanges, setKpiDateRanges] = useState<Partial<Record<KPIKey, string>>>({});
 
   // ── Risk Types state
   const [riskTypes, setRiskTypes] = useState<RiskType[]>(data.account?.riskTypes ?? []);
   const [tearsheetRiskType, setTearsheetRiskType] = useState<RiskType | 'new' | null>(null);
 
+  // ── KPI edit tearsheet state
+  const [editingKPI, setEditingKPI] = useState<KPIKey | null>(null);
+
   // ── KPI Wizard state
   const [showKPIWizard, setShowKPIWizard] = useState(false);
+  const [automationCreateTrigger, setAutomationCreateTrigger] = useState(0);
+
+  // ── Scope tab toggle state (auto-saved on change)
+  const [scopeIncludeAll, setScopeIncludeAll] = useState(true);
+  const [scopeExcludeCompleted, setScopeExcludeCompleted] = useState(true);
+  const [scopeProjectOverrides, setScopeProjectOverrides] = useState(false);
+  const [scopeMinValue, setScopeMinValue] = useState(false);
+  const [scopeLimitRegion, setScopeLimitRegion] = useState(false);
+  const [vizCard, setVizCard] = useState(true);
+  const [vizTableColumn, setVizTableColumn] = useState(true);
+  const [vizSparkline, setVizSparkline] = useState(true);
 
   const allKPIKeys = Object.keys(KPI_LABELS) as KPIKey[];
 
@@ -846,6 +1354,22 @@ export default function HealthRiskSettingsContent() {
       thresholds: { ...thresholds },
       kpiWeights: { ...kpiWeights },
     });
+  }
+
+  function handleKPISave(key: KPIKey, values: KPIEditValues) {
+    const nextActive = new Set(activeKPIs);
+    if (values.active) { nextActive.add(key); } else { nextActive.delete(key); }
+    setActiveKPIs(nextActive);
+    setCalcTypes(prev => ({ ...prev, [key]: values.calcType }));
+    setThresholds(prev => ({ ...prev, [key]: values.threshold }));
+    setKpiWeights(prev => ({ ...prev, [key]: values.weight }));
+    setKpiDateRanges(prev => ({ ...prev, [key]: values.dateRange }));
+    persistConfig({
+      activeKPIs: [...nextActive],
+      thresholds: { ...thresholds, [key]: values.threshold },
+      kpiWeights: { ...kpiWeights, [key]: values.weight },
+    });
+    setEditingKPI(null);
   }
 
   if (!config) return null;
@@ -914,6 +1438,16 @@ export default function HealthRiskSettingsContent() {
                         onClick={() => setShowKPIWizard(true)}
                       >
                         Create KPI
+                      </Button>
+                    )}
+                    {activeTab === 'Automation Rules' && (
+                      <Button
+                        variant="primary"
+                        className="b_primary"
+                        icon={<Plus size="sm" />}
+                        onClick={() => setAutomationCreateTrigger(n => n + 1)}
+                      >
+                        Create rule
                       </Button>
                     )}
                   </Title.Actions>
@@ -1108,81 +1642,47 @@ export default function HealthRiskSettingsContent() {
                                       </div>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
-                                      <Pill color={KPI_CATEGORY_PILL[cat] ?? 'gray'} style={{ fontSize: 11 }}>
-                                        {KPI_CATEGORY_DISPLAY[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                      <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{currentCalcType}</span>
+                                    </Table.BodyCell>
+                                    <Table.BodyCell>
+                                      <Pill color={isActive ? 'green' : 'gray'} style={{ fontSize: 11 }}>
+                                        {isActive ? 'Active' : 'Inactive'}
                                       </Pill>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
-                                      <div style={{ minWidth: 140 }}>
-                                        <Select
-                                          label={calcOption.label}
-                                          onSelect={({ item }) => {
-                                            const opt = item as typeof CALC_TYPE_OPTIONS[0];
-                                            setCalcTypes(prev => ({ ...prev, [key]: opt.value }));
-                                          }}
-                                        >
-                                          {CALC_TYPE_OPTIONS.map(opt => (
-                                            <Select.Option
-                                              key={opt.value}
-                                              value={opt}
-                                              selected={currentCalcType === opt.value}
-                                            >
-                                              {opt.label}
-                                            </Select.Option>
-                                          ))}
-                                        </Select>
-                                      </div>
+                                      <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{thr.yellow}</span>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
-                                      <Switch
-                                        checked={isActive}
-                                        onChange={() => {
-                                          setActiveKPIs(prev => {
-                                            const next = new Set(prev);
-                                            if (next.has(key)) { next.delete(key); } else { next.add(key); }
-                                            return next;
-                                          });
-                                        }}
-                                        aria-label={`${isActive ? 'Deactivate' : 'Activate'} ${KPI_LABELS[key]}`}
-                                      />
+                                      <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{thr.red}</span>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
-                                      <ThresholdInput
-                                        type="number"
-                                        value={thr.yellow}
-                                        onChange={e => setThresholds(prev => ({
-                                          ...prev,
-                                          [key]: { ...prev[key], yellow: Number(e.target.value) },
-                                        }))}
-                                        aria-label={`Yellow threshold for ${KPI_LABELS[key]}`}
-                                      />
-                                    </Table.BodyCell>
-                                    <Table.BodyCell>
-                                      <ThresholdInput
-                                        type="number"
-                                        value={thr.red}
-                                        onChange={e => setThresholds(prev => ({
-                                          ...prev,
-                                          [key]: { ...prev[key], red: Number(e.target.value) },
-                                        }))}
-                                        aria-label={`Red threshold for ${KPI_LABELS[key]}`}
-                                      />
-                                    </Table.BodyCell>
-                                    <Table.BodyCell>
-                                      <ThresholdInput
-                                        type="number"
-                                        value={kpiWeights[key] ?? 0}
-                                        onChange={e => setKpiWeights(prev => ({
-                                          ...prev,
-                                          [key]: Number(e.target.value),
-                                        }))}
-                                        aria-label={`Weight for ${KPI_LABELS[key]}`}
-                                      />
+                                      <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{kpiWeights[key] ?? 0}</span>
                                     </Table.BodyCell>
                                     <Table.BodyCell>
                                       <span style={{ fontSize: 12, color: linked.length === 0 ? 'var(--color-text-disabled)' : 'var(--color-text-secondary)' }}>
                                         {linked.length === 0 ? '—' : linked.join(', ')}
                                       </span>
+                                    </Table.BodyCell>
+                                    <Table.BodyCell>
+                                      {(() => {
+                                        const dr = kpiDateRanges[key] ?? 'last_30';
+                                        const labels: Record<string, string> = {
+                                          all_time: 'All time', last_7: 'Last 7 days', last_30: 'Last 30 days',
+                                          last_60: 'Last 60 days', last_90: 'Last 90 days', this_month: 'This month',
+                                          last_month: 'Last month', this_quarter: 'This quarter',
+                                          last_quarter: 'Last quarter', this_year: 'This year', last_year: 'Last year',
+                                        };
+                                        return <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{labels[dr] ?? dr}</span>;
+                                      })()}
+                                    </Table.BodyCell>
+                                    <Table.BodyCell>
+                                      <Button
+                                        variant="tertiary"
+                                        size="sm"
+                                        icon={<Pencil />}
+                                        aria-label={`Edit ${KPI_LABELS[key]}`}
+                                        onClick={() => setEditingKPI(key)}
+                                      />
                                     </Table.BodyCell>
                                   </Table.BodyRow>
                                 );
@@ -1191,23 +1691,6 @@ export default function HealthRiskSettingsContent() {
                           </Table>
                         </Table.Container>
                         </SettingsTableWrap>
-                        <SaveBar>
-                          <Button variant="secondary" className="b_secondary" onClick={() => {
-                            if (config) {
-                              setThresholds(buildInitialThresholds(config));
-                              setKpiWeights(buildInitialWeights(config));
-                              setActiveKPIs(new Set(config.activeKPIs));
-                              const init: Partial<Record<KPIKey, string>> = {};
-                              (Object.keys(KPI_CALC_LABELS) as KPIKey[]).forEach(k => { init[k] = KPI_CALC_LABELS[k]; });
-                              setCalcTypes(init);
-                            }
-                          }}>
-                            Reset
-                          </Button>
-                          <Button variant="primary" className="b_primary" onClick={saveKPIs}>
-                            Save Changes
-                          </Button>
-                        </SaveBar>
                       </DetailPage.Section>
                     </DetailPage.Card>
                   </TabBody>
@@ -1221,14 +1704,6 @@ export default function HealthRiskSettingsContent() {
                         <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
                           Choose which projects are included in the portfolio health score. By default, all active projects are included.
                         </Typography>
-                        <Banner variant="info" style={{ marginBottom: 20 }}>
-                          <Banner.Content>
-                            <Banner.Title>Project-level and user-level scoping</Banner.Title>
-                            <Banner.Body>
-                              Project managers can configure health scoring preferences per project. Individual users can also choose which health cards to display on their home hub. These controls are coming soon.
-                            </Banner.Body>
-                          </Banner.Content>
-                        </Banner>
                         <FormRow>
                           <FormLabel>
                             <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
@@ -1238,7 +1713,7 @@ export default function HealthRiskSettingsContent() {
                               Automatically includes all projects with status &ldquo;Active&rdquo; in the portfolio health score.
                             </Typography>
                           </FormLabel>
-                          <Switch checked aria-label="Include all active projects" onChange={() => {}} />
+                          <Switch checked={scopeIncludeAll} aria-label="Include all active projects" onChange={() => { setScopeIncludeAll(v => !v); triggerToast(); }} />
                         </FormRow>
                         <FormRow>
                           <FormLabel>
@@ -1249,7 +1724,7 @@ export default function HealthRiskSettingsContent() {
                               Projects marked as complete are excluded from the portfolio health score.
                             </Typography>
                           </FormLabel>
-                          <Switch checked aria-label="Exclude completed projects" onChange={() => {}} />
+                          <Switch checked={scopeExcludeCompleted} aria-label="Exclude completed projects" onChange={() => { setScopeExcludeCompleted(v => !v); triggerToast(); }} />
                         </FormRow>
                         <FormRow>
                           <FormLabel>
@@ -1260,7 +1735,7 @@ export default function HealthRiskSettingsContent() {
                               Allow project managers to configure KPI weights and thresholds for their specific project.
                             </Typography>
                           </FormLabel>
-                          <Switch checked={false} aria-label="Allow project-level overrides" onChange={() => {}} />
+                          <Switch checked={scopeProjectOverrides} aria-label="Allow project-level overrides" onChange={() => { setScopeProjectOverrides(v => !v); triggerToast(); }} />
                         </FormRow>
                         <FormRow>
                           <FormLabel>
@@ -1271,7 +1746,7 @@ export default function HealthRiskSettingsContent() {
                               Only include projects above a minimum contract value in the portfolio score.
                             </Typography>
                           </FormLabel>
-                          <Switch checked={false} aria-label="Minimum project value threshold" onChange={() => {}} />
+                          <Switch checked={scopeMinValue} aria-label="Minimum project value threshold" onChange={() => { setScopeMinValue(v => !v); triggerToast(); }} />
                         </FormRow>
                         <FormRow>
                           <FormLabel>
@@ -1282,35 +1757,49 @@ export default function HealthRiskSettingsContent() {
                               Limit portfolio health score to projects within specific regions. When enabled, configure included regions in the filter below.
                             </Typography>
                           </FormLabel>
-                          <Switch checked={false} aria-label="Limit portfolio health by region" onChange={() => {}} />
+                          <Switch checked={scopeLimitRegion} aria-label="Limit portfolio health by region" onChange={() => { setScopeLimitRegion(v => !v); triggerToast(); }} />
                         </FormRow>
-                        <SaveBar>
-                          <Button variant="primary" className="b_primary">Save Changes</Button>
-                        </SaveBar>
                       </DetailPage.Section>
                     </DetailPage.Card>
-                  </TabBody>
-                )}
 
-                {/* ── Connect Tab ── */}
-                {activeTab === 'Connect' && (
-                  <TabBody>
                     <DetailPage.Card>
-                      <DetailPage.Section heading="Procore Connect">
+                      <DetailPage.Section heading="Visualization Support">
                         <Typography intent="body" style={{ color: 'var(--color-text-secondary)', marginBottom: 16, display: 'block' }}>
-                          Procore Connect allows your Owner account to receive pre-aggregated health and risk data from General Contractor accounts.
-                          GC data appears alongside your owner-managed projects in the portfolio health views.
+                          Choose which visualization modes are available across all KPIs in this account. Enabled modes will be available for users to enable on individual KPIs.
                         </Typography>
-                        <Banner variant="info" style={{ marginBottom: 20 }}>
-                          <Banner.Content>
-                            <Banner.Title>Connected accounts receive read-only health summaries</Banner.Title>
-                            <Banner.Body>
-                              GC accounts control what data they share. You can view health status and risk exposure at the detail or summary level,
-                              depending on the share level granted by each GC.
-                            </Banner.Body>
-                          </Banner.Content>
-                        </Banner>
-                        <ConnectAccountsTable />
+                        <FormRow>
+                          <FormLabel>
+                            <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                              Card
+                            </Typography>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                              Status chip with value and label — shown on hub cards.
+                            </Typography>
+                          </FormLabel>
+                          <Switch checked={vizCard} aria-label="Enable Card visualization" onChange={() => { setVizCard(v => !v); triggerToast(); }} />
+                        </FormRow>
+                        <FormRow>
+                          <FormLabel>
+                            <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                              Table Column
+                            </Typography>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                              Adds a KPI column to the portfolio table view.
+                            </Typography>
+                          </FormLabel>
+                          <Switch checked={vizTableColumn} aria-label="Enable Table Column visualization" onChange={() => { setVizTableColumn(v => !v); triggerToast(); }} />
+                        </FormRow>
+                        <FormRow>
+                          <FormLabel>
+                            <Typography intent="body" style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                              Sparkline
+                            </Typography>
+                            <Typography intent="small" style={{ color: 'var(--color-text-secondary)', display: 'block' }}>
+                              Trend line showing KPI movement over the last 6 periods.
+                            </Typography>
+                          </FormLabel>
+                          <Switch checked={vizSparkline} aria-label="Enable Sparkline visualization" onChange={() => { setVizSparkline(v => !v); triggerToast(); }} />
+                        </FormRow>
                       </DetailPage.Section>
                     </DetailPage.Card>
                   </TabBody>
@@ -1318,7 +1807,7 @@ export default function HealthRiskSettingsContent() {
 
                 {/* ── Automation Rules Tab ── */}
                 {activeTab === 'Automation Rules' && (
-                  <AutomationRulesTab />
+                  <AutomationRulesTab triggerCreate={automationCreateTrigger} />
                 )}
 
               </TabContent>
@@ -1354,6 +1843,21 @@ export default function HealthRiskSettingsContent() {
         open={showKPIWizard}
         onClose={() => setShowKPIWizard(false)}
         onSaved={() => triggerToast()}
+      />
+
+      {/* ── KPI Edit Tearsheet ── */}
+      <KPIEditTearsheet
+        open={editingKPI !== null}
+        kpiKey={editingKPI}
+        initial={editingKPI ? {
+          active: activeKPIs.has(editingKPI),
+          calcType: calcTypes[editingKPI] ?? KPI_CALC_LABELS[editingKPI] ?? 'Count',
+          threshold: thresholds[editingKPI] ?? DEFAULT_THRESHOLDS[editingKPI],
+          weight: kpiWeights[editingKPI] ?? 0,
+          dateRange: kpiDateRanges[editingKPI] ?? 'last_30',
+        } : null}
+        onClose={() => setEditingKPI(null)}
+        onSave={handleKPISave}
       />
     </>
   );

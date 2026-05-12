@@ -6,8 +6,8 @@
 
 import React, { useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { Typography } from '@procore/core-react';
 import type { Options } from 'highcharts';
-import { HC_COLORS } from '@/lib/highcharts';
 import HubCardFrame from '@/components/hubs/HubCardFrame';
 import { useRiskTags } from '@/context/RiskTagsContext';
 import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
@@ -33,15 +33,16 @@ interface RiskCategoryDonutCardProps {
 
 const ACTIVE_STATUSES = new Set(['open', 'pending_acceptance', 'pending_approval']);
 
+// Assets by Type palette — same color scheme
 const CATEGORY_COLORS: Record<string, string> = {
-  financial:    '#e53935',
-  schedule:     '#f57c00',
+  financial:    '#1d5cc9',
+  schedule:     '#5c8de8',
   safety:       '#c62828',
-  quality:      '#7b1fa2',
-  contractual:  '#2e7d32',
-  regulatory:   '#0277bd',
+  quality:      '#9e9e9e',
+  contractual:  '#4a6572',
+  regulatory:   '#00a878',
   environmental:'#388e3c',
-  other:        '#546e7a',
+  other:        '#bdbdbd',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -87,8 +88,9 @@ export default function RiskCategoryDonutCard({ scope = 'portfolio', projectId }
     return Object.entries(counts)
       .map(([cat, y]) => ({
         name: CATEGORY_LABELS[cat] ?? cat,
+        cat,
         y,
-        color: CATEGORY_COLORS[cat] ?? HC_COLORS.text,
+        color: CATEGORY_COLORS[cat] ?? '#bdbdbd',
       }))
       .sort((a, b) => b.y - a.y);
   }, [activeItems]);
@@ -98,45 +100,36 @@ export default function RiskCategoryDonutCard({ scope = 'portfolio', projectId }
   const options = useMemo<Options>(() => ({
     chart: {
       type: 'pie',
-      height: 200,
+      height: 180,
       margin: [0, 0, 0, 0],
       spacing: [8, 8, 8, 8],
     },
     tooltip: {
-      pointFormat: '<b>{point.y}</b> risk{point.y !== 1 ? "s" : ""} ({point.percentage:.0f}%)',
+      formatter() {
+        const pt = this as unknown as { key: string; y: number; percentage: number };
+        const label = pt.key ?? (this as unknown as { point: { name: string } }).point?.name ?? '';
+        const count = pt.y ?? 0;
+        return `<b>${label}</b><br/>${count} risk${count !== 1 ? 's' : ''} (${Math.round(pt.percentage ?? 0)}%)`;
+      },
+      useHTML: false,
     },
     plotOptions: {
       pie: {
         innerSize: '62%',
         dataLabels: { enabled: false },
-        showInLegend: true,
+        showInLegend: false,
         borderWidth: 2,
         borderColor: 'transparent',
       },
     },
-    legend: {
-      enabled: true,
-      layout: 'vertical',
-      align: 'right',
-      verticalAlign: 'middle',
-      itemStyle: {
-        fontSize: '11px',
-        fontWeight: '400',
-        color: HC_COLORS.text,
-      },
-      itemHoverStyle: { color: '#1a2533' },
-      symbolRadius: 2,
-      symbolHeight: 10,
-      symbolWidth: 10,
-    },
+    legend: { enabled: false },
     series: [{
       type: 'pie',
       name: 'Risks',
       data: seriesData,
     }],
-    // Center label rendered via subtitle trick
     subtitle: {
-      text: `<span style="font-size:22px;font-weight:700;color:#1a2533">${total}</span><br/><span style="font-size:11px;color:${HC_COLORS.textLight}">active</span>`,
+      text: `<span style="font-size:22px;font-weight:700;color:#1a2533">${total}</span><br/><span style="font-size:11px;color:#8a97a7">active</span>`,
       floating: true,
       verticalAlign: 'middle',
       y: 8,
@@ -157,8 +150,22 @@ export default function RiskCategoryDonutCard({ scope = 'portfolio', projectId }
             containerProps={{ style: { width: '100%' } }}
           />
         ) : (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: HC_COLORS.textLight, fontSize: 13 }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: '#8a97a7', fontSize: 13 }}>
             No active risk tags to display.
+          </div>
+        )}
+
+        {/* Legend — matches Assets by Type style */}
+        {seriesData.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+            {seriesData.map(item => (
+              <span key={item.cat} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: item.color, flexShrink: 0 }} />
+                <Typography intent="small" style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>
+                  {item.name}
+                </Typography>
+              </span>
+            ))}
           </div>
         )}
       </div>

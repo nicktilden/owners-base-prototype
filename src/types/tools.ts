@@ -6,7 +6,7 @@ export type ToolLevel = 'portfolio' | 'project' | 'both' | 'global';
 
 export type ToolKey =
   | 'hubs'
-  | 'health'
+  | 'risk_register'
   | 'documents'
   | 'schedule'
   | 'assets'
@@ -31,7 +31,7 @@ export type ExportFormat = 'PDF' | 'CSV' | 'Excel';
 
 export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   hubs:               'both',
-  health:             'project',
+  risk_register:      'both',
   documents:          'both',
   schedule:           'both',
   assets:             'both',
@@ -56,7 +56,7 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
 // Human-readable display names for tools in the nav
 export const TOOL_DISPLAY_NAMES: Record<ToolKey, string> = {
   hubs:               'Home',
-  health:             'Risk Register',
+  risk_register:      'Risk Register',
   documents:          'Documents',
   schedule:           'Schedule',
   assets:             'Assets',

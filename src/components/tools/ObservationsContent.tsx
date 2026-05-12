@@ -15,6 +15,7 @@ import { SmartGridWrapper } from "@/components/SmartGrid";
 import CostActionsCellRenderer from "@/components/SmartGrid/CostActionsCellRenderer";
 import ConfigureColumnsPanel from "@/components/SmartGrid/ConfigureColumnsPanel";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import ObservationDetailTearsheet from "@/components/tools/ObservationDetailTearsheet";
 import styled from "styled-components";
 import { observations } from "@/data/seed/observations";
 
@@ -96,6 +97,11 @@ export default function ObservationsContent({ projectId }: ObservationsContentPr
   const [configOpen, setConfigOpen] = useState(false);
   const [groupBy, setGroupBy] = useState<GroupByOption | null>(null);
   const gridApiRef = useRef<GridApi | null>(null);
+  const [selectedObservation, setSelectedObservation] = useState<any | null>(null);
+
+  const handleRowClick = useCallback((event: { data?: any }) => {
+    if (event.data) setSelectedObservation(event.data);
+  }, []);
 
   const rowData = useMemo(() => observations.filter((o: any) => o.projectId === projectId), [projectId]);
 
@@ -318,6 +324,7 @@ export default function ObservationsContent({ projectId }: ObservationsContentPr
                   height="100%"
                   columnDefs={columnDefs}
                   rowData={rowData}
+                  onRowClicked={handleRowClick}
                   groupDisplayType="groupRows"
                   autoGroupColumnDef={{ headerName: "Group", minWidth: 200 }}
                   sideBar={false}
@@ -342,6 +349,11 @@ export default function ObservationsContent({ projectId }: ObservationsContentPr
           </SplitViewCard.Section>
         </SplitViewCard.Main>
       </SplitViewCard>
+      <ObservationDetailTearsheet
+        item={selectedObservation}
+        open={selectedObservation !== null}
+        onClose={() => setSelectedObservation(null)}
+      />
     </ToolPageLayout>
   );
 }

@@ -5,7 +5,7 @@ import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useData } from "@/context/DataContext";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { useRouter } from "next/router";
-import type { Asset, AssetStatus, AssetTrade } from "@/types/assets";
+import type { Asset, AssetStatus, AssetType } from "@/types/assets";
 
 // ─── Lifecycle stages ─────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ type LifecycleStage = "Ordered" | "Delivered" | "Installed" | "Commissioned" | "
 const LIFECYCLE_STAGES: LifecycleStage[] = ["Ordered", "Delivered", "Installed", "Commissioned", "Turned Over"];
 const KPI_STAGES: LifecycleStage[] = ["Ordered", "Delivered", "Installed", "Turned Over"];
 
-const STATUS_TO_STAGE: Record<AssetStatus, LifecycleStage> = {
+const STATUS_TO_STAGE: Partial<Record<AssetStatus, LifecycleStage>> = {
   ordered:     "Ordered",
   delivered:   "Delivered",
   installed:   "Installed",
@@ -22,8 +22,14 @@ const STATUS_TO_STAGE: Record<AssetStatus, LifecycleStage> = {
   turned_over: "Turned Over",
 };
 
+const LIFECYCLE_STATUSES = new Set<AssetStatus>(["ordered", "delivered", "installed", "commissioned", "turned_over"]);
+
+function isLifecycleAsset(a: Asset): boolean {
+  return LIFECYCLE_STATUSES.has(a.status);
+}
+
 function toLifecycle(status: AssetStatus): LifecycleStage {
-  return STATUS_TO_STAGE[status];
+  return STATUS_TO_STAGE[status]!;
 }
 
 const STAGE_DOT: Record<LifecycleStage, string> = {
@@ -34,18 +40,22 @@ const STAGE_DOT: Record<LifecycleStage, string> = {
   "Turned Over":"#4a6572",
 };
 
-const TRADE_LABELS: Record<AssetTrade, string> = {
-  hvac:        "HVAC",
-  electrical:  "Electrical",
-  mechanical:  "Mechanical",
-  plumbing:    "Plumbing",
-  civil:       "Civil",
-  structural:  "Structural",
-  general:     "General",
-  other:       "Other",
+const TYPE_LABELS: Record<AssetType, string> = {
+  equipment:       "Equipment",
+  vehicle:         "Vehicle",
+  tool:            "Tool",
+  material:        "Material",
+  fixture:         "Fixture",
+  system:          "System",
+  transformer:     "Transformer",
+  generator:       "Generator",
+  hvac_system:     "HVAC System",
+  fire_protection: "Fire Protection",
+  electrical:      "Electrical",
+  other:           "Other",
 };
 
-const STATUS_LABELS: Record<AssetStatus, string> = {
+const STATUS_LABELS: Partial<Record<AssetStatus, string>> = {
   ordered:     "Ordered",
   delivered:   "Delivered",
   installed:   "Installed",
@@ -53,7 +63,7 @@ const STATUS_LABELS: Record<AssetStatus, string> = {
   turned_over: "Turned Over",
 };
 
-const STATUS_PILL_COLOR: Record<AssetStatus, "green" | "gray" | "yellow" | "red"> = {
+const STATUS_PILL_COLOR: Partial<Record<AssetStatus, "green" | "gray" | "yellow" | "red">> = {
   ordered:     "gray",
   delivered:   "yellow",
   installed:   "green",
@@ -77,7 +87,7 @@ type TearsheetAsset = {
   assetCode: string;
   projectId: string;
   status: AssetStatus;
-  trade: AssetTrade;
+  type: AssetType;
 };
 
 interface AssetGroupTearsheetProps {
@@ -127,10 +137,10 @@ function AssetGroupTearsheet({ open, onClose, groupLabel, assets }: AssetGroupTe
                       {asset.name}
                     </Typography>
                     <Typography intent="small" style={{ color: "var(--color-text-secondary)", display: "block" }}>
-                      {asset.assetCode} · {TRADE_LABELS[asset.trade]}
+                      {asset.assetCode} · {TYPE_LABELS[asset.type] ?? asset.type}
                     </Typography>
                   </div>
-                  <Pill color={STATUS_PILL_COLOR[asset.status]}>{STATUS_LABELS[asset.status]}</Pill>
+                  <Pill color={STATUS_PILL_COLOR[asset.status] ?? "gray"}>{STATUS_LABELS[asset.status] ?? asset.status}</Pill>
                 </div>
               ))}
             </div>
@@ -149,42 +159,43 @@ export function AssetsHubCard() {
   const { openPanel: openAiPanel } = useAiPanel();
 
   const [selectedStage, setSelectedStage] = useState<LifecycleStage | null>(null);
-  const [selectedTrade, setSelectedTrade] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
-  const total = assets.length;
+  const lifecycleAssets = useMemo(() => (assets ?? []).filter(isLifecycleAsset), [assets]);
+  const total = lifecycleAssets.length;
 
   const stageCounts = useMemo(() => {
     const counts: Record<LifecycleStage, number> = { Ordered: 0, Delivered: 0, Installed: 0, Commissioned: 0, "Turned Over": 0 };
-    assets.forEach((a: Asset) => { counts[toLifecycle(a.status)]++; });
+    lifecycleAssets.forEach((a: Asset) => { counts[toLifecycle(a.status)]++; });
     return counts;
-  }, [assets]);
+  }, [lifecycleAssets]);
 
-  // Horizontal bar rows: trade × lifecycle stage breakdown
-  const tradeRows = useMemo(() => {
+  // Horizontal bar rows: type × lifecycle stage breakdown
+  const typeRows = useMemo(() => {
     const map = new Map<string, Record<LifecycleStage, number>>();
-    assets.forEach((a: Asset) => {
-      const label = TRADE_LABELS[a.trade] ?? a.trade;
+    lifecycleAssets.forEach((a: Asset) => {
+      const label = TYPE_LABELS[a.type] ?? a.type;
       if (!map.has(label)) map.set(label, { Ordered: 0, Delivered: 0, Installed: 0, Commissioned: 0, "Turned Over": 0 });
       map.get(label)![toLifecycle(a.status)]++;
     });
     return Array.from(map.entries())
-      .map(([name, stages]) => ({ name, stages, total: Object.values(stages).reduce((s, v) => s + v, 0) }))
+      .map(([name, stages]) => ({ name, stages, total: Object.values(stages).reduce((s, v) => s + (v ?? 0), 0) }))
       .sort((a, b) => b.total - a.total);
-  }, [assets]);
+  }, [lifecycleAssets]);
 
-  const maxTradeTotal = Math.max(...tradeRows.map((r) => r.total), 1);
+  const maxTypeTotal = Math.max(...typeRows.map((r) => r.total), 1);
 
   const tearsheetAssets = useMemo((): TearsheetAsset[] => {
-    let filtered = assets as Asset[];
+    let filtered = lifecycleAssets;
     if (selectedStage) filtered = filtered.filter((a) => toLifecycle(a.status) === selectedStage);
-    if (selectedTrade) filtered = filtered.filter((a) => (TRADE_LABELS[a.trade] ?? a.trade) === selectedTrade);
+    if (selectedType) filtered = filtered.filter((a) => (TYPE_LABELS[a.type] ?? a.type) === selectedType);
     return filtered.map((a) => ({
       id: a.id, name: a.name, assetCode: a.assetCode,
-      projectId: a.projectId, status: a.status, trade: a.trade,
+      projectId: a.projectId, status: a.status, type: a.type,
     }));
-  }, [assets, selectedStage, selectedTrade]);
+  }, [lifecycleAssets, selectedStage, selectedType]);
 
-  const tearsheetLabel = selectedStage ?? selectedTrade ?? "";
+  const tearsheetLabel = selectedStage ?? selectedType ?? "";
 
   const kpiCellStyle = (hasBorderRight: boolean): React.CSSProperties => ({
     padding: "8px 16px",
@@ -197,14 +208,14 @@ export function AssetsHubCard() {
   return (
     <>
       <AssetGroupTearsheet
-        open={selectedStage !== null || selectedTrade !== null}
-        onClose={() => { setSelectedStage(null); setSelectedTrade(null); }}
+        open={selectedStage !== null || selectedType !== null}
+        onClose={() => { setSelectedStage(null); setSelectedType(null); }}
         groupLabel={tearsheetLabel}
         assets={tearsheetAssets}
       />
       <HubCardFrame
-        title="Assets by Trade"
-        infoTooltip="Asset lifecycle distribution by trade across all projects. Click a stage or row to drill in."
+        title="Assets by Type"
+        infoTooltip="Asset lifecycle distribution by type across all projects. Click a stage or row to drill in."
         actions={
           <div style={{ display: "flex", gap: 8 }}>
             <Button
@@ -212,17 +223,17 @@ export function AssetsHubCard() {
               size="sm"
               icon={<Copilot size="sm" style={{ color: colors.orange50 }} />}
               onClick={() => {
-                const tradeSummary = tradeRows
+                const typeSummary = typeRows
                   .map((r) => `${r.name}:${r.stages["Ordered"]}:${r.stages["Delivered"]}:${r.stages["Installed"]}:${r.stages["Commissioned"]}:${r.stages["Turned Over"]}`)
                   .join('|');
                 openAiPanel({
-                  itemName: 'Assets by Trade',
+                  itemName: 'Assets by Type',
                   pills: [
-                    { label: `${assets.length} assets`, color: 'blue' },
+                    { label: `${lifecycleAssets.length} assets`, color: 'blue' },
                     { label: `${stageCounts["Installed"]} installed`, color: 'green' },
                     { label: `${stageCounts["Ordered"]} ordered`, color: 'gray' },
                   ],
-                  aiSummary: `${assets.length}|${tradeSummary}`,
+                  aiSummary: `${lifecycleAssets.length}|${typeSummary}`,
                   cardType: 'assets',
                   userRoles: ['owner', 'owner_admin', 'project_manager'],
                 });
@@ -252,7 +263,7 @@ export function AssetsHubCard() {
         {/* ── KPI tiles ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
           {KPI_STAGES.map((stage, i) => {
-            const count = stageCounts[stage];
+            const count = stageCounts[stage] ?? 0;
             const pct = total > 0 ? Math.round((count / total) * 100) : 0;
             const isLast = i === KPI_STAGES.length - 1;
             return (
@@ -274,34 +285,34 @@ export function AssetsHubCard() {
                   </Typography>
                 </div>
                 <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 2 }}>
-                  {count} <span style={{ fontSize: 13, fontWeight: 400, color: "var(--color-text-secondary)" }}>({pct}%)</span>
+                  {count} <span style={{ fontSize: 13, fontWeight: 400, color: "var(--color-text-secondary)" }}>({String(pct)}%)</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* ── Horizontal stacked bar chart by trade ── */}
+        {/* ── Horizontal stacked bar chart by type ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {tradeRows.map((row) => (
+          {typeRows.map((row) => (
             <div key={row.name} style={{ display: "grid", gridTemplateColumns: "88px 1fr 36px", gap: 8, alignItems: "center" }}>
               <Typography
                 intent="small"
                 style={{ color: "var(--color-text-secondary)", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}
-                onClick={() => setSelectedTrade(row.name)}
+                onClick={() => setSelectedType(row.name)}
                 title={row.name}
               >
                 {row.name}
               </Typography>
               <div
                 style={{ display: "flex", height: 20, borderRadius: 4, overflow: "hidden", cursor: "pointer", background: "var(--color-surface-secondary)" }}
-                onClick={() => setSelectedTrade(row.name)}
+                onClick={() => setSelectedType(row.name)}
                 role="button"
                 tabIndex={0}
                 aria-label={`${row.name}: ${row.total} assets`}
-                onKeyDown={(e) => e.key === "Enter" && setSelectedTrade(row.name)}
+                onKeyDown={(e) => e.key === "Enter" && setSelectedType(row.name)}
               >
-                <div style={{ display: "flex", width: `${(row.total / maxTradeTotal) * 100}%`, height: "100%" }}>
+                <div style={{ display: "flex", width: `${(row.total / maxTypeTotal) * 100}%`, height: "100%" }}>
                   {LIFECYCLE_STAGES.map((stage) => {
                     const count = row.stages[stage];
                     if (count === 0) return null;
@@ -318,7 +329,7 @@ export function AssetsHubCard() {
                 </div>
               </div>
               <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
-                {row.total}
+                {String(row.total)}
               </Typography>
             </div>
           ))}

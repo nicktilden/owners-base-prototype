@@ -209,7 +209,7 @@ export default function HealthSummaryCard({ scope = 'portfolio', projectId }: Pr
               className="b_secondary"
               size="sm"
               icon={<ArrowRight size="sm" />}
-              onClick={() => router.push(scope === 'project' && projectId ? `/project/${projectId}/health` : '/portfolio/health')}
+              onClick={() => router.push(scope === 'project' && projectId ? `/project/${projectId}/risk-register` : '/portfolio/health')}
             >
               View All
             </Button>

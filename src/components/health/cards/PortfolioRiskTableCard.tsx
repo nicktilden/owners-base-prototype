@@ -31,6 +31,33 @@ function deriveProgram(sector: string): string {
   return parts[parts.length - 1] ?? sector;
 }
 
+/**
+ * Generate a deterministic 8-point sparkline (values 0–1) for a given project+KPI.
+ * Uses a seeded pseudo-random walk so each cell has a unique but stable shape.
+ * The final point is anchored to reflect the current status severity.
+ */
+function makeSparkline(projectId: string, kpiKey: string, status: string): number[] {
+  // Simple string hash for seeding
+  const seed = [...`${projectId}:${kpiKey}`].reduce((acc, c) => acc * 31 + c.charCodeAt(0), 0);
+  const rng = (n: number) => {
+    const x = Math.sin(seed + n) * 10000;
+    return x - Math.floor(x);
+  };
+
+  const N = 8;
+  const points: number[] = [];
+  let v = 0.3 + rng(0) * 0.4; // start in middle band
+  for (let i = 0; i < N; i++) {
+    v = Math.max(0.05, Math.min(0.95, v + (rng(i + 1) - 0.48) * 0.22));
+    points.push(v);
+  }
+
+  // Anchor the last point to the current status so the chart "ends" at the right level
+  const statusAnchor: Record<string, number> = { red: 0.85, yellow: 0.55, green: 0.2, unavailable: 0.5 };
+  points[N - 1] = statusAnchor[status] ?? 0.5;
+  return points;
+}
+
 // ─── Styled ───────────────────────────────────────────────────────────────────
 
 const ToolbarRow = styled.div`
@@ -122,6 +149,7 @@ export default function PortfolioRiskTableCard() {
         kpiValues[kpi.key] = {
           status: kpi.status,
           displayValue: kpi.displayValue,
+          sparkline: makeSparkline(project.id, kpi.key, kpi.status),
         };
       }
 
@@ -130,6 +158,7 @@ export default function PortfolioRiskTableCard() {
         displayValue: result.compositeScore === 'green' ? 'Healthy'
           : result.compositeScore === 'yellow' ? 'At Risk'
           : 'Critical',
+        sparkline: makeSparkline(project.id, 'overall', result.compositeScore),
       };
 
       return {

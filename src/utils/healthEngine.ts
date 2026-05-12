@@ -283,7 +283,7 @@ function evalInvoiceStatus(n: NormalizedProjectData, threshold: KPIThreshold) {
 
 /**
  * Aggregates per-project KPI numeric values into a single portfolio-level KPIResult.
- * Used by the Risk Signals scorecard to show portfolio rollups from the canonical health engine.
+ * Used by the Risk KPIs scorecard to show portfolio rollups from the canonical health engine.
  *
  * Strategy per key:
  *   - Higher-worse counts/days: sum across projects

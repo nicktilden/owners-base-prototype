@@ -756,7 +756,7 @@ function getAutoPromptForContext(ctx: AiPanelContextData): string {
     return `Analyze the schedule for ${ctx.itemName} — show me the milestone status, key risks, and recommended actions.`;
   }
   if (ctx.cardType === 'risk_scorecard') {
-    return `Summarize the Risk Signals scorecard — interpret each KPI, highlight the most critical signals, and recommend actions.`;
+    return `Summarize the Risk KPIs scorecard — interpret each KPI, highlight the most critical signals, and recommend actions.`;
   }
   if (ctx.cardType === 'assets') {
     return `Summarize the asset portfolio — show lifecycle stage distribution by trade, flag anything that needs attention, and recommend next steps.`;
@@ -955,7 +955,7 @@ function buildRiskScorecardResponse(aiSummary: string): string {
   const onTrack = lines.filter(l => l.includes('(On Track)'));
   const noData = lines.filter(l => l.includes('(No data)'));
 
-  let response = `**Risk Signals — Portfolio KPI Summary**\n\n`;
+  let response = `**Risk KPIs — Portfolio KPI Summary**\n\n`;
 
   response += `📊 **${lines.length} KPI${lines.length !== 1 ? 's' : ''} tracked** across your active portfolio\n\n`;
 

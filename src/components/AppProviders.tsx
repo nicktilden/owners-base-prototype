@@ -70,7 +70,7 @@ import { observations } from '@/data/seed/observations';
 import { submittals } from '@/data/seed/submittals';
 import { changeEvents } from '@/data/seed/change_events';
 import { primeContracts } from '@/data/seed/prime_contracts';
-import { fundingSources } from '@/data/seed/funding_source';
+import { fundingSource as fundingSources } from '@/data/seed/funding_source';
 import { incidents } from '@/data/seed/incidents';
 import { workHours } from '@/data/seed/work_hours';
 import { automationRules } from '@/data/seed/automationRules';

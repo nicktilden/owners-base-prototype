@@ -173,7 +173,7 @@ export default function ActionPanel({
     financial_scorecard: 'Financial Scorecard',
     schedule_variance: 'Schedule Variance',
     open_items: 'Open Items',
-    risk_scorecard: 'Risk Signals',
+    risk_scorecard: 'Risk KPIs',
     assets: 'Assets',
   };
 

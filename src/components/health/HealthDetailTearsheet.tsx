@@ -186,7 +186,7 @@ export default function HealthDetailTearsheet({
                       className="b_secondary"
                       size="sm"
                       icon={<ArrowRight size="sm" />}
-                      onClick={() => { window.location.href = `/project/${projectId}/health`; }}
+                      onClick={() => { window.location.href = `/project/${projectId}/risk-register`; }}
                     >
                       Go to Project
                     </Button>
@@ -348,7 +348,7 @@ export default function HealthDetailTearsheet({
                       <Button
                         variant="tertiary"
                         icon={<ArrowRight size="sm" />}
-                        onClick={() => { window.location.href = `/project/${projectId}/health`; }}
+                        onClick={() => { window.location.href = `/project/${projectId}/risk-register`; }}
                       >
                         Go to project health page
                       </Button>

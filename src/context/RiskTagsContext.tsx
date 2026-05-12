@@ -4,7 +4,7 @@
  * Seed data is loaded from DataContext on mount.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { RiskTag, RiskTagStatus } from '@/types/health';
 import { useData } from './DataContext';
 
@@ -30,29 +30,29 @@ export function RiskTagsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data.riskTags]);
 
-  function getRiskTagsForProject(projectId: string): RiskTag[] {
+  const getRiskTagsForProject = useCallback((projectId: string): RiskTag[] => {
     return riskTags.filter(t => t.projectId === projectId);
-  }
+  }, [riskTags]);
 
-  function getRiskTagsForSource(sourceId: string, sourceType: string): RiskTag[] {
+  const getRiskTagsForSource = useCallback((sourceId: string, sourceType: string): RiskTag[] => {
     return riskTags.filter(t => t.sourceId === sourceId && t.sourceType === sourceType);
-  }
+  }, [riskTags]);
 
-  function addRiskTag(tag: RiskTag) {
+  const addRiskTag = useCallback((tag: RiskTag) => {
     setRiskTags(prev => [...prev, tag]);
-  }
+  }, []);
 
-  function updateRiskTag(id: string, updates: Partial<RiskTag>) {
+  const updateRiskTag = useCallback((id: string, updates: Partial<RiskTag>) => {
     setRiskTags(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  }
+  }, []);
 
-  function transitionStatus(id: string, newStatus: RiskTagStatus) {
+  const transitionStatus = useCallback((id: string, newStatus: RiskTagStatus) => {
     setRiskTags(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
-  }
+  }, []);
 
-  function removeRiskTag(id: string) {
+  const removeRiskTag = useCallback((id: string) => {
     setRiskTags(prev => prev.filter(t => t.id !== id));
-  }
+  }, []);
 
   return (
     <RiskTagsContext.Provider value={{

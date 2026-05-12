@@ -40,6 +40,8 @@ import RiskScoreCellRenderer from '@/components/SmartGrid/RiskScoreCellRenderer'
 import RiskItemTypeCellRenderer from '@/components/SmartGrid/RiskItemTypeCellRenderer';
 import RiskCategoriesCellRenderer from '@/components/SmartGrid/RiskCategoriesCellRenderer';
 import RiskOriginCellRenderer from '@/components/SmartGrid/RiskOriginCellRenderer';
+import RiskFiltersPanel, { type RiskFilterValues } from '@/components/SmartGrid/RiskFiltersPanel';
+import ConfigureColumnsPanel from '@/components/SmartGrid/ConfigureColumnsPanel';
 import RfiDetailTearsheet from '@/components/tools/RfiDetailTearsheet';
 import ChangeEventDetailTearsheet from '@/components/tools/ChangeEventDetailTearsheet';
 import SubmittalDetailTearsheet from '@/components/tools/SubmittalDetailTearsheet';
@@ -382,7 +384,8 @@ const ToolbarRight = styled.div`
 `;
 
 const GridArea = styled.div`
-  height: 520px;
+  display: flex;
+  height: 560px;
   overflow: hidden;
 `;
 
@@ -772,9 +775,16 @@ function CreateRiskRecordTearsheet({ open, projectId, onClose, onSave }: CreateR
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// 1-5 scale → real dollar amounts (healthcare construction magnitude)
+const COST_SCALE: Record<number, number> = { 1: 50000, 2: 250000, 3: 750000, 4: 2000000, 5: 5000000 };
+// 1-5 scale → days
+const SCHEDULE_SCALE: Record<number, number> = { 1: 7, 2: 21, 3: 45, 4: 90, 5: 180 };
+
 function toRiskGridRow(r: Risk, assignedTo = ''): RiskGridRow {
   const maxImpact = Math.max(r.impactCost, r.impactSchedule, r.impactSafety);
   const catLabel = CATEGORY_DISPLAY[r.category] ?? r.category;
+  const costDollars = COST_SCALE[r.impactCost] ?? 0;
+  const scheduleDays = SCHEDULE_SCALE[r.impactSchedule] ?? 0;
   return {
     id:             r.id,
     itemTitle:      r.title,
@@ -786,6 +796,8 @@ function toRiskGridRow(r: Risk, assignedTo = ''): RiskGridRow {
     riskScore:      r.probability * maxImpact,
     impactSummary:  `${maxImpact}/5`,
     impactRaw:      maxImpact,
+    costImpact:     formatCostImpact(costDollars, 'financial'),
+    scheduleImpact: formatScheduleImpact(scheduleDays, 'schedule'),
     status:         r.status,
     assignedTo,
     origin:         r.origin,
@@ -817,6 +829,11 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   milestone:      'Milestone',
   budget_line:    'Budget Line',
   manual:         'Manual',
+  observation:    'Observation',
+  incident:       'Incident',
+  inspection:     'Inspection',
+  task:           'Task',
+  document:       'Document',
 };
 
 const CATEGORY_DISPLAY: Record<string, string> = {
@@ -832,16 +849,28 @@ const CATEGORY_DISPLAY: Record<string, string> = {
 
 function formatImpact(impact: number, category: string): string {
   if (impact <= 5) {
-    // 1-5 scale
     return `${impact}/5`;
   }
   if (category === 'schedule') {
     return impact === 1 ? '1 day' : `${impact} days`;
   }
-  // Dollar amount
   if (impact >= 1_000_000) return `$${(impact / 1_000_000).toFixed(1)}M`;
   if (impact >= 1_000)     return `$${Math.round(impact / 1_000)}K`;
   return `$${impact.toLocaleString()}`;
+}
+
+function formatCostImpact(impact: number, category: string): string {
+  if (category === 'schedule') return '—';
+  if (impact <= 0) return '—';
+  if (impact >= 1_000_000) return `$${(impact / 1_000_000).toFixed(1)}M`;
+  if (impact >= 1_000)     return `$${Math.round(impact / 1_000)}K`;
+  return `$${impact.toLocaleString()}`;
+}
+
+function formatScheduleImpact(impact: number, category: string): string {
+  if (category !== 'schedule') return '—';
+  if (impact <= 0) return '—';
+  return impact === 1 ? '1 day' : `${impact} days`;
 }
 
 function getSourceItem(sourceType: string, sourceId: string): {
@@ -910,7 +939,7 @@ function toRiskGridRowFromTag(tag: RiskTag, ownerName = ''): RiskGridRow {
   return {
     id:            tag.id,
     itemTitle:     sourceItem.itemTitle,
-    itemType:      SOURCE_TYPE_LABELS[tag.sourceType] ?? tag.sourceType,
+    itemType:      SOURCE_TYPE_LABELS[tag.sourceType] ?? tag.sourceType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     itemDueDate:   sourceItem.itemDueDate,
     itemStatus:    sourceItem.itemStatus,
     itemAssignedTo:sourceItem.itemAssignedTo,
@@ -918,6 +947,8 @@ function toRiskGridRowFromTag(tag: RiskTag, ownerName = ''): RiskGridRow {
     riskScore:     tag.probability * impactNorm,
     impactSummary: formatImpact(tag.impact, category),
     impactRaw:     tag.impact,
+    costImpact:    formatCostImpact(tag.impact, category),
+    scheduleImpact:formatScheduleImpact(tag.impact, category),
     status:        tag.status,
     assignedTo:    ownerName,
     origin:        tag.origin,
@@ -946,6 +977,8 @@ function toRiskGridRowFromManualItem(item: ManualRiskItem, ownerName = ''): Risk
     riskScore:     item.probability * impactNorm,
     impactSummary: formatImpact(item.impact, category),
     impactRaw:     item.impact,
+    costImpact:    formatCostImpact(item.impact, category),
+    scheduleImpact:formatScheduleImpact(item.impact, category),
     status:        item.status,
     assignedTo:    ownerName,
     origin:        item.origin,
@@ -988,24 +1021,77 @@ function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel
     gridApiRef.current?.setGridOption('quickFilterText', '');
   }, []);
 
-  const handleGroupBySelect = useCallback((value: unknown) => {
-    const id = value as string;
-    setGroupBys([id]);
-    gridApiRef.current?.applyColumnState({
-      state: [{ colId: id, rowGroup: true }],
-      applyOrder: false,
+  const handleGroupBySelect = useCallback((selection: { item: unknown }) => {
+    const opt = selection.item as { id: string; label: string };
+    const prevId = groupBys[0];
+    setGroupBys([opt.id]);
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => {
+      if (col.colId === opt.id) return { ...col, rowGroup: true, rowGroupIndex: 0, hide: true };
+      if (prevId && col.colId === prevId) return { ...col, rowGroup: false, rowGroupIndex: null, hide: false };
+      return { ...col, rowGroup: false, rowGroupIndex: null };
     });
-  }, []);
+    api.applyColumnState({ state });
+  }, [groupBys]);
 
   const handleGroupByClear = useCallback(() => {
+    const prevId = groupBys[0];
     setGroupBys([]);
-    riskGroupByOptions.forEach(opt => {
-      gridApiRef.current?.applyColumnState({
-        state: [{ colId: opt.id, rowGroup: false }],
-        applyOrder: false,
-      });
-    });
+    const api = gridApiRef.current;
+    if (!api) return;
+    const state = api.getColumnState().map((col) => ({
+      ...col,
+      rowGroup: false,
+      rowGroupIndex: null,
+      hide: prevId && col.colId === prevId ? false : col.hide,
+    }));
+    api.applyColumnState({ state });
+  }, [groupBys]);
+
+  const handleFilterApply = useCallback((filterValues: RiskFilterValues) => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    const model: Record<string, unknown> = {};
+    if (filterValues.statuses.length > 0) {
+      model['status'] = { filterType: 'set', values: filterValues.statuses };
+    }
+    if (filterValues.categories.length > 0) {
+      model['categories'] = { filterType: 'set', values: filterValues.categories };
+    }
+    if (filterValues.itemTypes.length > 0) {
+      model['itemType'] = { filterType: 'set', values: filterValues.itemTypes };
+    }
+    if (filterValues.origins.length > 0) {
+      model['origin'] = { filterType: 'set', values: filterValues.origins };
+    }
+    api.setFilterModel(model);
+    api.onFilterChanged();
   }, []);
+
+  const handleFilterClear = useCallback(() => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    api.setFilterModel(null);
+    api.onFilterChanged();
+  }, []);
+
+  const statusOptions = useMemo(
+    () => [...new Set(rows.map((r) => r.status).filter(Boolean))].sort(),
+    [rows]
+  );
+  const categoryOptions = useMemo(
+    () => [...new Set(rows.flatMap((r) => r.categories).filter(Boolean))].sort(),
+    [rows]
+  );
+  const itemTypeOptions = useMemo(
+    () => [...new Set(rows.map((r) => r.itemType).filter(Boolean))].sort(),
+    [rows]
+  );
+  const originOptions = useMemo(
+    () => [...new Set(rows.map((r) => r.origin).filter(Boolean))].sort(),
+    [rows]
+  );
 
   return (
     <GridCard>
@@ -1054,7 +1140,7 @@ function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel
                 {riskGroupByOptions.map(opt => (
                   <Select.Option
                     key={opt.id}
-                    value={opt.id}
+                    value={opt}
                     selected={groupBys.includes(opt.id)}
                   >
                     {opt.label}
@@ -1077,37 +1163,47 @@ function RiskGrid({ rows, gridId, localStorageKey, searchPlaceholder, emptyLabel
         </ToolbarRow>
       </div>
       <GridArea>
-        <SmartGridWrapper<RiskGridRow>
-          id={gridId}
-          localStorageKey={localStorageKey}
-          height="100%"
-          rowData={rows}
-          columnDefs={riskColumnDefs}
-          getRowId={(p) => p.data.id}
-          components={{
-            riskTitleCellRenderer: RiskTitleCellRenderer,
-            riskStatusCellRenderer: RiskStatusCellRenderer,
-            riskScoreCellRenderer: RiskScoreCellRenderer,
-            riskItemTypeCellRenderer: RiskItemTypeCellRenderer,
-            riskCategoriesCellRenderer: RiskCategoriesCellRenderer,
-            riskOriginCellRenderer: RiskOriginCellRenderer,
-          }}
-          context={{ onOpenRisk } as RiskGridContext}
-          groupDisplayType="groupRows"
-          autoGroupColumnDef={{ headerName: 'Item Title', minWidth: 220 }}
-          sideBar={filtersOpen ? {
-            toolPanels: [{ id: 'filters', labelDefault: 'Filters', labelKey: 'filters', iconKey: 'filter', toolPanel: 'agFiltersToolPanel' }],
-            defaultToolPanel: 'filters',
-          } : (configOpen ? {
-            toolPanels: [{ id: 'columns', labelDefault: 'Columns', labelKey: 'columns', iconKey: 'columns', toolPanel: 'agColumnsToolPanel' }],
-            defaultToolPanel: 'columns',
-          } : false)}
-          onGridReady={(e) => { gridApiRef.current = e.api; }}
-          statusBar={{
-            statusPanels: [
-              { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
-            ],
-          }}
+        <RiskFiltersPanel
+          open={filtersOpen}
+          statusOptions={statusOptions}
+          categoryOptions={categoryOptions}
+          itemTypeOptions={itemTypeOptions}
+          originOptions={originOptions}
+          onApply={handleFilterApply}
+          onClear={handleFilterClear}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <SmartGridWrapper<RiskGridRow>
+            id={gridId}
+            localStorageKey={localStorageKey}
+            height="100%"
+            rowData={rows}
+            columnDefs={riskColumnDefs}
+            getRowId={(p) => p.data.id}
+            components={{
+              riskTitleCellRenderer: RiskTitleCellRenderer,
+              riskStatusCellRenderer: RiskStatusCellRenderer,
+              riskScoreCellRenderer: RiskScoreCellRenderer,
+              riskItemTypeCellRenderer: RiskItemTypeCellRenderer,
+              riskCategoriesCellRenderer: RiskCategoriesCellRenderer,
+              riskOriginCellRenderer: RiskOriginCellRenderer,
+            }}
+            context={{ onOpenRisk } as RiskGridContext}
+            groupDisplayType="groupRows"
+            autoGroupColumnDef={{ headerName: 'Item Title', minWidth: 220 }}
+            sideBar={false as const}
+            onGridReady={(e) => { gridApiRef.current = e.api; }}
+            statusBar={{
+              statusPanels: [
+                { statusPanel: 'agTotalAndFilteredRowCountComponent', align: 'left' },
+              ],
+            }}
+          />
+        </div>
+        <ConfigureColumnsPanel
+          open={configOpen}
+          gridApi={gridApiRef.current}
+          onClose={() => setConfigOpen(false)}
         />
       </GridArea>
       {rows.length === 0 && (
@@ -1209,7 +1305,7 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
   return (
     <>
       <HubCardFrame
-        title="Risk Signals"
+        title="Risk KPIs"
         actions={
           <HeaderActions>
             {displayedKPIs.length > 0 && (
@@ -1290,6 +1386,7 @@ function ProjectRiskScorecard({ projectId }: ProjectRiskScorecardProps) {
                         trendValue={0}
                         value={kpi.status === 'unavailable' ? 'No data' : kpi.status === 'green' ? 'On Track' : kpi.status === 'yellow' ? 'At Risk' : 'Critical'}
                       />
+                      <Typography intent="small" style={{ color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>Last 30 days</Typography>
                     </TrendRow>
                   </KPITile>
                 ))}
@@ -1709,7 +1806,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
         )}
 
         {/* ── PROJECT: OVERVIEW TAB ── */}
-        {scope === 'project' && singleResult && currentTab === 'Overview' && projectId && (
+        {scope === 'project' && currentTab === 'Overview' && projectId && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Risk summary cards */}
@@ -1735,7 +1832,7 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
         )}
 
         {/* ── PROJECT: RESOLVED TAB ── */}
-        {scope === 'project' && singleResult && currentTab === 'Resolved' && (
+        {scope === 'project' && currentTab === 'Resolved' && (
           <div style={{ padding: 20 }}>
             <RiskGrid
               rows={resolvedRiskRows}

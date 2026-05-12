@@ -7,7 +7,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Button, Pill, Search, Typography } from '@procore/core-react';
 import { Plus, Warning } from '@procore/core-icons';
-import type { ColDef, GridApi } from 'ag-grid-community';
+import type { ColDef, GridApi, ICellRendererParams } from 'ag-grid-community';
 import styled from 'styled-components';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import { SmartGridWrapper } from '@/components/SmartGrid';
@@ -15,7 +15,9 @@ import { useRiskTags } from '@/context/RiskTagsContext';
 import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
 import { useData } from '@/context/DataContext';
 import ManualRiskForm from '@/components/risk/ManualRiskForm';
-import type { RiskTagStatus, SourceType } from '@/types/health';
+import RiskDetailTearsheet from '@/components/risk/RiskDetailTearsheet';
+import type { RiskDetailItem } from '@/components/risk/RiskDetailTearsheet';
+import type { RiskTag, ManualRiskItem, RiskTagStatus, SourceType } from '@/types/health';
 
 // ─── Styled components ────────────────────────────────────────────────────────
 
@@ -46,6 +48,23 @@ const GridArea = styled.div`
   border: 1px solid var(--color-border-default);
   border-radius: 0;
   overflow: hidden;
+`;
+
+const LinkCell = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-link);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  &:hover { color: var(--color-action-primary); }
 `;
 
 // ─── Status color map ─────────────────────────────────────────────────────────
@@ -95,6 +114,7 @@ interface RiskRow {
   status: RiskTagStatus;
   origin: string;
   owner: string;
+  _raw: RiskDetailItem;
 }
 
 function StatusCellRenderer({ value }: { value: RiskTagStatus }) {
@@ -112,6 +132,7 @@ export default function RisksContent() {
   const gridApiRef = useRef<GridApi | null>(null);
   const [searchText, setSearchText] = useState('');
   const [showManualForm, setShowManualForm] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<RiskDetailItem | null>(null);
 
   const projects = data.projects ?? [];
   const riskTypes = data.account?.riskTypes ?? [];
@@ -143,6 +164,7 @@ export default function RisksContent() {
       status: tag.status,
       origin: tag.origin === 'connected_partner' ? 'Connected' : tag.origin === 'automated' ? 'Automated' : 'Manual',
       owner: getUserName(tag.riskOwner),
+      _raw: { kind: 'tag', data: tag },
     }));
 
     const manualRows: RiskRow[] = manualRiskItems.map(item => ({
@@ -157,13 +179,14 @@ export default function RisksContent() {
       status: item.status,
       origin: 'Manual',
       owner: getUserName(item.riskOwner),
+      _raw: { kind: 'manual', data: item },
     }));
 
     return [...tagRows, ...manualRows];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riskTags, manualRiskItems, projects, riskTypes, users]);
 
-  const columnDefs = useMemo<ColDef[]>(() => [
+  const columnDefs = useMemo<ColDef<RiskRow>[]>(() => [
     {
       field: 'project',
       headerName: 'Project',
@@ -182,6 +205,18 @@ export default function RisksContent() {
       field: 'sourceItem',
       headerName: 'Source Item',
       minWidth: 150,
+      cellRenderer: (params: ICellRendererParams<RiskRow>) => {
+        if (!params.data) return params.value ?? null;
+        const raw = params.data._raw;
+        return (
+          <LinkCell
+            onClick={(e) => { e.stopPropagation(); setSelectedItem(raw); }}
+            aria-label={`View risk details: ${params.value}`}
+          >
+            {params.value}
+          </LinkCell>
+        );
+      },
     },
     {
       field: 'riskType',
@@ -226,6 +261,10 @@ export default function RisksContent() {
       filter: 'agSetColumnFilter',
     },
   ], []);
+
+  const handleRowClick = useCallback((event: { data?: RiskRow }) => {
+    if (event.data) setSelectedItem(event.data._raw);
+  }, []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchText(e.target.value);
@@ -275,6 +314,7 @@ export default function RisksContent() {
             rowData={rowData}
             columnDefs={columnDefs}
             onGridReady={({ api }) => { gridApiRef.current = api; }}
+            onRowClicked={handleRowClick}
           />
         </GridArea>
       </div>
@@ -284,6 +324,12 @@ export default function RisksContent() {
           onClose={() => setShowManualForm(false)}
         />
       )}
+
+      <RiskDetailTearsheet
+        open={selectedItem !== null}
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
     </ToolPageLayout>
   );
 }

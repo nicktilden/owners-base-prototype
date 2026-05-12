@@ -1,7 +1,8 @@
-import { useState } from "react";
-import styled from "styled-components";
+import { useState, useRef, useEffect } from "react";
+import ReactDOM from "react-dom";
+import styled, { createGlobalStyle } from "styled-components";
 import { Button, Dropdown, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
-import { Home, Plus, Filter, EllipsisVertical } from "@procore/core-icons";
+import { Home, Plus, Filter, EllipsisVertical, Check } from "@procore/core-icons";
 import GlobalHeader from "@/components/nav/GlobalHeader";
 import AppLayout from "@/components/nav/AppLayout";
 import MyOpenItemsCard from "@/components/MyOpenItemsCard";
@@ -36,7 +37,8 @@ import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTable
 const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
 
-const HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
+// Default tabs that start hidden — users can toggle them on via the + menu
+const DEFAULT_HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
 // Uses the same colors/spacing as Tabs internals so it's visually identical,
@@ -107,11 +109,70 @@ const EllipsisBtn = styled.button`
   }
 `;
 
+const ViewsMenuWrap = styled.div<{ $top: number; $left: number }>`
+  position: fixed;
+  top: ${({ $top }) => $top}px;
+  left: ${({ $left }) => $left}px;
+  z-index: 1000;
+  min-width: 220px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-separator);
+  overflow: hidden;
+  padding: 4px 0;
+`;
+
+const ViewsMenuItem = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  text-align: left;
+  gap: 8px;
+
+  &:hover {
+    background: var(--color-surface-secondary);
+  }
+`;
+
+const ViewsMenuLabel = styled.span`
+  flex: 1;
+`;
+
+const CheckIconWrap = styled.span`
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-primary);
+  width: 16px;
+  flex-shrink: 0;
+`;
+
+const AddViewBtnWrap = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+`;
+
+// Force min-width on the Dropdown (ellipsis) popovers rendered in the tab bar
+const TabDropdownMinWidth = createGlobalStyle`
+  [class*="StyledDropdownMenu"] {
+    min-width: 220px !important;
+    max-width: none !important;
+  }
+`;
+
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
   "My Work": ["My Open Items", "Projects by Stage", "Projects Table"],
   "Health & Risk": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Health & Risk"],
-  "Portfolio Performance": ["Risk Signals", "Financial Scorecard", "Schedule Variance", "Assets by Type", "Action Plans Portfolio Matrix"],
+  "Portfolio Performance": ["Risk KPIs", "Financial Scorecard", "Schedule Variance", "Assets by Type", "Action Plans Portfolio Matrix"],
   "Schedule & Milestones": ["Schedule Risk", "Action Plans Template", "Schedule Heatmap"],
   "Ideas Hub": [
     "Invoices for Approval",
@@ -146,6 +207,55 @@ function HomeContentInner() {
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
   const [hiddenCards, setHiddenCards] = useState<HiddenCards>(makeEmptyHidden);
 
+  // Hub views visibility (tabs) — start with the defaults hidden
+  const [hiddenTabs, setHiddenTabs] = useState<Set<TabName>>(() => new Set(DEFAULT_HIDDEN_TABS));
+  const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const viewsMenuRef = useRef<HTMLDivElement>(null);
+  const viewsBtnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!viewsMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        viewsMenuRef.current && !viewsMenuRef.current.contains(e.target as Node) &&
+        viewsBtnRef.current && !viewsBtnRef.current.contains(e.target as Node)
+      ) {
+        setViewsMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [viewsMenuOpen]);
+
+  function openViewsMenu() {
+    if (viewsBtnRef.current) {
+      const rect = viewsBtnRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 6,
+        left: rect.left,
+      });
+    }
+    setViewsMenuOpen(v => !v);
+  }
+
+  function toggleTabVisibility(tab: TabName) {
+    setHiddenTabs(prev => {
+      const next = new Set(prev);
+      if (next.has(tab)) {
+        next.delete(tab);
+      } else {
+        next.add(tab);
+        // If the hidden tab was active, switch to the first visible tab
+        if (activeTab === tab) {
+          const firstVisible = tabs.find(t => !next.has(t));
+          if (firstVisible) setActiveTab(firstVisible);
+        }
+      }
+      return next;
+    });
+  }
+
 
   function isCardVisible(tab: TabName, cardName: string) {
     return !hiddenCards[tab].has(cardName);
@@ -171,6 +281,7 @@ function HomeContentInner() {
 
   return (
     <>
+      <TabDropdownMinWidth />
       <GlobalHeader />
       <AppLayout>
       <ToolLandingPage>
@@ -205,7 +316,7 @@ function HomeContentInner() {
                 </ToggleButton>
                 <div style={{ width: 2, height: 20, background: "var(--color-border-separator)", borderRadius: 1, flexShrink: 0 }} />
                 <TabBarList className="Tabs__TabsList">
-                  {tabs.filter((tab) => !HIDDEN_TABS.has(tab)).map((tab) => {
+                  {tabs.filter((tab) => !hiddenTabs.has(tab)).map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <TabItem
@@ -239,6 +350,39 @@ function HomeContentInner() {
                     );
                   })}
                 </TabBarList>
+                <div style={{ width: 2, height: 20, background: 'var(--color-border-separator)', borderRadius: 1, flexShrink: 0 }} />
+                <AddViewBtnWrap ref={viewsBtnRef}>
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    icon={<Plus size="sm" />}
+                    aria-label="Manage hub views"
+                    aria-haspopup="menu"
+                    aria-expanded={viewsMenuOpen}
+                    onClick={openViewsMenu}
+                  />
+                </AddViewBtnWrap>
+                {viewsMenuOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
+                  <ViewsMenuWrap ref={viewsMenuRef} role="menu" $top={menuPos.top} $left={menuPos.left}>
+                    {tabs.map(tab => {
+                      const isVisible = !hiddenTabs.has(tab);
+                      return (
+                        <ViewsMenuItem
+                          key={tab}
+                          role="menuitemcheckbox"
+                          aria-checked={isVisible}
+                          onClick={() => toggleTabVisibility(tab)}
+                        >
+                          <ViewsMenuLabel>{tab}</ViewsMenuLabel>
+                          <CheckIconWrap>
+                            {isVisible && <Check size="sm" />}
+                          </CheckIconWrap>
+                        </ViewsMenuItem>
+                      );
+                    })}
+                  </ViewsMenuWrap>,
+                  document.body
+                )}
               </div>
             </ToolLandingPage.Tabs>
           </ToolLandingPage.Header>
@@ -279,7 +423,7 @@ function HomeContentInner() {
             )}
             {activeTab === "Portfolio Performance" && (
               <HubsContentLayout>
-                {isCardVisible("Portfolio Performance", "Risk Signals") && (
+                {isCardVisible("Portfolio Performance", "Risk KPIs") && (
                   <HubsContentLayout.Row>
                     <RiskScorecardCard />
                   </HubsContentLayout.Row>

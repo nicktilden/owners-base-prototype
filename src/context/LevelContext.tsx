@@ -29,13 +29,9 @@ export function LevelProvider({ children }: { children: React.ReactNode }) {
       const path = url.split('?')[0] ?? '';
       const match = path.match(/^\/project\/([^/]+)/);
       if (match?.[1]) {
-        const rawId = match[1];
-        // Normalise numeric IDs (e.g. "4" → "proj-004")
-        const numeric = /^\d+$/.test(rawId) ? parseInt(rawId, 10) : null;
-        const projectId = numeric !== null
-          ? `proj-${String(numeric).padStart(3, '0')}`
-          : rawId;
-        setActiveProjectId(projectId);
+        // Store the raw URL segment so GlobalHeader can distinguish
+        // seed project ids (e.g. "proj-001") from numeric sample ids (e.g. "2")
+        setActiveProjectId(match[1]);
         setLevel('project');
       } else {
         setActiveProjectId(null);

@@ -64,8 +64,8 @@ export const changeEvents: any[] = [
   mkCE('proj-002', 'Additional electrical circuits — medical equipment rooms', 'Closed', 'Out of Scope', 'Design Issue', '04/10/2024', 'Prime Contract 002', '26 - Electrical', 54600, 'RFQ-008', 'Electrical Circuits — Med Equipment Rooms'),
   mkCE('proj-002', 'Sitework scope addition — bioretention pond requirement', 'Under Review', 'Undetermined', 'Regulatory', '04/20/2024', '--', '--', 0, '--', '--'),
   mkCE('proj-002', 'Fire protection upgrade — NFPA 13D vs 13 variance', 'Closed', 'Out of Scope', 'Regulatory', '03/05/2024', 'Prime Contract 002', '21 - Fire Suppression', 28900, 'RFQ-009', 'Fire Protection Upgrade — NFPA 13'),
-  mkCE('proj-002', 'FF&E scope addition — patient room TV infrastructure', 'Open', 'Undetermined', 'Owner Request', '05/15/2024', '--', '--', 0, '--', '--'),
-  mkCE('proj-002', 'Delayed sitework start — contractor resource conflict', 'Open', 'In Scope', 'Contractor Request', '05/01/2024', '--', '--', 0, '--', '--'),
+  mkCE('proj-002', 'FF&E scope addition — patient room TV infrastructure', 'Open', 'Out of Scope', 'Owner Request', '05/15/2024', 'Prime Contract 002', '12 - Furnishings / FF&E', 487500, 'RFQ-014', 'Patient Room AV & TV Infrastructure Package'),
+  mkCE('proj-002', 'Delayed sitework start — contractor resource conflict', 'Open', 'Out of Scope', 'Owner Request', '05/01/2024', '--', '--', 0, '--', '--'),
 
   // ── proj-003 · Mercy MOB Phase II ──────────────────────────────────────────
   mkCE('proj-003', 'Steel connection plate revision — engineer of record change', 'Closed', 'Out of Scope', 'Design Issue', '11/15/2023', 'Prime Contract 003', '05 - Metals / Connections', 17400, 'RFQ-010', 'Steel Connection Plate Revision'),
