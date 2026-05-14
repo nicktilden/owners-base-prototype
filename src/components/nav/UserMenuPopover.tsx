@@ -7,12 +7,14 @@
  *   4. Standard account actions (profile, settings, log out)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Typography } from '@procore/core-react';
+import { Button, Select, Typography } from '@procore/core-react';
 import { Person, Cog, Import, Pencil } from '@procore/core-icons';
 import styled from 'styled-components';
 import { useRouter } from 'next/router';
 import { usePersona } from '@/context/PersonaContext';
-import { useData } from '@/context/DataContext';
+import { useCompanyType } from '@/context/CompanyTypeContext';
+import { COMPANY_TYPES } from '@/data/seed/companyTypes/registry';
+import type { CompanyType } from '@/types/companyType';
 import avatarImg from '@/images/avatar-XL.png';
 
 // ─── Styled components ────────────────────────────────────────────────────────
@@ -133,7 +135,7 @@ export default function UserMenuPopover({
   const popoverRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { activeUser } = usePersona();
-  const { data } = useData();
+  const { activeType, setActiveType, config } = useCompanyType();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -151,8 +153,6 @@ export default function UserMenuPopover({
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
-
-  const account = data.account;
 
   return (
     <Popover ref={popoverRef} role="dialog" aria-label="User menu">
@@ -181,9 +181,26 @@ export default function UserMenuPopover({
               {activeUser.email}
             </Typography>
           </NameBlock>
-          <Typography intent="body" style={{ fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center' }}>
-            {account?.companyName ?? 'Acme Development Group'}
-          </Typography>
+          <div style={{ width: '100%', marginTop: 4 }}>
+            <Select
+              block
+              label={config.accountName}
+              onSelect={(s) => {
+                if (s.action !== 'selected') return;
+                setActiveType(s.item as CompanyType);
+              }}
+            >
+              {COMPANY_TYPES.map((ct) => (
+                <Select.Option
+                  key={ct.key}
+                  value={ct.key}
+                  selected={ct.key === activeType}
+                >
+                  {ct.label} — {ct.accountName}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
         </Section>
       )}
 

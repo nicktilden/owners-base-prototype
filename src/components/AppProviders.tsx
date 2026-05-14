@@ -18,6 +18,7 @@ import { RiskTagsProvider } from '@/context/RiskTagsContext';
 import { ManualRiskItemsProvider } from '@/context/ManualRiskItemsContext';
 import { ConnectDataProvider } from '@/context/ConnectDataContext';
 import { HealthConfigProvider } from '@/context/HealthConfigContext';
+import { CompanyTypeProvider } from '@/context/CompanyTypeContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
@@ -47,33 +48,38 @@ const TearsheetAnimationOverride = createGlobalStyle`
   }
 `;
 
-// Seed data imports — loaded once at app root
-import { account } from '@/data/seed/account';
-import { activeUser } from '@/data/seed/activeUser';
-import { users } from '@/data/seed/users';
-import { projects } from '@/data/seed/projects';
-import { wbsItems } from '@/data/seed/wbs';
-import { hubs } from '@/data/seed/hubs';
-import { budgetLineItems } from '@/data/seed/budget';
-import { scheduleEntries } from '@/data/seed/schedule';
-import { tasks } from '@/data/seed/tasks';
-import { documents } from '@/data/seed/documents';
-import { assets } from '@/data/seed/assets';
-import { actionPlans } from '@/data/seed/action_plans';
-import { rfis } from '@/data/seed/rfis';
-import { specifications } from '@/data/seed/specifications';
-import { riskTags } from '@/data/seed/riskTags';
-import { manualRiskItems } from '@/data/seed/manualRiskItems';
-import { connectedProjects } from '@/data/seed/connectedProjects';
-import { healthSnapshotsByProject } from '@/data/seed/healthSnapshots';
-import { observations } from '@/data/seed/observations';
-import { submittals } from '@/data/seed/submittals';
-import { changeEvents } from '@/data/seed/change_events';
-import { primeContracts } from '@/data/seed/prime_contracts';
-import { fundingSource as fundingSources } from '@/data/seed/funding_source';
-import { incidents } from '@/data/seed/incidents';
-import { workHours } from '@/data/seed/work_hours';
-import { automationRules } from '@/data/seed/automationRules';
+// Seed data imports — resolved from the active company type at module init.
+// All imports come from the companyTypes barrel, which reads localStorage
+// and returns the matching dataset. Adding a new company type only requires
+// adding its directory — this file does not need to change.
+import {
+  account,
+  activeUser,
+  users,
+  projects,
+  wbsItems,
+  hubs,
+  budgetLineItems,
+  scheduleEntries,
+  tasks,
+  documents,
+  assets,
+  actionPlans,
+  rfis,
+  specifications,
+  riskTags,
+  manualRiskItems,
+  connectedProjects,
+  healthSnapshotsByProject,
+  observations,
+  submittals,
+  changeEvents,
+  primeContracts,
+  fundingSource as fundingSources,
+  incidents,
+  workHours,
+  automationRules,
+} from '@/data/seed/companyTypes';
 
 function SeedLoader({ children }: { children: React.ReactNode }) {
   const { setData } = useData();
@@ -118,6 +124,7 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
+    <CompanyTypeProvider>
     <ThemeProvider>
       <DataProvider>
         <PersonaProvider>
@@ -148,5 +155,6 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         </PersonaProvider>
       </DataProvider>
     </ThemeProvider>
+    </CompanyTypeProvider>
   );
 }
