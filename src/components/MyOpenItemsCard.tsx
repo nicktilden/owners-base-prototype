@@ -14,6 +14,7 @@ import { sampleOpenItemRows, type OpenItemRow } from "@/data/openitems";
 import { rfis } from "@/data/seed/rfis";
 import { projects } from "@/data/seed/projects";
 import { usePersona } from "@/context/PersonaContext";
+import { useHubFilters } from "@/context/HubFilterContext";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { formatDateMMDDYYYY } from "@/utils/date";
@@ -228,10 +229,13 @@ export default function MyOpenItemsCard({ seedProjectId }: MyOpenItemsCardProps 
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [progressFilter, setProgressFilter] = useState("All Progress");
   const { openPanel: openAiPanel } = useAiPanel();
+  const { filteredSeedProjects } = useHubFilters();
   const allOpenItems = useMyOpenItems();
+
+  const filteredProjectIds = new Set(filteredSeedProjects.map((p) => p.id));
   const MY_OPEN_ITEMS = seedProjectId != null
     ? allOpenItems.filter((item) => item.projectId === seedProjectId)
-    : allOpenItems;
+    : allOpenItems.filter((item) => filteredProjectIds.has(item.projectId));
 
   const projectOptions = ["All Projects", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.projectName))).sort()];
   const typeOptions = ["All Types", ...Array.from(new Set(MY_OPEN_ITEMS.map((item) => item.type))).sort()];

@@ -13,7 +13,7 @@ import HubCardFrame from '@/components/hubs/HubCardFrame';
 import { SmartGridWrapper } from '@/components/SmartGrid';
 import ConfigureColumnsPanel from '@/components/SmartGrid/ConfigureColumnsPanel';
 import { useData } from '@/context/DataContext';
-import { projects as allProjects } from '@/data/seed/projects';
+import { useHubFilters } from '@/context/HubFilterContext';
 import { getRisksForProject } from '@/data/seed/risks';
 import { buildHealthResult } from '@/utils/healthEngine';
 import {
@@ -122,6 +122,7 @@ const SIDEBAR_CONFIG = {
 
 export default function PortfolioRiskTableCard() {
   const { data } = useData();
+  const { filteredSeedProjects } = useHubFilters();
   const gridApiRef = useRef<GridApi<PortfolioRiskRow> | null>(null);
   const [gridApi, setGridApi] = useState<GridApi<PortfolioRiskRow> | null>(null);
   const [searchText, setSearchText] = useState('');
@@ -138,7 +139,7 @@ export default function PortfolioRiskTableCard() {
   const rowData = useMemo<PortfolioRiskRow[]>(() => {
     if (!data.account) return [];
     const config = data.account.healthConfig;
-    const activeProjects = allProjects.filter((p) => p.status === 'active');
+    const activeProjects = filteredSeedProjects.filter((p) => p.status === 'active');
 
     return activeProjects.map((project) => {
       const risks = getRisksForProject(project.id);
@@ -173,7 +174,7 @@ export default function PortfolioRiskTableCard() {
         ...kpiValues,
       };
     });
-  }, [data.account]);
+  }, [data.account, filteredSeedProjects]);
 
   // ── Column defs ────────────────────────────────────────────────────────────
   const columnDefs = useMemo(

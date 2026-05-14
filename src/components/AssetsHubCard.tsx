@@ -4,6 +4,7 @@ import { Copilot, ExternalLink } from "@procore/core-icons";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import { useData } from "@/context/DataContext";
 import { useAiPanel } from "@/context/AiPanelContext";
+import { useHubFilters } from "@/context/HubFilterContext";
 import { useRouter } from "next/router";
 import type { Asset, AssetStatus, AssetType } from "@/types/assets";
 
@@ -155,13 +156,23 @@ function AssetGroupTearsheet({ open, onClose, groupLabel, assets }: AssetGroupTe
 
 export function AssetsHubCard() {
   const { data } = useData();
-  const assets = data.assets;
+  const { filteredSeedProjects } = useHubFilters();
   const { openPanel: openAiPanel } = useAiPanel();
 
   const [selectedStage, setSelectedStage] = useState<LifecycleStage | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
-  const lifecycleAssets = useMemo(() => (assets ?? []).filter(isLifecycleAsset), [assets]);
+  const filteredProjectIds = useMemo(
+    () => new Set(filteredSeedProjects.map((p) => p.id)),
+    [filteredSeedProjects]
+  );
+
+  const assets = useMemo(
+    () => (data.assets ?? []).filter((a) => filteredProjectIds.has(a.projectId)),
+    [data.assets, filteredProjectIds]
+  );
+
+  const lifecycleAssets = useMemo(() => assets.filter(isLifecycleAsset), [assets]);
   const total = lifecycleAssets.length;
 
   const stageCounts = useMemo(() => {
