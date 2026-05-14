@@ -34,7 +34,7 @@ export function CompanyTypeProvider({ children }: { children: React.ReactNode })
 
   const setActiveType = (type: CompanyType) => {
     localStorage.setItem(STORAGE_KEY, type);
-    window.location.href = '/';
+    window.location.href = '/portfolio';
   };
 
   const value = useMemo(

@@ -139,10 +139,13 @@ export default function UserMenuPopover({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (
-        popoverRef.current && !popoverRef.current.contains(e.target as Node) &&
-        anchorRef.current && !anchorRef.current.contains(e.target as Node)
-      ) onClose();
+      const target = e.target as Node;
+      // Ignore clicks inside the popover or its anchor
+      if (popoverRef.current?.contains(target)) return;
+      if (anchorRef.current?.contains(target)) return;
+      // Ignore clicks inside any Select/Menu portal (rendered outside the popover DOM)
+      if ((target as Element).closest?.('[role="listbox"], [role="option"], [data-qa="menu"]')) return;
+      onClose();
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -185,9 +188,9 @@ export default function UserMenuPopover({
             <Select
               block
               label={config.accountName}
-              onSelect={(s) => {
-                if (s.action !== 'selected') return;
-                setActiveType(s.item as CompanyType);
+              onSelect={(s: { item: unknown }) => {
+                const key = s.item as CompanyType;
+                if (key && key !== activeType) setActiveType(key);
               }}
             >
               {COMPANY_TYPES.map((ct) => (
