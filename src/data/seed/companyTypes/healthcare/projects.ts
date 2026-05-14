@@ -847,7 +847,7 @@ export const projects: Project[] = [
   {
     id: 'proj-021',
     number: 'NE1021',
-    name: "Ascension Saint Thomas — Women's & Infants Tower (Study)",
+    name: "Trinity Health Nashville — Women's & Infants Tower (Study)",
     stage: 'conceptual',
     status: 'on_hold',
     program: null,
@@ -875,7 +875,7 @@ export const projects: Project[] = [
   {
     id: 'proj-022',
     number: 'MW1022',
-    name: 'Henry Ford West Bloomfield — Central Energy Plant Replacement',
+    name: 'Trinity Health West Bloomfield — Central Energy Plant Replacement',
     stage: 'feasibility',
     status: 'on_hold',
     program: null,
@@ -903,7 +903,7 @@ export const projects: Project[] = [
   {
     id: 'proj-023',
     number: 'S1023',
-    name: 'Ochsner LSU Health — Academic Medical Center North Campus',
+    name: 'Trinity Health Shreveport — Academic Medical Center North Campus',
     stage: 'conceptual',
     status: 'on_hold',
     program: null,
@@ -931,7 +931,7 @@ export const projects: Project[] = [
   {
     id: 'proj-024',
     number: 'W1024',
-    name: 'CommonSpirit — Behavioral Health Crisis Stabilization Unit',
+    name: 'Trinity Health Phoenix — Behavioral Health Crisis Stabilization Unit',
     stage: 'feasibility',
     status: 'on_hold',
     program: null,
@@ -959,7 +959,7 @@ export const projects: Project[] = [
   {
     id: 'proj-025',
     number: 'NE1025',
-    name: 'Mount Sinai Morningside — Interventional Radiology Suite',
+    name: 'Trinity Health New York — Interventional Radiology Suite',
     stage: 'conceptual',
     status: 'on_hold',
     program: null,
@@ -987,7 +987,7 @@ export const projects: Project[] = [
   {
     id: 'proj-026',
     number: 'MW1026',
-    name: 'Advocate Aurora — Proton Therapy Addition (Oak Lawn)',
+    name: 'Trinity Health Oak Lawn — Proton Therapy Addition',
     stage: 'feasibility',
     status: 'on_hold',
     program: null,
@@ -1015,7 +1015,7 @@ export const projects: Project[] = [
   {
     id: 'proj-027',
     number: 'S1027',
-    name: 'Baylor Scott & White — Plano Ambulatory Surgery Center',
+    name: 'Trinity Health Plano — Ambulatory Surgery Center',
     stage: 'conceptual',
     status: 'on_hold',
     program: null,
@@ -1043,7 +1043,7 @@ export const projects: Project[] = [
   {
     id: 'proj-028',
     number: 'W1028',
-    name: 'Dignity Health — Yuma Regional Cancer Center Expansion',
+    name: 'Trinity Health Yuma — Regional Cancer Center Expansion',
     stage: 'feasibility',
     status: 'on_hold',
     program: null,
@@ -1071,7 +1071,7 @@ export const projects: Project[] = [
   {
     id: 'proj-029',
     number: 'NE1029',
-    name: 'Cleveland Clinic Florida — East Campus Inpatient Tower',
+    name: 'Trinity Health Weston — East Campus Inpatient Tower',
     stage: 'conceptual',
     status: 'on_hold',
     program: null,
@@ -1099,7 +1099,7 @@ export const projects: Project[] = [
   {
     id: 'proj-030',
     number: 'MW1030',
-    name: 'University of Michigan Health — Adult Emergency Department Expansion',
+    name: 'Trinity Health Ann Arbor — Adult Emergency Department Expansion',
     stage: 'feasibility',
     status: 'on_hold',
     program: null,
@@ -1127,7 +1127,7 @@ export const projects: Project[] = [
   {
     id: 'proj-031',
     number: 'S1031',
-    name: 'Memorial Hermann — Katy Heart & Vascular Institute',
+    name: 'Trinity Health Katy — Heart & Vascular Institute',
     stage: 'Pre-Construction',
     status: 'active',
     program: null,
@@ -1169,7 +1169,7 @@ export const projects: Project[] = [
   {
     id: 'proj-032',
     number: 'W1032',
-    name: 'Stanford Health Care — Emeryville Outpatient Diagnostics Hub',
+    name: 'Trinity Health Bay Area — Emeryville Outpatient Diagnostics Hub',
     stage: 'Pre-Construction',
     status: 'active',
     program: null,
@@ -1211,7 +1211,7 @@ export const projects: Project[] = [
   {
     id: 'proj-033',
     number: 'NE1033',
-    name: 'Jefferson Health — Navy Yard Specialty Pavilion',
+    name: 'Trinity Health Philadelphia — Navy Yard Specialty Pavilion',
     stage: 'course_of_construction',
     status: 'active',
     program: null,
@@ -1253,7 +1253,7 @@ export const projects: Project[] = [
   {
     id: 'proj-034',
     number: 'MW1034',
-    name: 'Froedtert Menomonee Falls — Sterile Processing Renovation',
+    name: 'Trinity Health Menomonee Falls — Sterile Processing Renovation',
     stage: 'course_of_construction',
     status: 'active',
     program: null,
@@ -1295,7 +1295,7 @@ export const projects: Project[] = [
   {
     id: 'proj-035',
     number: 'S1035',
-    name: 'Novant Health — Charlotte Region MOB Portfolio (RFP)',
+    name: 'Trinity Health Charlotte — Regional MOB Portfolio (RFP)',
     stage: 'bidding',
     status: 'active',
     program: null,
