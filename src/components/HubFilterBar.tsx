@@ -84,14 +84,25 @@ const FilterSetTrigger = styled.button`
 
 // ─── Saved filter set data (prototype) ──────────────────────────────────────
 
-const SAVED_FILTER_SETS = [
-  'Active Planning Pipeline',
-  'Critical Schedule Status',
-  'Data Centers View',
-  'Eastern (MW, SE, NE) Regions',
-  'High Risk Score',
-  'Overall Health Status',
-  'PM Oversight',
+interface SavedFilterSet {
+  name: string;
+  filters: Partial<{ stage: ProjectStage[]; region: ProjectRegion[] }>;
+}
+
+const SAVED_FILTER_SETS: SavedFilterSet[] = [
+  {
+    name: 'Active Planning Pipeline',
+    filters: { stage: ['Conceptual', 'Feasibility', 'Permitting', 'Final design'] },
+  },
+  { name: 'Critical Schedule Status', filters: {} },
+  { name: 'Data Centers View',        filters: {} },
+  {
+    name: 'Eastern (MW, SE, NE) Regions',
+    filters: { region: ['Midwest', 'Southeast', 'Northeast'] },
+  },
+  { name: 'High Risk Score',     filters: {} },
+  { name: 'Overall Health Status', filters: {} },
+  { name: 'PM Oversight',        filters: {} },
 ];
 
 // ─── Filter options ─────────────────────────────────────────────────────────────
@@ -120,10 +131,20 @@ function FilterSetDropdown() {
   const [search, setSearch] = useState('');
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { setFilters, clearFilters } = useHubFilters();
 
   const filtered = SAVED_FILTER_SETS.filter((s) =>
-    s.toLowerCase().includes(search.toLowerCase())
+    s.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  function applyFilterSet(fs: SavedFilterSet) {
+    setFilters((prev) => ({
+      ...prev,
+      stage: fs.filters.stage ?? prev.stage,
+      region: fs.filters.region ?? prev.region,
+    }));
+    setOpen(false);
+  }
 
   // Close on outside click or Escape
   useEffect(() => {
@@ -170,8 +191,9 @@ function FilterSetDropdown() {
             width: 260,
             borderRadius: 8,
             boxShadow: '0 4px 12px 0 rgba(0,0,0,0.2)',
-            zIndex: 200,
+            zIndex: 1000,
             overflow: 'hidden',
+            background: 'var(--color-surface-card, #fff)',
           }}
         >
           <MenuImperative className="menu_container">
@@ -183,12 +205,12 @@ function FilterSetDropdown() {
             />
             <MenuImperative.Options>
               {filtered.length > 0 ? (
-                filtered.map((name) => (
+                filtered.map((fs) => (
                   <MenuImperative.Item
-                    key={name}
-                    onClick={() => setOpen(false)}
+                    key={fs.name}
+                    onClick={() => applyFilterSet(fs)}
                   >
-                    {name}
+                    {fs.name}
                   </MenuImperative.Item>
                 ))
               ) : (
@@ -203,7 +225,7 @@ function FilterSetDropdown() {
                   className="b_tertiary"
                   variant="tertiary"
                   size="sm"
-                  onClick={() => setOpen(false)}
+                  onClick={() => { clearFilters(); setOpen(false); }}
                 >
                   Clear All
                 </Button>

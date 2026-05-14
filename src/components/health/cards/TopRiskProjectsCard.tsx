@@ -11,11 +11,11 @@ import { ArrowRight, ArrowUp, ArrowDown, Minus, Info } from '@procore/core-icons
 import styled from 'styled-components';
 import { useRouter } from 'next/router';
 import HubCardFrame, { HubCardEmptyState } from '@/components/hubs/HubCardFrame';
-import { projects as allProjects } from '@/data/seed/projects';
 import { risks as allRisks } from '@/data/seed/risks';
 import { riskTypes } from '@/data/seed/riskTypes';
 import { useRiskTags } from '@/context/RiskTagsContext';
 import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
+import { useHubFilters } from '@/context/HubFilterContext';
 import type { RiskCategory } from '@/types/health';
 
 // ─── Styled ───────────────────────────────────────────────────────────────────
@@ -135,10 +135,11 @@ export default function TopRiskProjectsCard() {
   const router = useRouter();
   const { riskTags } = useRiskTags();
   const { manualRiskItems } = useManualRiskItems();
+  const { filteredSeedProjects } = useHubFilters();
 
   const rankedCategories = useMemo(() => {
     const activeProjectIds = new Set(
-      allProjects.filter(p => p.status === 'active').map(p => p.id)
+      filteredSeedProjects.filter(p => p.status === 'active').map(p => p.id)
     );
 
     // Aggregate per category
@@ -203,7 +204,7 @@ export default function TopRiskProjectsCard() {
       level: scoreToLevel(e.score, maxScore),
       scoreDisplay: Math.round(e.score),
     }));
-  }, [riskTags, manualRiskItems]);
+  }, [riskTags, manualRiskItems, filteredSeedProjects]);
 
   return (
     <HubCardFrame

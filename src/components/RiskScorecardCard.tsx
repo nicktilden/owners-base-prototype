@@ -12,9 +12,9 @@ import { Cog, Copilot, Grip, Clear, Info, Plus } from '@procore/core-icons';
 import styled, { createGlobalStyle } from 'styled-components';
 import HubCardFrame, { HubCardEmptyState } from '@/components/hubs/HubCardFrame';
 import KPIPill from '@/components/KPIPill';
-import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
+import { useHubFilters } from '@/context/HubFilterContext';
 import { resolveKPIs, aggregatePortfolioKPIs } from '@/utils/healthEngine';
 import { KPI_DESCRIPTIONS } from '@/types/health';
 import type { KPIKey, KPIResult } from '@/types/health';
@@ -330,6 +330,7 @@ function toneFromStatus(status: KPIResult['status']): KPITone {
 export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKey[] } = {}) {
   const { isLoading } = useHubLoading();
   const { data } = useData();
+  const { filteredSeedProjects } = useHubFilters();
   const config = data.account?.healthConfig;
   const { openPanel } = useAiPanel();
 
@@ -384,7 +385,7 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
   const { portfolioKPIs, perProjectByKey } = useMemo(() => {
     if (!config) return { portfolioKPIs: [], perProjectByKey: {} as Record<KPIKey, Array<{ projectName: string; kpi: KPIResult; costImpact?: number | null }>> };
 
-    const activeProjects = allProjects.filter(p => p.status === 'active');
+    const activeProjects = filteredSeedProjects.filter(p => p.status === 'active');
 
     // Pre-compute pending CE cost impact per project from seed data
     const pendingStatuses = new Set(['Open', 'Under Review', 'Pending Pricing']);
@@ -419,7 +420,7 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
     });
 
     return { portfolioKPIs, perProjectByKey };
-  }, [config, data.changeEvents]);
+  }, [config, data.changeEvents, filteredSeedProjects]);
 
   // KPIs available in the configure modal = all active KPIs from settings
   const availableKPIKeys: KPIKey[] = config?.activeKPIs ?? [];
