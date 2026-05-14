@@ -1,11 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { Button, Pill, Select } from "@procore/core-react";
-import { EllipsisVertical } from "@procore/core-icons";
+import { Button, Pill, Select, Tooltip } from "@procore/core-react";
+import { EllipsisVertical, Info } from "@procore/core-icons";
 import styled from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import KPIPill from "@/components/KPIPill";
 import { sampleProjectRows } from "@/data/projects";
 import { useHubFilters } from "@/context/HubFilterContext";
+
+const KpiGridWrap = styled.div`
+  display: flex;
+  height: 100%;
+  align-items: center;
+`;
 
 const KpiGrid = styled.div`
   display: grid;
@@ -19,16 +25,13 @@ const KpiTile = styled.div`
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid var(--color-border-separator);
-  border-radius: 8px;
-  background: var(--color-surface-card);
 `;
 
 const KpiLabel = styled.div`
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--color-text-primary);
-  line-height: 20px;
+  line-height: 16px;
   letter-spacing: 0.15px;
 `;
 
@@ -44,6 +47,21 @@ const KpiTrendRow = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
+`;
+
+const TrendInfoButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  line-height: 1;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
 `;
 
 const InvoiceList = styled.div`
@@ -140,20 +158,23 @@ export function FinancialScorecardCard() {
     const projectedOverUnder = estCostAtCompletion - revisedBudget;
 
     return [
-      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "+2.4%", tone: "positive" as const, trendValue: 1 },
-      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "-3.1%", tone: "positive" as const, trendValue: -1 },
-      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "+5.7%", tone: "negative" as const, trendValue: 1 },
-      { label: "Total Committed", value: formatCurrency(totalCommitted), delta: "+1.8%", tone: "negative" as const, trendValue: 1 },
-      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "-0.6%", tone: "positive" as const, trendValue: -1 },
+      { label: "Revised Budget", value: formatCurrency(revisedBudget), delta: "+2.4%", tone: "positive" as const, trendValue: 1, tooltipText: "Revised Budget increased 2.4% vs. the last 30 days. Budget adjustments approved across active projects." },
+      { label: "Forecast to Complete", value: formatCurrency(forecastToComplete), delta: "-3.1%", tone: "positive" as const, trendValue: -1, tooltipText: "Forecast to Complete decreased 3.1% vs. the last 30 days. Remaining cost projections have improved across the portfolio." },
+      { label: "Job to Date Costs", value: formatCurrency(jobToDateCosts), delta: "+5.7%", tone: "negative" as const, trendValue: 1, tooltipText: "Job to Date Costs increased 5.7% vs. the last 30 days. Spending is tracking above the prior period pace." },
+      { label: "Total Committed", value: formatCurrency(totalCommitted), delta: "+1.8%", tone: "negative" as const, trendValue: 1, tooltipText: "Total Committed increased 1.8% vs. the last 30 days. New commitments and change orders have been executed." },
+      { label: "% Forecast/Budget", value: `${forecastVsBudget.toFixed(2)}%`, delta: "-0.6%", tone: "positive" as const, trendValue: -1, tooltipText: "% Forecast/Budget decreased 0.6 pts vs. the last 30 days. The forecast-to-budget ratio is trending closer to 100%." },
       {
         label: "Projected Over/Under",
         value: `${projectedOverUnder >= 0 ? "+" : "-"}${formatCurrency(Math.abs(projectedOverUnder))}`,
         delta: projectedOverUnder > 0 ? "+4.2%" : "-4.2%",
         tone: projectedOverUnder > 0 ? ("negative" as const) : projectedOverUnder < 0 ? ("positive" as const) : ("neutral" as const),
         trendValue: projectedOverUnder > 0 ? -1 : projectedOverUnder < 0 ? 1 : 0,
+        tooltipText: projectedOverUnder > 0
+          ? "Projected Over/Under worsened 4.2% vs. the last 30 days. The portfolio is tracking further over budget."
+          : "Projected Over/Under improved 4.2% vs. the last 30 days. The portfolio is tracking closer to budget.",
       },
-      { label: "Invoiced to Date", value: formatCurrency(invoicedToDate), delta: "+8.3%", tone: "positive" as const, trendValue: 1 },
-      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "-1.2%", tone: "positive" as const, trendValue: -1 },
+      { label: "Invoiced to Date", value: formatCurrency(invoicedToDate), delta: "+8.3%", tone: "positive" as const, trendValue: 1, tooltipText: "Invoiced to Date increased 8.3% vs. the last 30 days. Invoice volume has accelerated across active projects." },
+      { label: "Est Cost of Completion", value: formatCurrency(estCostAtCompletion), delta: "-1.2%", tone: "positive" as const, trendValue: -1, tooltipText: "Est Cost of Completion decreased 1.2% vs. the last 30 days. Overall cost-at-completion projections have improved." },
     ];
   }, [filteredProjectRows]);
 
@@ -204,6 +225,7 @@ export function FinancialScorecardCard() {
         </>
       }
     >
+      <KpiGridWrap>
       <KpiGrid>
         {financialKpis.map((kpi) => (
           <KpiTile key={kpi.label}>
@@ -211,13 +233,24 @@ export function FinancialScorecardCard() {
             <KpiValue>{kpi.value}</KpiValue>
             <KpiTrendRow>
               <KPIPill tone={kpi.tone} trendValue={kpi.trendValue} value={kpi.delta} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)' }}>
-                vs Prior Month
-              </span>
+              <Tooltip
+                trigger="hover"
+                placement="top"
+                overlay={
+                  <Tooltip.Content>
+                    <div style={{ maxWidth: 240, whiteSpace: "normal" }}>{kpi.tooltipText}</div>
+                  </Tooltip.Content>
+                }
+              >
+                <TrendInfoButton aria-label={`Trend info for ${kpi.label}`}>
+                  <Info size="sm" />
+                </TrendInfoButton>
+              </Tooltip>
             </KpiTrendRow>
           </KpiTile>
         ))}
       </KpiGrid>
+      </KpiGridWrap>
     </HubCardFrame>
   );
 }
