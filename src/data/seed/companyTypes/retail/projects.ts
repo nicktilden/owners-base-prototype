@@ -12,7 +12,7 @@ function makeHistory(days: number, scores: ('green' | 'yellow' | 'red')[]): Heal
   });
 }
 
-// 20 Retail (Meijer Development Group) projects
+// 20 Retail (Brightline Retail Group) projects
 // Status: 10 active, 4 on_hold, 4 inactive, 2 cancelled
 // Stages: heavy toward Bidding and Pre-Construction
 // Regions: Midwest, Northeast, South
@@ -251,7 +251,7 @@ export const projects: Project[] = [
     photo: null,
     startDate: new Date('2025-10-01'),
     endDate: new Date('2027-04-30'),
-    description: "New neighborhood-format Meijer grocery store in Detroit's eastside, designed to serve a food-access gap with a 60,000 sq ft store emphasizing fresh produce and pharmacy services.",
+    description: "New neighborhood-format Brightline grocery store in Detroit's eastside, designed to serve a food-access gap with a 60,000 sq ft store emphasizing fresh produce and pharmacy services.",
     // ── Health signals: ON TRACK ──
     budgetVariancePct: 1.2,
     contingencyPct: 9.5,
@@ -416,7 +416,7 @@ export const projects: Project[] = [
     photo: null,
     startDate: new Date('2025-12-01'),
     endDate: new Date('2027-12-31'),
-    description: 'First phase of a new open-air shopping center anchored by a Meijer Grocery store, with 12 inline tenant spaces and a food court pad site.',
+    description: 'First phase of a new open-air shopping center anchored by a Brightline Grocery store, with 12 inline tenant spaces and a food court pad site.',
     // ── Health signals: ON TRACK ──
     budgetVariancePct: 1.0,
     contingencyPct: 9.5,
@@ -459,7 +459,7 @@ export const projects: Project[] = [
     photo: null,
     startDate: new Date('2024-06-01'),
     endDate: new Date('2026-12-31'),
-    description: 'Conversion of a former department store anchor into a Meijer-anchored food hall with specialty food vendors, held pending city permitting resolution and financing approvals.',
+    description: 'Conversion of a former department store anchor into a Brightline-anchored food hall with specialty food vendors, held pending city permitting resolution and financing approvals.',
   },
   {
     id: 'proj-012',
@@ -513,7 +513,7 @@ export const projects: Project[] = [
     photo: null,
     startDate: new Date('2025-02-01'),
     endDate: new Date('2027-06-30'),
-    description: 'Site feasibility and acquisition study for a new Meijer Grocery in the Buffalo-Niagara market; on hold while a preferred site undergoes environmental review.',
+    description: 'Site feasibility and acquisition study for a new Brightline Grocery in the Buffalo-Niagara market; on hold while a preferred site undergoes environmental review.',
   },
   {
     id: 'proj-014',

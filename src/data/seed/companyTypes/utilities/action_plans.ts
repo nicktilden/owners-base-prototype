@@ -181,7 +181,7 @@ const ap004: ActionPlan = {
       createdAt: d('2026-04-01'), updatedAt: d('2026-04-01'),
       items: [
         openItem('ap-004-s2-i1', 'ap-004-s2', 0, 'Archaeological monitor clearance for Mile 11.4 segment', ['user-014'], '2026-06-01', 'user-011', '2026-04-01'),
-        openItem('ap-004-s2-i2', 'ap-004-s2', 1, 'National Grid outage authorization confirmed for Winchendon tie-in', ['user-013'], '2026-07-01', 'user-011', '2026-04-01'),
+        openItem('ap-004-s2-i2', 'ap-004-s2', 1, 'Keystone Utilities outage authorization confirmed for Winchendon tie-in', ['user-013'], '2026-07-01', 'user-011', '2026-04-01'),
         openItem('ap-004-s2-i3', 'ap-004-s2', 2, 'ROW final cleanup and revegetation completed', ['user-016'], '2026-09-30', 'user-011', '2026-04-01'),
       ],
     },

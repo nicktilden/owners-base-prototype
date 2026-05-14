@@ -239,7 +239,7 @@ export const tasks: Task[] = [
     dueDate: new Date('2026-05-12'),
     distributionList: ['user-008', 'user-001'],
     private: false,
-    description: 'Review proposed wayfinding and monument signage design package against Meijer brand standards and submit consolidated owner comments to the design team.',
+    description: 'Review proposed wayfinding and monument signage design package against Brightline brand standards and submit consolidated owner comments to the design team.',
     attachments: [],
     createdBy: 'user-009',
     createdAt: new Date('2026-04-01'),

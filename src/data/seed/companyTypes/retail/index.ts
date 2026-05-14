@@ -1,5 +1,5 @@
 /**
- * RETAIL DATASET — Meijer Development Group
+ * RETAIL DATASET — Brightline Retail Group
  * Named exports for direct import; default export for the validation checker.
  */
 

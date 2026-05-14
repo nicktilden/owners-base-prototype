@@ -24,7 +24,7 @@ export const connectedAccounts: ConnectedAccount[] = [
 
 export const account: Account = {
   id: 'acc-001',
-  companyName: 'Meijer Development Group',
+  companyName: 'Brightline Retail Group',
   logo: null,
   timeZone: 'America/Detroit',
   hasGovernmentContracts: false,

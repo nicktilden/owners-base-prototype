@@ -48,75 +48,49 @@ const TearsheetAnimationOverride = createGlobalStyle`
   }
 `;
 
-// Seed data imports — resolved from the active company type at module init.
-// All imports come from the companyTypes barrel, which reads localStorage
-// and returns the matching dataset. Adding a new company type only requires
-// adding its directory — this file does not need to change.
-import {
-  account,
-  activeUser,
-  users,
-  projects,
-  wbsItems,
-  hubs,
-  budgetLineItems,
-  scheduleEntries,
-  tasks,
-  documents,
-  assets,
-  actionPlans,
-  rfis,
-  specifications,
-  riskTags,
-  manualRiskItems,
-  connectedProjects,
-  healthSnapshotsByProject,
-  observations,
-  submittals,
-  changeEvents,
-  primeContracts,
-  fundingSource as fundingSources,
-  incidents,
-  workHours,
-  automationRules,
-} from '@/data/seed/companyTypes';
+// Seed data is loaded dynamically inside SeedLoader so that localStorage is
+// read client-side. A static top-level import would be evaluated during SSR
+// where window is undefined, causing getActiveType() to always return the
+// default and ignore the stored company type selection.
 
 function SeedLoader({ children }: { children: React.ReactNode }) {
   const { setData } = useData();
   const { setUsers, setActiveUser } = usePersona();
 
   useEffect(() => {
-    setData({
-      account,
-      users,
-      projects,
-      wbs: wbsItems,
-      hubs,
-      budget: budgetLineItems,
-      schedule: scheduleEntries,
-      tasks,
-      documents,
-      assets,
-      actionPlans,
-      rfis,
-      specifications,
-      riskTags,
-      manualRiskItems,
-      connectedProjects,
-      healthSnapshotsByProject,
-      observations,
-      submittals,
-      changeEvents,
-      primeContracts,
-      fundingSources,
-      budgetLineItems,
-      scheduleEntries,
-      incidents,
-      workHours,
-      automationRules,
+    import('@/data/seed/companyTypes').then((ds) => {
+      setData({
+        account: ds.account,
+        users: ds.users,
+        projects: ds.projects,
+        wbs: ds.wbsItems,
+        hubs: ds.hubs,
+        budget: ds.budgetLineItems,
+        schedule: ds.scheduleEntries,
+        tasks: ds.tasks,
+        documents: ds.documents,
+        assets: ds.assets,
+        actionPlans: ds.actionPlans,
+        rfis: ds.rfis,
+        specifications: ds.specifications,
+        riskTags: ds.riskTags,
+        manualRiskItems: ds.manualRiskItems,
+        connectedProjects: ds.connectedProjects,
+        healthSnapshotsByProject: ds.healthSnapshotsByProject,
+        observations: ds.observations,
+        submittals: ds.submittals,
+        changeEvents: ds.changeEvents,
+        primeContracts: ds.primeContracts,
+        fundingSources: ds.fundingSource,
+        budgetLineItems: ds.budgetLineItems,
+        scheduleEntries: ds.scheduleEntries,
+        incidents: ds.incidents,
+        workHours: ds.workHours,
+        automationRules: ds.automationRules,
+      });
+      setUsers(ds.users);
+      setActiveUser(ds.activeUser);
     });
-    setUsers(users);
-    setActiveUser(activeUser);
   }, []);
 
   return <>{children}</>;
