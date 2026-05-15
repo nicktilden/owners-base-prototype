@@ -59,9 +59,11 @@ export type ProjectType =
   | 'P3'
   | 'Renewal'
   | 'Renewal of Existing Buildings and Facilities'
+  | 'Renovation'
   | 'Repair'
   | 'Sample Project'
   | 'TBD.'
+  | 'Tenant Improvement'
   | 'Transmission'
   | 'Utilities';
 
