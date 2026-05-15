@@ -12,6 +12,7 @@
 
 import type { CompanyType } from '@/types/companyType';
 import { COMPANY_TYPE_CONFIGS } from './registry';
+import { buildProjectRows } from '../projectRowAdapter';
 
 // ─── Static import map (webpack bundles all at build time) ───────────────────
 import * as healthcareDataset from './healthcare';
@@ -97,3 +98,6 @@ export const fundingSource = ds.fundingSource ?? [];
 export const incidents = ds.incidents ?? [];
 export const workHours = ds.workHours ?? [];
 export const automationRules = ds.automationRules ?? [];
+
+// ─── Derived: ProjectRow[] for the portfolio grid ─────────────────────────────
+export const projectRows = buildProjectRows(ds.projects, ds.budgetLineItems, ds.users);

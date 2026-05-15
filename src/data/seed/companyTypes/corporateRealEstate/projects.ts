@@ -18,7 +18,7 @@ export const projects: Project[] = [
   {
     id: 'proj-001', number: 'CP-BEL-001',
     name: 'Northgate Bellevue Campus — Building 3 Expansion',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Corporate Campus',
     estimatedBudget: 180000000, priority: 'high', scope: 'new_construction',
     sector: 'Commercial > Office',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -27,7 +27,7 @@ export const projects: Project[] = [
     state: 'Washington', zip: '98004', address: '10900 NE 8th Street',
     latitude: 47.6101, longitude: -122.2015,
     favorite: true, photo: null,
-    startDate: new Date('2023-10-01'), endDate: new Date('2027-03-31'),
+    startDate: new Date('2024-04-01'), endDate: new Date('2027-09-30'),
     description: 'New 12-story, 420,000 SF Class A office tower connected by sky bridge to Building 2. Includes structured parking, ground-floor amenities, and R&D lab spaces on floors 8–10.',
     budgetVariancePct: 5.8, contingencyPct: 3.9,
     contingencyOriginal: 14400000, contingencyUsed: 7450000,
@@ -41,7 +41,7 @@ export const projects: Project[] = [
   {
     id: 'proj-002', number: 'TI-SEA-001',
     name: 'Seattle Office TI — Westlake Tower Floors 18–22',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Tenant Improvement',
     estimatedBudget: 28000000, priority: 'high', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -64,7 +64,7 @@ export const projects: Project[] = [
   {
     id: 'proj-003', number: 'OF-RNO-001',
     name: 'Reno Operations Center — New Build',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Corporate Campus',
     estimatedBudget: 62000000, priority: 'high', scope: 'new_construction',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -87,7 +87,7 @@ export const projects: Project[] = [
   {
     id: 'proj-004', number: 'CP-BEL-002',
     name: 'Northgate Campus Childcare & Amenity Hub',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Corporate Campus',
     estimatedBudget: 32000000, priority: 'high', scope: 'new_construction',
     sector: 'Institutional > Educational > Daycare / Pre-K',
     delivery: 'Design-Bid-Build (DBB)',
@@ -110,7 +110,7 @@ export const projects: Project[] = [
   {
     id: 'proj-005', number: 'TI-PDX-001',
     name: 'Portland TI — Pearl District Office Floors 4–6',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Tenant Improvement',
     estimatedBudget: 14000000, priority: 'medium', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -133,7 +133,7 @@ export const projects: Project[] = [
   {
     id: 'proj-006', number: 'OF-SFO-001',
     name: 'San Francisco R&D Lab — Mission Bay Fit-Out',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Industrial & Manufacturing',
     estimatedBudget: 38000000, priority: 'high', scope: 'renovation',
     sector: 'Industrial > Research + Development',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -156,7 +156,7 @@ export const projects: Project[] = [
   {
     id: 'proj-007', number: 'TI-AUS-001',
     name: 'Austin TI — Domain NORTHSIDE Floors 2–4',
-    stage: 'Pre-Construction', status: 'active', program: null,
+    stage: 'Pre-Construction', status: 'active', program: 'Tenant Improvement',
     estimatedBudget: 18000000, priority: 'medium', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -179,7 +179,7 @@ export const projects: Project[] = [
   {
     id: 'proj-008', number: 'MF-BEL-001',
     name: 'Bellevue Campus Multi-Family Housing — Phase 1',
-    stage: 'final_design', status: 'active', program: null,
+    stage: 'final_design', status: 'active', program: 'Corporate Campus',
     estimatedBudget: 135000000, priority: 'high', scope: 'new_construction',
     sector: 'Residential > Multifamily',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -202,7 +202,7 @@ export const projects: Project[] = [
   {
     id: 'proj-009', number: 'OF-DEN-001',
     name: 'Denver Office Consolidation — LoDo',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Renovations & Upgrades',
     estimatedBudget: 22000000, priority: 'medium', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -225,7 +225,7 @@ export const projects: Project[] = [
   {
     id: 'proj-010', number: 'TI-NYC-001',
     name: 'New York TI — Hudson Yards Tower Floor 34',
-    stage: 'Pre-Construction', status: 'active', program: null,
+    stage: 'Pre-Construction', status: 'active', program: 'Tenant Improvement',
     estimatedBudget: 11000000, priority: 'high', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -250,7 +250,7 @@ export const projects: Project[] = [
   {
     id: 'proj-011', number: 'CP-BEL-003',
     name: 'Northgate Campus — Building 4 Land Study',
-    stage: 'feasibility', status: 'on_hold', program: null,
+    stage: 'feasibility', status: 'on_hold', program: 'Corporate Campus',
     estimatedBudget: 160000000, priority: 'medium', scope: 'new_construction',
     sector: 'Commercial > Office',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -267,7 +267,7 @@ export const projects: Project[] = [
   {
     id: 'proj-012', number: 'TI-CHI-001',
     name: 'Chicago TI — Wacker Drive Consolidation',
-    stage: 'final_design', status: 'on_hold', program: null,
+    stage: 'final_design', status: 'on_hold', program: 'Tenant Improvement',
     estimatedBudget: 16500000, priority: 'medium', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -284,7 +284,7 @@ export const projects: Project[] = [
   {
     id: 'proj-013', number: 'OF-BOS-001',
     name: 'Boston Innovation Lab — Seaport District',
-    stage: 'final_design', status: 'on_hold', program: null,
+    stage: 'final_design', status: 'on_hold', program: 'Industrial & Manufacturing',
     estimatedBudget: 24000000, priority: 'medium', scope: 'renovation',
     sector: 'Industrial > Research + Development',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -301,7 +301,7 @@ export const projects: Project[] = [
   {
     id: 'proj-014', number: 'MF-RNO-001',
     name: 'Reno Employee Housing — Phase 1',
-    stage: 'feasibility', status: 'on_hold', program: null,
+    stage: 'feasibility', status: 'on_hold', program: 'Corporate Campus',
     estimatedBudget: 42000000, priority: 'low', scope: 'new_construction',
     sector: 'Residential > Multifamily',
     delivery: 'Design-Build (DB)',
@@ -320,7 +320,7 @@ export const projects: Project[] = [
   {
     id: 'proj-015', number: 'TI-SEA-002',
     name: 'Seattle TI — Pioneer Square Pilot Office',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Tenant Improvement',
     estimatedBudget: 5800000, priority: 'low', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -336,7 +336,7 @@ export const projects: Project[] = [
   {
     id: 'proj-016', number: 'OF-PHX-001',
     name: 'Phoenix TI — Tempe Town Lake',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Tenant Improvement',
     estimatedBudget: 8400000, priority: 'low', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -352,7 +352,7 @@ export const projects: Project[] = [
   {
     id: 'proj-017', number: 'CP-BEL-004',
     name: 'Campus Building 1 Lobby Renovation',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Renovations & Upgrades',
     estimatedBudget: 6200000, priority: 'low', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Bid-Build (DBB)',
@@ -368,7 +368,7 @@ export const projects: Project[] = [
   {
     id: 'proj-018', number: 'TI-ATL-001',
     name: 'Atlanta TI — Buckhead',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Tenant Improvement',
     estimatedBudget: 7200000, priority: 'low', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -386,7 +386,7 @@ export const projects: Project[] = [
   {
     id: 'proj-019', number: 'TI-MIA-001',
     name: 'Miami TI — Brickell City Centre (Cancelled)',
-    stage: 'permitting', status: 'cancelled', program: null,
+    stage: 'permitting', status: 'cancelled', program: 'Tenant Improvement',
     estimatedBudget: 5500000, priority: 'low', scope: 'renovation',
     sector: 'Commercial > Office',
     delivery: 'Design-Build (DB)',
@@ -402,7 +402,7 @@ export const projects: Project[] = [
   {
     id: 'proj-020', number: 'CP-BEL-005',
     name: 'Campus Parking Garage P4 (Cancelled)',
-    stage: 'final_design', status: 'cancelled', program: null,
+    stage: 'final_design', status: 'cancelled', program: 'Corporate Campus',
     estimatedBudget: 28000000, priority: 'low', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Parking Garage',
     delivery: 'Design-Bid-Build (DBB)',

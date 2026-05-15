@@ -161,7 +161,7 @@ export interface Project {
   name: string;
   stage: ProjectStage;
   status: ProjectStatus;
-  program: null;
+  program: string | null;
   estimatedBudget: number;
   priority: ProjectPriority;
   scope: WorkScope;

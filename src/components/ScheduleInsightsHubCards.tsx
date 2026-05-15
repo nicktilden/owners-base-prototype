@@ -4,7 +4,6 @@ import { Avatar, Banner, Button, Card, H2, Link, Pill, Popover, Select, Table, T
 import { ChevronDown, ChevronRight, Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Info, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
 import {
   sampleProjectMilestones,
-  sampleProjectRows,
   topScheduleRiskProjectRowsForMilestoneHeatmap,
   scheduleVarianceData,
   getCurrentMilestoneLabelForProject,
@@ -14,6 +13,7 @@ import {
   getDaysRemaining,
   getProjectPortfolioScheduleSummary,
 } from "@/data/projects";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import HubCardTable from "@/components/HubCardTable";
 import { useAiPanel } from "@/context/AiPanelContext";
@@ -89,7 +89,7 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
   const [pastExpanded, setPastExpanded] = useState(false);
   const [currentExpanded, setCurrentExpanded] = useState(true);
   const project = useMemo(
-    () => projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null,
+    () => projectId !== null ? seedProjectRows.find((p) => p.id === projectId) ?? null : null,
     [projectId]
   );
   const milestones = useMemo(
@@ -881,7 +881,7 @@ export function ScheduleRiskGHubCard() {
                   <HubCardTable.Cell>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
+                        {seedProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
                       </span>
                       {getProjectConnection(row.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                     </span>
@@ -903,7 +903,7 @@ export function ScheduleRiskGHubCard() {
                       onClick={(e) => {
                         e.stopPropagation();
                         openAiPanel({
-                          itemName: sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
+                          itemName: seedProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
                           itemId: `#${row.id}`,
                           projectId: row.id,
                           pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],

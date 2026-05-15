@@ -13,7 +13,8 @@ import { Button, MenuImperative, Select, ToggleButton } from '@procore/core-reac
 import { ChevronDown, Plus } from '@procore/core-icons';
 import styled from 'styled-components';
 import { useHubFilters, toggleFilterValue } from '@/context/HubFilterContext';
-import { PROJECT_STAGES, PROJECT_REGIONS, sampleProjectRows } from '@/data/projects';
+import { PROJECT_STAGES, PROJECT_REGIONS } from '@/data/projects';
+import { projectRows as seedProjectRows } from '@/data/seed/companyTypes';
 import type { ProjectStage, ProjectRegion } from '@/data/projects';
 
 // ─── Styled components ─────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ const STAGE_OPTIONS: { value: ProjectStage; label: string }[] = PROJECT_STAGES.m
   label: s,
 }));
 
-const PROGRAM_OPTIONS: string[] = [...new Set(sampleProjectRows.map((p) => p.program))].sort(
+const PROGRAM_OPTIONS: string[] = [...new Set(seedProjectRows.map((p) => p.program).filter(Boolean))].sort(
   (a, b) => a.localeCompare(b)
 );
 
@@ -120,7 +121,7 @@ const REGION_OPTIONS: ProjectRegion[] = [...new Set(PROJECT_REGIONS)].sort(
   (a, b) => a.localeCompare(b)
 ) as ProjectRegion[];
 
-const PM_OPTIONS: string[] = [...new Set(sampleProjectRows.map((p) => p.projectManager))].sort(
+const PM_OPTIONS: string[] = [...new Set(seedProjectRows.map((p) => p.projectManager))].sort(
   (a, b) => a.localeCompare(b)
 );
 

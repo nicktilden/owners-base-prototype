@@ -23,7 +23,7 @@ import ScheduleHealthCard from "@/components/health/cards/ScheduleHealthCard";
 import DeliveryRiskCard from "@/components/health/cards/DeliveryRiskCard";
 import RiskRegisterCard from "@/components/health/cards/RiskRegisterCard";
 import ProjectRiskLevelCard from "@/components/health/cards/ProjectRiskLevelCard";
-import { sampleProjectRows } from "@/data/projects";
+import { projectRows as sampleProjectRows } from "@/data/seed/companyTypes";
 
 /** Convert numeric projectRowId (1–50) to seed string format ('proj-001'…). */
 function toSeedId(projectRowId: number): string {

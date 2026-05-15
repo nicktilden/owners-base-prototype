@@ -1,7 +1,8 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Button, MultiSelect, Search, Typography } from "@procore/core-react";
 import styled from "styled-components";
-import { PROJECT_STAGES, PROJECT_PROGRAMS } from "@/data/projects";
+import { PROJECT_STAGES } from "@/data/projects";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 
 const PanelWrapper = styled.div<{ $open: boolean }>`
   width: ${({ $open }) => ($open ? "400px" : "0px")};
@@ -172,7 +173,7 @@ export default function PortfolioFiltersPanel({
   const [filterSearch, setFilterSearch] = useState("");
 
   const programOpts = useMemo(
-    () => [...PROJECT_PROGRAMS].map((p) => ({ id: p, label: p })),
+    () => [...new Set(seedProjectRows.map((r) => r.program).filter(Boolean))].sort().map((p) => ({ id: p, label: p })),
     []
   );
   const stageOpts = useMemo(

@@ -18,7 +18,7 @@ export const projects: Project[] = [
   {
     id: 'proj-001', number: 'LAX-TM-001',
     name: 'Terminal 1 Modernization — Southwest Airlines',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Terminal & Gates',
     estimatedBudget: 1200000000, priority: 'high', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -27,7 +27,7 @@ export const projects: Project[] = [
     state: 'California', zip: '90045', address: '1 World Way, Terminal 1',
     latitude: 33.9425, longitude: -118.4081,
     favorite: true, photo: null,
-    startDate: new Date('2023-08-01'), endDate: new Date('2027-06-30'),
+    startDate: new Date('2024-03-01'), endDate: new Date('2028-01-28'),
     description: 'Full gut renovation and expansion of Terminal 1 to accommodate international growth, including 14 new gates, modernized concourse, expanded security checkpoints, and new baggage handling system.',
     budgetVariancePct: 5.8, contingencyPct: 8.2,
     contingencyOriginal: 96000000, contingencyUsed: 32500000,
@@ -41,7 +41,7 @@ export const projects: Project[] = [
   {
     id: 'proj-002', number: 'LAX-AF-001',
     name: 'Runway 24L/6R Rehabilitation — Phase 2',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Airfield & Operations',
     estimatedBudget: 185000000, priority: 'high', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',
@@ -64,7 +64,7 @@ export const projects: Project[] = [
   {
     id: 'proj-003', number: 'LAX-PA-001',
     name: 'Central Terminal Area Parking Structure P3',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Ground Transport',
     estimatedBudget: 310000000, priority: 'high', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Parking Garage',
     delivery: 'Design-Build (DB)',
@@ -87,7 +87,7 @@ export const projects: Project[] = [
   {
     id: 'proj-004', number: 'LAX-TM-002',
     name: 'Tom Bradley International Terminal — Gates 147–152 Expansion',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Terminal & Gates',
     estimatedBudget: 875000000, priority: 'high', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -110,7 +110,7 @@ export const projects: Project[] = [
   {
     id: 'proj-005', number: 'LAX-TM-003',
     name: 'Terminal 5 & 6 Consolidated Security Checkpoint',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Infrastructure & Systems',
     estimatedBudget: 145000000, priority: 'high', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Bid-Build (DBB)',
@@ -133,7 +133,7 @@ export const projects: Project[] = [
   {
     id: 'proj-006', number: 'LAX-AF-002',
     name: 'Airfield Lighting Modernization — South Complex',
-    stage: 'Pre-Construction', status: 'active', program: null,
+    stage: 'Pre-Construction', status: 'active', program: 'Airfield & Operations',
     estimatedBudget: 78000000, priority: 'high', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',
@@ -156,7 +156,7 @@ export const projects: Project[] = [
   {
     id: 'proj-007', number: 'LAX-PA-002',
     name: 'Economy Parking Lot C Expansion & EV Infrastructure',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Ground Transport',
     estimatedBudget: 92000000, priority: 'medium', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Parking Lot',
     delivery: 'Design-Build (DB)',
@@ -179,7 +179,7 @@ export const projects: Project[] = [
   {
     id: 'proj-008', number: 'LAX-IN-001',
     name: 'Airport Metro Connector — West Ground Transportation Hub',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Ground Transport',
     estimatedBudget: 950000000, priority: 'high', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -188,7 +188,7 @@ export const projects: Project[] = [
     state: 'California', zip: '90045', address: 'West Ground Transportation Hub, LAX',
     latitude: 33.9460, longitude: -118.3970,
     favorite: false, photo: null,
-    startDate: new Date('2023-11-01'), endDate: new Date('2027-09-30'),
+    startDate: new Date('2024-06-01'), endDate: new Date('2028-04-30'),
     description: 'New APM station connecting LAX to Metro C (Green) Line, including elevated people mover guideway, below-grade passenger concourse, fare gates, and accessible connections to all terminals.',
     budgetVariancePct: 6.2, contingencyPct: 5.7,
     contingencyOriginal: 76000000, contingencyUsed: 22200000,
@@ -202,7 +202,7 @@ export const projects: Project[] = [
   {
     id: 'proj-009', number: 'LAX-AF-003',
     name: 'Taxiway B & D Pavement Rehabilitation — North Side',
-    stage: 'course_of_construction', status: 'active', program: null,
+    stage: 'course_of_construction', status: 'active', program: 'Airfield & Operations',
     estimatedBudget: 125000000, priority: 'high', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',
@@ -225,7 +225,7 @@ export const projects: Project[] = [
   {
     id: 'proj-010', number: 'LAX-PA-003',
     name: 'Ground Transportation Center — Consolidated Rental Car Facility',
-    stage: 'Pre-Construction', status: 'active', program: null,
+    stage: 'Pre-Construction', status: 'active', program: 'Ground Transport',
     estimatedBudget: 680000000, priority: 'high', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Build (DB)',
@@ -250,7 +250,7 @@ export const projects: Project[] = [
   {
     id: 'proj-011', number: 'LAX-TM-004',
     name: 'Terminal 2 & 3 Connector Concourse',
-    stage: 'final_design', status: 'on_hold', program: null,
+    stage: 'final_design', status: 'on_hold', program: 'Terminal & Gates',
     estimatedBudget: 420000000, priority: 'medium', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -267,7 +267,7 @@ export const projects: Project[] = [
   {
     id: 'proj-012', number: 'LAX-IN-002',
     name: 'Automated People Mover — Phase 2 Extension',
-    stage: 'feasibility', status: 'on_hold', program: null,
+    stage: 'feasibility', status: 'on_hold', program: 'Ground Transport',
     estimatedBudget: 780000000, priority: 'medium', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Build (DB)',
@@ -284,7 +284,7 @@ export const projects: Project[] = [
   {
     id: 'proj-013', number: 'LAX-AF-004',
     name: 'Runway 25L/7R Extension Study',
-    stage: 'feasibility', status: 'on_hold', program: null,
+    stage: 'feasibility', status: 'on_hold', program: 'Airfield & Operations',
     estimatedBudget: 250000000, priority: 'low', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',
@@ -301,7 +301,7 @@ export const projects: Project[] = [
   {
     id: 'proj-014', number: 'LAX-TM-005',
     name: 'Terminal 8 Renovation — Alaska Airlines',
-    stage: 'final_design', status: 'on_hold', program: null,
+    stage: 'final_design', status: 'on_hold', program: 'Terminal & Gates',
     estimatedBudget: 165000000, priority: 'medium', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Construction Management at Risk (CMaR)',
@@ -320,7 +320,7 @@ export const projects: Project[] = [
   {
     id: 'proj-015', number: 'LAX-PA-004',
     name: 'Parking Structure 6 Seismic Retrofit',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Ground Transport',
     estimatedBudget: 58000000, priority: 'medium', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Parking Garage',
     delivery: 'Design-Bid-Build (DBB)',
@@ -336,7 +336,7 @@ export const projects: Project[] = [
   {
     id: 'proj-016', number: 'LAX-AF-005',
     name: 'Taxiway J Reconstruction',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Airfield & Operations',
     estimatedBudget: 42000000, priority: 'medium', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',
@@ -352,7 +352,7 @@ export const projects: Project[] = [
   {
     id: 'proj-017', number: 'LAX-TM-006',
     name: 'Terminal 3 Gate Holdroom Refresh',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Terminal & Gates',
     estimatedBudget: 25000000, priority: 'low', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Bid-Build (DBB)',
@@ -368,7 +368,7 @@ export const projects: Project[] = [
   {
     id: 'proj-018', number: 'LAX-IN-003',
     name: 'FlyAway Bus Terminal Renovation — Van Nuys',
-    stage: 'closeout', status: 'inactive', program: null,
+    stage: 'closeout', status: 'inactive', program: 'Ground Transport',
     estimatedBudget: 18000000, priority: 'low', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Bid-Build (DBB)',
@@ -386,7 +386,7 @@ export const projects: Project[] = [
   {
     id: 'proj-019', number: 'LAX-TM-007',
     name: 'Terminal 7 & 8 APM Connection (Cancelled)',
-    stage: 'permitting', status: 'cancelled', program: null,
+    stage: 'permitting', status: 'cancelled', program: 'Terminal & Gates',
     estimatedBudget: 95000000, priority: 'low', scope: 'new_construction',
     sector: 'Civil & Infrastructure > Transportation > Transportation Terminals',
     delivery: 'Design-Build (DB)',
@@ -402,7 +402,7 @@ export const projects: Project[] = [
   {
     id: 'proj-020', number: 'LAX-AF-006',
     name: 'North Taxiway Complex Reconfiguration (Cancelled)',
-    stage: 'permitting', status: 'cancelled', program: null,
+    stage: 'permitting', status: 'cancelled', program: 'Airfield & Operations',
     estimatedBudget: 210000000, priority: 'low', scope: 'renovation',
     sector: 'Civil & Infrastructure > Transportation > Aviation',
     delivery: 'Design-Bid-Build (DBB)',

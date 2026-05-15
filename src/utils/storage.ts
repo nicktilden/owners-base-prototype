@@ -44,8 +44,9 @@ export function removeItem(key: string): void {
 
 /**
  * Removes all localStorage keys that start with the "owners_" prefix.
- * Does NOT touch unrelated keys (e.g. "procore-theme-preference",
- * "owners.projectFavorites.v1").
+ * Does NOT touch unrelated keys (e.g. "procore-theme-preference").
+ * Covers: projects, companies, current_user_id, risk_tags, kpi_scorecard,
+ * project_row_edits, project_favorites.
  */
 export function resetAll(): void {
   if (typeof window === 'undefined') return;

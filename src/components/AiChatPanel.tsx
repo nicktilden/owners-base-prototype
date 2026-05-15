@@ -24,10 +24,10 @@ import {
 } from '@procore/core-icons';
 import { useAiPanel, type AiPanelContextData } from '@/context/AiPanelContext';
 import {
-  sampleProjectRows,
   sampleProjectMilestones,
   scheduleVarianceData,
 } from '@/data/projects';
+import { projectRows as seedProjectRows } from '@/data/seed/companyTypes';
 import {
   sampleOpenItemRows,
   type OpenItemRow,
@@ -768,7 +768,7 @@ function getAutoPromptForContext(ctx: AiPanelContextData): string {
 }
 
 function buildProjectScheduleResponse(projectId: number): string {
-  const project = sampleProjectRows.find((p) => p.id === projectId);
+  const project = seedProjectRows.find((p) => p.id === projectId);
   if (!project) return '';
 
   const milestones = sampleProjectMilestones.get(projectId) ?? [];

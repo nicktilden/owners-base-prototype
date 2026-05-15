@@ -16,6 +16,8 @@ import { buildHealthResult } from '@/utils/healthEngine';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
 import { useHubFilters } from '@/context/HubFilterContext';
+import { useRiskTags } from '@/context/RiskTagsContext';
+import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
 import { HC_COLORS } from '@/lib/highcharts';
 import type { HealthResult } from '@/types/health';
 import type { Project } from '@/types/project';
@@ -132,6 +134,8 @@ type TearsheetEntry = { project: Project; result: HealthResult };
 export default function PortfolioRiskGaugeCard() {
   const { data } = useData();
   const { filteredSeedProjects } = useHubFilters();
+  const { getRiskTagsForProject } = useRiskTags();
+  const { getManualRiskItemsForProject } = useManualRiskItems();
   const [tearsheetEntry, setTearsheetEntry] = useState<TearsheetEntry | null>(null);
 
   const { score, needAttention, total, worstEntry } = useMemo(() => {
@@ -141,7 +145,9 @@ export default function PortfolioRiskGaugeCard() {
 
     const entries = activeProjects.map((project) => {
       const risks = getRisksForProject(project.id);
-      const result = buildHealthResult(project, healthConfig, undefined, risks);
+      const riskTags = getRiskTagsForProject(project.id);
+      const manualRisks = getManualRiskItemsForProject(project.id);
+      const result = buildHealthResult(project, healthConfig, undefined, risks, riskTags, manualRisks);
       return { project, result };
     });
 
@@ -158,7 +164,7 @@ export default function PortfolioRiskGaugeCard() {
     })[0] ?? null;
 
     return { score, needAttention, total, worstEntry };
-  }, [data.account, filteredSeedProjects]);
+  }, [data.account, filteredSeedProjects, getRiskTagsForProject, getManualRiskItemsForProject]);
 
   const options = useMemo(() => buildGaugeOptions(score), [score]);
   const label = gaugeLabel(score);

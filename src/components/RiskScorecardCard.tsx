@@ -5,7 +5,7 @@
  * User selects up to 4 KPIs to display via the Configure Scorecard modal.
  */
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Modal, Tearsheet, Tooltip, Typography, colors } from '@procore/core-react';
 import { Cog, Copilot, Grip, Clear, Info, Plus } from '@procore/core-icons';
@@ -22,6 +22,9 @@ import { useHubLoading } from '@/context/HubLoadingContext';
 import HubCardSkeleton from '@/components/skeletons/HubCardSkeleton';
 import RiskScorecardSkeleton from '@/components/skeletons/RiskScorecardSkeleton';
 import { useAiPanel } from '@/context/AiPanelContext';
+import { getItem, setItem } from '@/utils/storage';
+
+const KPI_CONFIG_BASE_KEY = 'kpi_scorecard';
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 
@@ -327,16 +330,21 @@ function toneFromStatus(status: KPIResult['status']): KPITone {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKey[] } = {}) {
+export default function RiskScorecardCard({ defaultKPIs, cardId = 'default' }: { defaultKPIs?: KPIKey[]; cardId?: string } = {}) {
   const { isLoading } = useHubLoading();
   const { data } = useData();
   const { filteredSeedProjects } = useHubFilters();
   const config = data.account?.healthConfig;
   const { openPanel } = useAiPanel();
 
+  const storageKey = `${KPI_CONFIG_BASE_KEY}_${cardId}`;
+
   const [selectedKPIKey, setSelectedKPIKey] = useState<KPIKey | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
-  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>(defaultKPIs ?? []);
+  const [displayedIds, setDisplayedIds] = useState<KPIKey[]>(() => {
+    const saved = getItem<KPIKey[]>(storageKey);
+    return saved ?? defaultKPIs ?? [];
+  });
   const [draftIds, setDraftIds] = useState<KPIKey[]>([]);
   const dragIndexRef = useRef<number | null>(null);
 
@@ -355,7 +363,9 @@ export default function RiskScorecardCard({ defaultKPIs }: { defaultKPIs?: KPIKe
   }
 
   function handleSaveConfig() {
-    setDisplayedIds([...draftIds]);
+    const next = [...draftIds];
+    setDisplayedIds(next);
+    setItem(storageKey, next);
     setConfigOpen(false);
   }
 

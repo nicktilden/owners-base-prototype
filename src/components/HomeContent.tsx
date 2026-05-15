@@ -410,7 +410,7 @@ function HomeContentInner() {
             {activeTab === "Health & Risk" && (
               <HubsContentLayout>
                 <HubsContentLayout.Row variant="table">
-                  <RiskScorecardCard defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />
+                  <RiskScorecardCard cardId="health-risk" defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />
                 </HubsContentLayout.Row>
                 <HubsContentLayout.Row columnsTemplate="2fr 1fr">
                   <TopRiskProjectsCard />
@@ -425,7 +425,7 @@ function HomeContentInner() {
               <HubsContentLayout>
                 {isCardVisible("Portfolio Performance", "Risk KPIs") && (
                   <HubsContentLayout.Row>
-                    <RiskScorecardCard />
+                    <RiskScorecardCard cardId="portfolio-performance" />
                   </HubsContentLayout.Row>
                 )}
                 {isCardVisible("Portfolio Performance", "Financial Scorecard") || isCardVisible("Portfolio Performance", "Schedule Variance") || isCardVisible("Portfolio Performance", "Assets by Type") ? (

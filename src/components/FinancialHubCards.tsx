@@ -4,7 +4,6 @@ import { EllipsisVertical, Info } from "@procore/core-icons";
 import styled from "styled-components";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import KPIPill from "@/components/KPIPill";
-import { sampleProjectRows } from "@/data/projects";
 import { useHubFilters } from "@/context/HubFilterContext";
 
 const KpiGridWrap = styled.div`

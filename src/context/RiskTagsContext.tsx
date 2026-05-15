@@ -7,6 +7,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { RiskTag, RiskTagStatus } from '@/types/health';
 import { useData } from './DataContext';
+import { getItem, setItem } from '@/utils/storage';
+
+const STORAGE_KEY = 'risk_tags';
 
 interface RiskTagsContextValue {
   riskTags: RiskTag[];
@@ -25,10 +28,14 @@ export function RiskTagsProvider({ children }: { children: React.ReactNode }) {
   const [riskTags, setRiskTags] = useState<RiskTag[]>([]);
 
   useEffect(() => {
-    if (data.riskTags.length > 0) {
+    const saved = getItem<RiskTag[]>(STORAGE_KEY);
+    if (saved && saved.length > 0) {
+      setRiskTags(saved);
+    } else if (data.riskTags.length > 0) {
       setRiskTags(data.riskTags);
     }
-  }, [data.riskTags]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getRiskTagsForProject = useCallback((projectId: string): RiskTag[] => {
     return riskTags.filter(t => t.projectId === projectId);
@@ -39,19 +46,35 @@ export function RiskTagsProvider({ children }: { children: React.ReactNode }) {
   }, [riskTags]);
 
   const addRiskTag = useCallback((tag: RiskTag) => {
-    setRiskTags(prev => [...prev, tag]);
+    setRiskTags(prev => {
+      const next = [...prev, tag];
+      setItem(STORAGE_KEY, next);
+      return next;
+    });
   }, []);
 
   const updateRiskTag = useCallback((id: string, updates: Partial<RiskTag>) => {
-    setRiskTags(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setRiskTags(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      setItem(STORAGE_KEY, next);
+      return next;
+    });
   }, []);
 
   const transitionStatus = useCallback((id: string, newStatus: RiskTagStatus) => {
-    setRiskTags(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    setRiskTags(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, status: newStatus } : t);
+      setItem(STORAGE_KEY, next);
+      return next;
+    });
   }, []);
 
   const removeRiskTag = useCallback((id: string) => {
-    setRiskTags(prev => prev.filter(t => t.id !== id));
+    setRiskTags(prev => {
+      const next = prev.filter(t => t.id !== id);
+      setItem(STORAGE_KEY, next);
+      return next;
+    });
   }, []);
 
   return (
