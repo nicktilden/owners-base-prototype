@@ -30,7 +30,7 @@ export const COMPANY_TYPE_CONFIGS: Record<CompanyType, CompanyTypeConfig> = {
     regions: ['Southeast', 'Northeast', 'Midwest', 'South', 'Southwest'],
     stageDistribution: 'heavy toward Course of Construction and Pre-Construction',
     budgetRange: { min: 8_000_000, max: 85_000_000 },
-    emailDomain: 'crescentcommunities.com',
+    emailDomain: 'crescentcom.com',
   },
 
   retail: {
@@ -161,7 +161,7 @@ export const COMPANY_TYPE_CONFIGS: Record<CompanyType, CompanyTypeConfig> = {
     regions: ['Northeast', 'Midwest', 'South'],
     stageDistribution: 'heavy toward Course of Construction and Maintenance',
     budgetRange: { min: 2_000_000, max: 120_000_000 },
-    emailDomain: 'keystoneutilities.com',
+    emailDomain: 'keystoneutil.com',
   },
 
   education: {

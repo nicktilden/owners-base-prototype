@@ -7,7 +7,7 @@
  *   4. Standard account actions (profile, settings, log out)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Select, Typography } from '@procore/core-react';
+import { Button, Dropdown, Typography } from '@procore/core-react';
 import { Person, Cog, Import, Pencil } from '@procore/core-icons';
 import styled from 'styled-components';
 import { useRouter } from 'next/router';
@@ -143,8 +143,8 @@ export default function UserMenuPopover({
       // Ignore clicks inside the popover or its anchor
       if (popoverRef.current?.contains(target)) return;
       if (anchorRef.current?.contains(target)) return;
-      // Ignore clicks inside any Select/Menu portal (rendered outside the popover DOM)
-      if ((target as Element).closest?.('[role="listbox"], [role="option"], [data-qa="menu"]')) return;
+      // Ignore clicks inside any Select/Dropdown portal (rendered outside the popover DOM)
+      if ((target as Element).closest?.('[role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [data-qa="menu"]')) return;
       onClose();
     };
     document.addEventListener('mousedown', handler);
@@ -185,24 +185,25 @@ export default function UserMenuPopover({
             </Typography>
           </NameBlock>
           <div style={{ width: '100%', marginTop: 4 }}>
-            <Select
+            <Dropdown
               block
+              variant="tertiary"
               label={config.accountName}
-              onSelect={(s: { item: unknown }) => {
+              placement="bottom"
+              onSelect={(s) => {
                 const key = s.item as CompanyType;
                 if (key && key !== activeType) setActiveType(key);
               }}
             >
               {COMPANY_TYPES.map((ct) => (
-                <Select.Option
-                  key={ct.key}
-                  value={ct.key}
-                  selected={ct.key === activeType}
-                >
-                  {ct.label} — {ct.accountName}
-                </Select.Option>
+                <Dropdown.Item key={ct.key} item={ct.key}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{ct.label}</span>
+                    <span style={{ fontWeight: 600 }}>{ct.accountName}</span>
+                  </div>
+                </Dropdown.Item>
               ))}
-            </Select>
+            </Dropdown>
           </div>
         </Section>
       )}
