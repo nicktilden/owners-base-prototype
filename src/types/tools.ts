@@ -2,6 +2,8 @@
  * TOOLS TYPES
  */
 
+import type { ReleaseTimeframe } from './features';
+
 export type ToolLevel = 'portfolio' | 'project' | 'both' | 'global';
 
 export type ToolKey =
@@ -51,6 +53,12 @@ export const TOOL_LEVEL_MAP: Record<ToolKey, ToolLevel> = {
   observations:       'project',
   correspondence:     'project',
   commitments:        'project',
+};
+
+// Release timeframe for each tool. Omitted keys default to 'now' in isVisible().
+// Seed verification set: 'bidding' tagged 'next'.
+export const TOOL_TIMEFRAME_MAP: Partial<Record<ToolKey, ReleaseTimeframe>> = {
+  bidding: 'next',
 };
 
 // Human-readable display names for tools in the nav

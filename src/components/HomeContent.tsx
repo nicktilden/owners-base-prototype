@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import styled, { createGlobalStyle } from "styled-components";
 import { Button, Dropdown, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
@@ -26,6 +26,8 @@ import {
   APv2ProjectCardsHubCard,
 } from "@/components/ActionPlansExploration2HubCards";
 import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
+import { useHorizon } from "@/context/HorizonContext";
+import { ReleaseTimeframe } from "@/types/features";
 import HubFilterBar from "@/components/HubFilterBar";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
 import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
@@ -36,6 +38,20 @@ import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTable
 
 const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
 type TabName = typeof tabs[number];
+
+// Horizon timeframe for each tab. Omitted === 'now'.
+// Seed verification: "Ideas Hub" tagged 'future'.
+const TAB_TIMEFRAMES: Partial<Record<TabName, ReleaseTimeframe>> = {
+  "Ideas Hub": "future",
+};
+
+// Horizon timeframe for individual cards within a tab. Omitted === 'now'.
+// Seed verification: "Invoices for Approval" tagged 'next'.
+const CARD_TIMEFRAMES: Partial<Record<TabName, Partial<Record<string, ReleaseTimeframe>>>> = {
+  "Ideas Hub": {
+    "Invoices for Approval": "next",
+  },
+};
 
 // Default tabs that start hidden — users can toggle them on via the + menu
 const DEFAULT_HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
@@ -202,6 +218,7 @@ function HomeContentInner() {
   useResetScrollOnTabChange(activeTab);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
   const { hasActiveFilters } = useHubFilters();
+  const { isVisible } = useHorizon();
 
   // Edit view modal state
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
@@ -209,6 +226,17 @@ function HomeContentInner() {
 
   // Hub views visibility (tabs) — start with the defaults hidden
   const [hiddenTabs, setHiddenTabs] = useState<Set<TabName>>(() => new Set(DEFAULT_HIDDEN_TABS));
+
+  // Tabs visible under current horizon and user-hidden state
+  const visibleTabs = tabs.filter(t => !hiddenTabs.has(t) && isVisible(TAB_TIMEFRAMES[t]));
+
+  // If the active tab is no longer visible (horizon changed), fall back to first visible tab
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTabs.join(','), activeTab]);
   const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const viewsMenuRef = useRef<HTMLDivElement>(null);
@@ -257,9 +285,11 @@ function HomeContentInner() {
   }
 
 
-  function isCardVisible(tab: TabName, cardName: string) {
-    return !hiddenCards[tab].has(cardName);
-  }
+  const isCardVisible = useCallback((tab: TabName, cardName: string) => {
+    if (hiddenCards[tab].has(cardName)) return false;
+    const cardTimeframe = CARD_TIMEFRAMES[tab]?.[cardName];
+    return isVisible(cardTimeframe);
+  }, [hiddenCards, isVisible]);
 
   function toggleCard(tab: TabName, cardName: string) {
     setHiddenCards((prev) => {
@@ -316,7 +346,7 @@ function HomeContentInner() {
                 </ToggleButton>
                 <div style={{ width: 2, height: 20, background: "var(--color-border-separator)", borderRadius: 1, flexShrink: 0 }} />
                 <TabBarList className="Tabs__TabsList">
-                  {tabs.filter((tab) => !hiddenTabs.has(tab)).map((tab) => {
+                  {visibleTabs.map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <TabItem
@@ -365,17 +395,17 @@ function HomeContentInner() {
                 {viewsMenuOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
                   <ViewsMenuWrap ref={viewsMenuRef} role="menu" $top={menuPos.top} $left={menuPos.left}>
                     {tabs.map(tab => {
-                      const isVisible = !hiddenTabs.has(tab);
+                      const isTabOn = !hiddenTabs.has(tab);
                       return (
                         <ViewsMenuItem
                           key={tab}
                           role="menuitemcheckbox"
-                          aria-checked={isVisible}
+                          aria-checked={isTabOn}
                           onClick={() => toggleTabVisibility(tab)}
                         >
                           <ViewsMenuLabel>{tab}</ViewsMenuLabel>
                           <CheckIconWrap>
-                            {isVisible && <Check size="sm" />}
+                            {isTabOn && <Check size="sm" />}
                           </CheckIconWrap>
                         </ViewsMenuItem>
                       );
@@ -390,6 +420,11 @@ function HomeContentInner() {
             {filterBarOpen && (
               <div style={{ marginBottom: 16 }}>
                 <HubFilterBar />
+              </div>
+            )}
+            {visibleTabs.length === 0 && (
+              <div style={{ padding: 48, textAlign: 'center' }}>
+                <Typography intent="body" color="gray45">No features in the current Horizon.</Typography>
               </div>
             )}
             {activeTab === "My Work" && (

@@ -22,6 +22,7 @@ import {
 } from '@procore/core-icons';
 import styled from 'styled-components';
 import NavDrawer from './NavDrawer';
+import { HorizonMenu } from '@/components/horizon/HorizonMenu';
 import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
@@ -203,22 +204,18 @@ const CompanyBadge = styled.div`
 `;
 
 const AiButton = styled.button`
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--color-nav-surface);
-  border: 2px solid #FF5100;
+  justify-content: center;
   color: var(--color-nav-text);
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 8px;
-  flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
-
-  &:hover {
-    background: var(--color-nav-surface-hover);
-    border-color: #FF7433;
-  }
+  transition: background 0.15s;
+  &:hover { background: var(--color-nav-hover); }
 `;
 
 
@@ -364,6 +361,7 @@ export default function GlobalHeader() {
             />
           )}
         </PickerWrap>
+
         </LeftActions>
 
         {/* Search bar */}
@@ -380,13 +378,15 @@ export default function GlobalHeader() {
 
         {/* Right actions */}
         <RightActions>
+          {/* Horizon filter */}
+          <HorizonMenu />
+
           {/* Procore AI */}
           <AiButton
             aria-label="Procore AI"
             onClick={() => openPanel()}
           >
             <Copilot size="sm" />
-            <Typography color="white" intent="body" style={{ fontWeight: 600, lineHeight: 1.3 }}>Procore AI</Typography>
           </AiButton>
 
           {/* Help */}

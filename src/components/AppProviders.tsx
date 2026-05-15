@@ -19,6 +19,7 @@ import { ManualRiskItemsProvider } from '@/context/ManualRiskItemsContext';
 import { ConnectDataProvider } from '@/context/ConnectDataContext';
 import { HealthConfigProvider } from '@/context/HealthConfigContext';
 import { CompanyTypeProvider } from '@/context/CompanyTypeContext';
+import { HorizonProvider } from '@/context/HorizonContext';
 import dynamic from 'next/dynamic';
 
 const AiChatPanel = dynamic(() => import('@/components/AiChatPanel'), { ssr: false });
@@ -99,6 +100,7 @@ function SeedLoader({ children }: { children: React.ReactNode }) {
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <CompanyTypeProvider>
+    <HorizonProvider>
     <ThemeProvider>
       <DataProvider>
         <PersonaProvider>
@@ -129,6 +131,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
         </PersonaProvider>
       </DataProvider>
     </ThemeProvider>
+    </HorizonProvider>
     </CompanyTypeProvider>
   );
 }

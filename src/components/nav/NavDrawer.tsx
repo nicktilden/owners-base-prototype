@@ -37,7 +37,8 @@ import { useLevel } from '@/context/LevelContext';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 import { usePersona } from '@/context/PersonaContext';
 import { canAccessTool } from '@/utils/permissions';
-import { TOOL_LEVEL_MAP, TOOL_DISPLAY_NAMES, ToolKey } from '@/types/tools';
+import { TOOL_LEVEL_MAP, TOOL_DISPLAY_NAMES, TOOL_TIMEFRAME_MAP, ToolKey } from '@/types/tools';
+import { useHorizon } from '@/context/HorizonContext';
 
 // ─── Animations ──────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
   const router = useRouter();
   const { level, activeProjectId } = useLevel();
   const { activeUser } = usePersona();
+  const { isVisible } = useHorizon();
   const [closing, setClosing] = React.useState(false);
 
   const currentPath = React.useMemo(() => {
@@ -206,7 +208,7 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
   }, [router.asPath]);
   const isProjectLevel = level === 'project' && !!activeProjectId;
 
-  // Build the tool list for the current level, filtered by user permissions
+  // Build the tool list for the current level, filtered by user permissions and horizon
   const toolKeys = (Object.keys(TOOL_LEVEL_MAP) as ToolKey[]).filter((key) => {
     const toolLevel = TOOL_LEVEL_MAP[key];
     const matchesLevel = isProjectLevel
@@ -214,7 +216,8 @@ export default function NavDrawer({ open, onClose }: NavDrawerProps) {
       : toolLevel === 'portfolio' || toolLevel === 'both';
     if (!matchesLevel) return false;
     if (!activeUser) return true;
-    return canAccessTool(activeUser, key);
+    if (!canAccessTool(activeUser, key)) return false;
+    return isVisible(TOOL_TIMEFRAME_MAP[key]);
   });
 
   // Build nav items
