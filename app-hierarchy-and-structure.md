@@ -44,6 +44,22 @@ The global nav bar is persistent across all levels and page types. Left to right
 - The Project Menu is the primary level-switching mechanism for moving between projects
 - Navigating to Portfolio level = deselecting the current project in the Project Menu
 
+### Profile Menu (`UserMenuPopover`)
+
+The profile menu popover contains:
+
+| Element | Description |
+|---|---|
+| **User avatar** | Large avatar image for the active persona |
+| **Name + edit button** | Active persona's name with a pencil icon to open the persona switcher |
+| **Role + email** | Active persona's role and email address |
+| **Company Type dropdown** | `Select` component listing all 10 company types (label: "Type — Account"). Selecting a type writes to `localStorage` key `owner_prototype_company_type` and hard-reloads to `/`. |
+| **My Profile Settings** | Opens profile settings modal |
+| **Account Settings** | Navigates to `/settings` |
+| **Log Out** | Closes menu (no-op in prototype) |
+
+The Company Type dropdown is the **company switcher** — see `CONTEXT.md §20` for full details.
+
 ---
 
 ## 3. Sliding Drawer Navigation

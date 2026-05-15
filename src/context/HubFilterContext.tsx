@@ -5,12 +5,20 @@
  * Filters align with the ProjectRow type from @/data/projects.
  */
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { parseLocationCityState, sampleProjectRows } from '@/data/projects';
-import { projects as seedProjects } from '@/data/seed/projects';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { parseLocationCityState } from '@/data/projects';
+import { projects as seedProjects, projectRows as seedProjectRows } from '@/data/seed/companyTypes';
 import type { ProjectRow, ProjectStage, ProjectRegion } from '@/data/projects';
 import type { Project } from '@/types/project';
 import type { ProjectStage as SeedProjectStage, ProjectRegion as SeedProjectRegion } from '@/types/project';
+import { getItem, setItem } from '@/utils/storage';
+import {
+  favoriteKeyForSeedProject,
+  readProjectFavorites,
+  writeProjectFavorites,
+} from '@/utils/projectFavorites';
+
+const PROJECT_ROW_EDITS_KEY = 'project_row_edits';
 
 export interface HubFilterState {
   /** Stage filter — maps to ProjectStage values from data/projects */
@@ -71,11 +79,13 @@ const HubFilterContext = createContext<HubFilterContextValue | null>(null);
 
 export function HubFilterProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<HubFilterState>(EMPTY_HUB_FILTERS);
-  const [projectRowEdits, setProjectRowEdits] = useState<Record<number, Partial<ProjectRow>>>({});
+  const [projectRowEdits, setProjectRowEdits] = useState<Record<number, Partial<ProjectRow>>>(() => {
+    return getItem<Record<number, Partial<ProjectRow>>>(PROJECT_ROW_EDITS_KEY) ?? {};
+  });
   const hasActiveFilters = Object.values(filters).some((arr) => arr.length > 0);
 
   const projectRowsWithEdits = useMemo(
-    () => sampleProjectRows.map((r) => ({ ...r, ...projectRowEdits[r.id] })),
+    () => seedProjectRows.map((r) => ({ ...r, ...projectRowEdits[r.id] })),
     [projectRowEdits]
   );
 
@@ -87,7 +97,21 @@ export function HubFilterProvider({ children }: { children: React.ReactNode }) {
         merged.city = city;
         merged.state = state;
       }
-      return { ...prev, [id]: merged };
+      const next = { ...prev, [id]: merged };
+      setItem(PROJECT_ROW_EDITS_KEY, next);
+
+      // Keep the nav picker favorites in sync
+      if ('favorite' in patch) {
+        const row = seedProjectRows.find((r) => r.id === id);
+        if (row) {
+          const favMap = readProjectFavorites();
+          const seedId = `proj-${String(id).padStart(3, '0')}`;
+          favMap[favoriteKeyForSeedProject(seedId)] = !!patch.favorite;
+          writeProjectFavorites(favMap);
+        }
+      }
+
+      return next;
     });
   }, []);
 

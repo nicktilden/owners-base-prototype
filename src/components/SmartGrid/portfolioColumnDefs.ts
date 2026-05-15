@@ -2,9 +2,9 @@ import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-co
 import type { ProjectRow } from "@/data/projects";
 import {
   PROJECT_STAGES,
-  PROJECT_PROGRAMS,
   getProjectPortfolioScheduleSummary,
 } from "@/data/projects";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import { formatDateMMDDYYYY } from "@/utils/date";
 import StagePillRenderer from "./StagePillRenderer";
 import ProjectNameCellRenderer from "./ProjectNameCellRenderer";
@@ -23,7 +23,7 @@ function fmtCurrency(n: number | null | undefined): string {
 }
 
 const stageOptions = [...PROJECT_STAGES];
-const programOptions = [...PROJECT_PROGRAMS];
+const programOptions = [...new Set(seedProjectRows.map((r) => r.program).filter(Boolean))].sort();
 
 /** Column IDs whose data comes from a connected (upstream) Procore project. */
 export const CONNECTED_DATA_COL_IDS = new Set([

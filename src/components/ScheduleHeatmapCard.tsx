@@ -4,7 +4,6 @@ import { Filter, Fire, Gantt, Info, List, Pencil, Sliders } from "@procore/core-
 import styled, { createGlobalStyle } from "styled-components";
 import {
   sampleProjectMilestones,
-  sampleProjectRows,
   PROJECT_MILESTONES,
   PROJECT_STAGES,
   PROJECT_PRIORITIES_DISTINCT,
@@ -17,6 +16,7 @@ import {
   type ProjectRow,
 } from "@/data/projects";
 import { formatDateMMDDYYYY, formatDateMMDDYY } from "@/utils/date";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import { useHubFilters } from "@/context/HubFilterContext";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -1357,7 +1357,7 @@ function varianceBadgeTearsheet(v: number) {
 
 function MilestoneEditTearsheet({ projectId, onClose }: MilestoneEditTearsheetProps) {
   const project = useMemo(
-    () => (projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null),
+    () => (projectId !== null ? seedProjectRows.find((p) => p.id === projectId) ?? null : null),
     [projectId]
   );
   const milestones = useMemo(

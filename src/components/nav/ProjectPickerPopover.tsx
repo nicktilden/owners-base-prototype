@@ -11,7 +11,7 @@ import { useData } from '@/context/DataContext';
 import { useLevel } from '@/context/LevelContext';
 import { usePersona } from '@/context/PersonaContext';
 import { hasPermissionKey } from '@/utils/permissions';
-import { sampleProjectRows } from '@/data/projects';
+import { projectRows as sampleProjectRows } from '@/data/seed/companyTypes';
 import {
   favoriteKeyForSampleProject,
   favoriteKeyForSeedProject,

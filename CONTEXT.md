@@ -586,3 +586,54 @@ Run before marking any feature complete:
   /config
     hubCards.ts           ← Card registry (key → component + default position)
 ```
+
+---
+
+## 20. Company Type Switcher
+
+A runtime company-type switcher lets the demo operator swap the entire prototype context — account, users, projects, budget, schedule, tasks, documents, action plans, assets — to match the industry vertical of the customer being demoed.
+
+**localStorage key:** `owner_prototype_company_type`  
+**Default:** `'healthcare'` (Trinity Health)
+
+### The 10 Company Types
+
+| Key | Label | Account | HQ |
+|---|---|---|---|
+| `multiFamilyResidential` | Multi-Family Residential | Crescent Communities | Charlotte, NC |
+| `retail` | Retail | Brightline Retail Group | Grand Rapids, MI |
+| `office` | Office | Empire State Realty Trust | New York, NY |
+| `dataCenter` | Data Center | Vantage Data Centers | Denver, CO |
+| `healthcare` ⭐ | Healthcare | Trinity Health | Livonia, MI |
+| `utilities` | Utilities | Keystone Utilities | Waltham, MA |
+| `education` | Education | University of Nebraska | Lincoln, NE |
+| `renewables` | Renewables | Silicon Ranch | Nashville, TN |
+| `airports` | Airports | Los Angeles World Airports | Los Angeles, CA |
+| `corporateRealEstate` | Corporate Real Estate | Northgate Services | Bellevue, WA |
+
+⭐ = default
+
+### Architecture
+
+Each company type owns a complete pre-baked seed dataset under `src/data/seed/companyTypes/<key>/`. The barrel entry point `src/data/seed/companyTypes/index.ts` reads the active type from localStorage at module init and re-exports from the matching directory. All existing consumers of seed data are unaffected — the barrel swap is invisible to them.
+
+### UI
+
+The switcher lives inside the profile menu popover (`UserMenuPopover.tsx`), replacing the static account name line. It uses the `@procore/core-react` `Select` component. Selecting a new type writes to localStorage and hard-reloads to `/`. The active user's **role** is preserved across switches (not their user ID).
+
+### Validation
+
+```bash
+npm run validate-seed
+```
+
+Runs `tsc --noEmit` against `_validation.ts`, which enforces that every `CompanyType` key has a registered dataset with all required exports.
+
+### Key Files
+
+- `src/types/companyType.ts` — `CompanyType` union + `CompanyTypeConfig` interface
+- `src/data/seed/companyTypes/registry.ts` — all 10 `CompanyTypeConfig` objects
+- `src/data/seed/companyTypes/index.ts` — active-type resolver (barrel entry point)
+- `src/data/seed/companyTypes/_validation.ts` — compile-time exhaustiveness check
+- `src/context/CompanyTypeContext.tsx` — `useCompanyType()` hook + provider
+- `src/data/seed/companyTypes/README.md` — full usage documentation

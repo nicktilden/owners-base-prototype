@@ -21,7 +21,7 @@ import {
   ConcentricCircles,
 } from "@procore/core-icons";
 import styled from "styled-components";
-import { sampleProjectRows } from "@/data/projects";
+import { projectRows as sampleProjectRows } from "@/data/seed/companyTypes";
 import { scheduleEntries } from "@/data/seed/schedule";
 import type { Milestone } from "@/types/schedule";
 import { users } from "@/data/seed/users";

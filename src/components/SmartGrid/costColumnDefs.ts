@@ -1,6 +1,7 @@
 import type { ColDef, ValueFormatterParams, ValueGetterParams } from "ag-grid-community";
 import type { ProjectRow } from "@/data/projects";
-import { PROJECT_STAGES, PROJECT_PROGRAMS } from "@/data/projects";
+import { PROJECT_STAGES } from "@/data/projects";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import { getProjectConnection } from "@/data/procoreConnect";
 import StagePillRenderer from "./StagePillRenderer";
 import ConnectCellRenderer from "./ConnectCellRenderer";
@@ -21,7 +22,7 @@ function fmtVariance(n: number | null | undefined): string {
 }
 
 const stageOptions = [...PROJECT_STAGES];
-const programOptions = [...PROJECT_PROGRAMS];
+const programOptions = [...new Set(seedProjectRows.map((r) => r.program).filter(Boolean))].sort();
 
 export const costColumnDefs: ColDef<ProjectRow>[] = [
   {

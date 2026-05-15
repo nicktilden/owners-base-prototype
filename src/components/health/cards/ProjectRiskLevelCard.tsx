@@ -16,6 +16,8 @@ import { buildHealthResult } from '@/utils/healthEngine';
 import { projects as allProjects } from '@/data/seed/projects';
 import { getRisksForProject } from '@/data/seed/risks';
 import { useData } from '@/context/DataContext';
+import { useRiskTags } from '@/context/RiskTagsContext';
+import { useManualRiskItems } from '@/context/ManualRiskItemsContext';
 import { HC_COLORS } from '@/lib/highcharts';
 import type { HealthResult } from '@/types/health';
 import type { Project } from '@/types/project';
@@ -136,6 +138,8 @@ type TearsheetEntry = { project: Project; result: HealthResult };
 
 export default function ProjectRiskLevelCard({ projectId }: ProjectRiskLevelCardProps) {
   const { data } = useData();
+  const { getRiskTagsForProject } = useRiskTags();
+  const { getManualRiskItemsForProject } = useManualRiskItems();
   const [tearsheetEntry, setTearsheetEntry] = useState<TearsheetEntry | null>(null);
 
   const { score, entry } = useMemo(() => {
@@ -145,11 +149,13 @@ export default function ProjectRiskLevelCard({ projectId }: ProjectRiskLevelCard
     if (!project) return { score: 0, entry: null };
 
     const risks = getRisksForProject(projectId);
-    const result = buildHealthResult(project, healthConfig, undefined, risks);
+    const riskTags = getRiskTagsForProject(projectId);
+    const manualRisks = getManualRiskItemsForProject(projectId);
+    const result = buildHealthResult(project, healthConfig, undefined, risks, riskTags, manualRisks);
     const score = SCORE_MAP[result.compositeScore] ?? 0;
 
     return { score, entry: { project, result } };
-  }, [data.account, projectId]);
+  }, [data.account, projectId, getRiskTagsForProject, getManualRiskItemsForProject]);
 
   const options = useMemo(() => buildGaugeOptions(score), [score]);
   const label = gaugeLabel(score);

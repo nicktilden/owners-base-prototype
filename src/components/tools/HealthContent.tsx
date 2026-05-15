@@ -1615,16 +1615,45 @@ export default function HealthContent({ scope, projectId }: HealthContentProps) 
   const singleProject = singleResult?.project ?? null;
 
   // ── Project-scope risk rows ───────────────────────────────────────────────
+  const projectRiskTags = useMemo(() =>
+    scope === 'project' && projectId ? getRiskTagsForProject(projectId) : [],
+  [scope, projectId, getRiskTagsForProject]);
+
   const allProjectRisks = useMemo(() => {
     if (scope !== 'project' || !projectId) return [];
     const seedRisks = getRisksForProject(projectId);
     const extra = extraRisks.filter(r => r.projectId === projectId);
-    return [...seedRisks, ...extra];
-  }, [scope, projectId, extraRisks]);
-
-  const projectRiskTags = useMemo(() =>
-    scope === 'project' && projectId ? getRiskTagsForProject(projectId) : [],
-  [scope, projectId, getRiskTagsForProject]);
+    // Convert active risk tags to Risk-compatible shape so trend/count cards reflect them
+    const TAG_STATUS_MAP: Record<string, RiskStatus> = {
+      open: 'identified',
+      pending_acceptance: 'assessed',
+      pending_approval: 'assessed',
+      accepted: 'assessed',
+      mitigated: 'mitigated',
+      closed: 'closed',
+    };
+    const tagRisks: Risk[] = projectRiskTags.map(tag => {
+      const impactNorm = (tag.impact > 5
+        ? Math.min(5, Math.round(tag.impact / 100000)) || 1
+        : tag.impact) as 1 | 2 | 3 | 4 | 5;
+      return {
+        id: tag.id,
+        projectId: tag.projectId,
+        category: 'financial' as RiskCategory,
+        title: `Tagged risk: ${tag.sourceType}`,
+        description: '',
+        probability: tag.probability,
+        impactCost: impactNorm,
+        impactSchedule: (tag.scheduleImpact ? Math.min(5, Math.round(tag.scheduleImpact / 10)) || 1 : impactNorm) as 1 | 2 | 3 | 4 | 5,
+        impactSafety: 1 as const,
+        responseStrategy: (tag.responseStrategy ?? 'mitigate') as ResponseStrategy,
+        status: TAG_STATUS_MAP[tag.status] ?? 'identified' as RiskStatus,
+        dueDate: null,
+        origin: 'manual' as const,
+      };
+    });
+    return [...seedRisks, ...extra, ...tagRisks];
+  }, [scope, projectId, extraRisks, projectRiskTags]);
 
   const projectManualItems = useMemo(() =>
     scope === 'project' && projectId ? getManualRiskItemsForProject(projectId) : [],

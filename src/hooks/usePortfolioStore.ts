@@ -21,7 +21,7 @@
 
 import { useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { resetAll } from '@/utils/storage';
+import { resetAll, removeItem } from '@/utils/storage';
 import { useData } from '@/context/DataContext';
 import type { Project } from '@/types/project';
 import type { User } from '@/types/user';
@@ -89,6 +89,9 @@ export function usePortfolioStore() {
 
   const resetStore = useCallback(() => {
     resetAll();
+    // resetAll() covers owners_* keys including: projects, companies, current_user_id,
+    // risk_tags, kpi_scorecard, project_row_edits, project_favorites.
+    // Re-seed the in-memory values that useLocalStorage mirrors from localStorage.
     setProjects(data.projects);
     setCompanies(SEED_COMPANIES);
     setCurrentUserId(DEFAULT_USER_ID);

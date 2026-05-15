@@ -49,13 +49,12 @@ import {
   CONNECT_FEATURES,
 } from "@/data/procoreConnect";
 import {
-  PROJECT_PROGRAMS,
   PROJECT_STAGES,
   PROJECT_REGIONS,
-  sampleProjectRows,
   parseLocationCityState,
   getProjectPortfolioScheduleSummary,
 } from "@/data/projects";
+import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import type { ProjectStatus, ProjectType, DeliveryMethod, ProjectSector } from "@/types/project";
 
 const ProjectEditTearsheetWidth = createGlobalStyle`
@@ -155,7 +154,7 @@ const OrangeConnectBanner = styled(Banner)`
   }
 `;
 
-const PM_OPTIONS = [...new Set(sampleProjectRows.map((p) => p.projectManager))].sort();
+const PM_OPTIONS = [...new Set(seedProjectRows.map((p) => p.projectManager))].sort();
 const REGION_OPTIONS = [...new Set(PROJECT_REGIONS as readonly string[])].sort();
 
 /** Shown in Classification tab — matches common Figma “project admin” fields; not on {@link ProjectRow}. */
@@ -694,7 +693,7 @@ export default function ProjectEditTearsheet({
   const { getConnection, addConnection } = useConnection();
 
   const programOptions = useMemo(
-    () => PROJECT_PROGRAMS.map((p) => ({ id: p, label: p })),
+    () => [...new Set(seedProjectRows.map((p) => p.program).filter(Boolean))].sort().map((p) => ({ id: p, label: p })),
     []
   );
   const stageOptions = useMemo(

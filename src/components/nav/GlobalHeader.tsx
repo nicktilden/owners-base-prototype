@@ -26,7 +26,7 @@ import { usePersona } from '@/context/PersonaContext';
 import { useLevel } from '@/context/LevelContext';
 import { useData } from '@/context/DataContext';
 import { useAiPanel } from '@/context/AiPanelContext';
-import { sampleProjectRows } from '@/data/projects';
+import { projectRows as sampleProjectRows } from '@/data/seed/companyTypes';
 import avatarImg from '@/images/avatar-XL.png';
 import procoreOwnersLogo from '@/images/ProcoreOwners_LOGO.png';
 

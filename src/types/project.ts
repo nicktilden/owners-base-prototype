@@ -59,9 +59,11 @@ export type ProjectType =
   | 'P3'
   | 'Renewal'
   | 'Renewal of Existing Buildings and Facilities'
+  | 'Renovation'
   | 'Repair'
   | 'Sample Project'
   | 'TBD.'
+  | 'Tenant Improvement'
   | 'Transmission'
   | 'Utilities';
 
@@ -159,7 +161,7 @@ export interface Project {
   name: string;
   stage: ProjectStage;
   status: ProjectStatus;
-  program: null;
+  program: string | null;
   estimatedBudget: number;
   priority: ProjectPriority;
   scope: WorkScope;
