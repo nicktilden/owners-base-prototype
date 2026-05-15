@@ -3,6 +3,7 @@
  */
 
 import type { ToolLevel } from './tools';
+import type { ReleaseTimeframe } from './features';
 
 export type HubTabSource = 'admin' | 'user';
 
@@ -42,6 +43,7 @@ export interface HubCard {
   title: string;
   order: number;
   config: HubCardConfig;
+  releaseTimeframe?: ReleaseTimeframe;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +56,7 @@ export interface HubTab {
   order: number;
   source: HubTabSource;
   cards: HubCard[];
+  releaseTimeframe?: ReleaseTimeframe;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
