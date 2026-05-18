@@ -1,54 +1,45 @@
 import React, { useMemo, useState } from "react";
-import { useRouter } from "next/router";
-import { Avatar, Banner, Button, Card, H2, Link, Pill, Popover, Select, Table, Tearsheet, Typography } from "@procore/core-react";
-import { ChevronDown, ChevronRight, Comment, Copilot, Duplicate, EllipsisVertical, Envelope, ExternalLink, Info, Lightning, Phone, PhoneMobile } from "@procore/core-icons";
+import { Avatar, Button, Card, Dropdown, H2, Link, Pill, Tabs, Tearsheet, Tooltip, Typography } from "@procore/core-react";
+import {
+  Comment,
+  Copilot,
+  Duplicate,
+  EllipsisVertical,
+  Envelope,
+  ExternalLink,
+  Fullscreen,
+  Lightning,
+  Phone,
+  PhoneMobile,
+} from "@procore/core-icons";
 import {
   sampleProjectMilestones,
+  sampleProjectRows,
   topScheduleRiskProjectRowsForMilestoneHeatmap,
   scheduleVarianceData,
   getCurrentMilestoneLabelForProject,
   PROJECT_MILESTONES,
   varianceColors,
   PROJECT_MANAGER_CONTACTS,
-  getDaysRemaining,
-  getProjectPortfolioScheduleSummary,
+  type ProjectPriority,
+  type ProjectStage,
 } from "@/data/projects";
-import { projectRows as seedProjectRows } from "@/data/seed/companyTypes";
 import HubCardFrame from "@/components/hubs/HubCardFrame";
-import HubCardTable from "@/components/HubCardTable";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { createGlobalStyle } from "styled-components";
 import { useHubFilters } from "@/context/HubFilterContext";
+import type { ProjectStage as SeedProjectStage } from "@/types/project";
 import { getProjectConnection } from "@/data/procoreConnect";
 import { Connect } from "@procore/core-icons";
 
 const TearsheetWide = createGlobalStyle`
   [class*="StyledTearsheetBody"]:has(> .schedule-insights-variance-tearsheet-root) {
-    flex: 0 0 60vw !important;
-  }
-`;
-
-const TearsheetProject = createGlobalStyle`
-  [class*="StyledTearsheetBody"]:has(> .schedule-project-tearsheet-root) {
-    flex: 0 0 60vw !important;
+    flex: 0 0 80vw !important;
+    max-width: 1100px !important;
   }
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const STAGE_COLORS: Record<string, "blue" | "green" | "yellow" | "gray" | "magenta" | "cyan"> = {
-  "Conceptual":             "magenta",
-  "Feasibility":            "magenta",
-  "Final design":           "cyan",
-  "Permitting":             "yellow",
-  "Bidding":                "yellow",
-  "Pre-Construction":       "blue",
-  "Course of Construction": "green",
-  "Post-Construction":      "green",
-  "Handover":               "blue",
-  "Closeout":               "gray",
-  "Maintenance":            "gray",
-};
 
 function addDaysLocal(isoDate: string, days: number): string {
   const d = new Date(isoDate);
@@ -86,10 +77,8 @@ interface ProjectScheduleTearsheetProps {
 }
 
 function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearsheetProps) {
-  const [pastExpanded, setPastExpanded] = useState(false);
-  const [currentExpanded, setCurrentExpanded] = useState(true);
   const project = useMemo(
-    () => projectId !== null ? seedProjectRows.find((p) => p.id === projectId) ?? null : null,
+    () => projectId !== null ? sampleProjectRows.find((p) => p.id === projectId) ?? null : null,
     [projectId]
   );
   const milestones = useMemo(
@@ -100,277 +89,208 @@ function ProjectScheduleTearsheet({ projectId, onClose }: ProjectScheduleTearshe
     () => project ? scheduleVarianceData.find((d) => d.project === project.name)?.variance ?? 0 : 0,
     [project]
   );
-
-  const { lastMilestone, nextMilestone } = useMemo(
-    () => project ? getProjectPortfolioScheduleSummary(project) : { lastMilestone: "—", nextMilestone: "—" },
-    [project]
-  );
+  const currentMilestone = project ? getCurrentMilestoneLabelForProject(project) : "";
 
   const firstMilestoneWithActual = milestones.find(m => m.actualDate !== null);
   const startVariance = firstMilestoneWithActual?.varianceDays ?? 0;
   const actualStartDate = startVariance !== 0 && project ? addDaysLocal(project.startDate, startVariance) : null;
+  const expectedEndDate = scheduleVariance !== 0 && project ? addDaysLocal(project.endDate, scheduleVariance) : null;
   const pmContact = project ? PROJECT_MANAGER_CONTACTS[project.projectManager] ?? null : null;
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const pastMilestones = milestones.filter(m => m.baselineDate < todayIso);
-  const currentMilestones = milestones.filter(m => m.baselineDate >= todayIso);
-
-  // Timeline: gray bar = baseline full span, blue bar = progress (start → today clamped to end)
   const timeline = useMemo(() => {
     if (!project) return null;
     const bStart = new Date(project.startDate).getTime();
     const bEnd = new Date(project.endDate).getTime();
-    const today = Date.now();
-    const progressEnd = Math.min(today, bEnd);
-    const progressWidth = bStart < bEnd
-      ? Math.max(0, Math.min(100, ((progressEnd - bStart) / (bEnd - bStart)) * 100))
-      : 0;
+    const aStart = actualStartDate ? new Date(actualStartDate).getTime() : bStart;
+    const eEnd = expectedEndDate ? new Date(expectedEndDate).getTime() : bEnd;
+    const tMin = Math.min(bStart, aStart);
+    const tMax = Math.max(bEnd, eEnd);
+    const span = tMax - tMin || 1;
     return {
-      progressWidth,
-      startLabel: formatDate(project.startDate),
-      endLabel: formatDate(project.endDate),
-      isComplete: today >= bEnd,
+      baselineLeft: ((bStart - tMin) / span) * 100,
+      baselineWidth: ((bEnd - bStart) / span) * 100,
+      expectedLeft: ((aStart - tMin) / span) * 100,
+      expectedWidth: ((eEnd - aStart) / span) * 100,
     };
-  }, [project]);
+  }, [project, actualStartDate, expectedEndDate]);
 
   return (
-    <>
-      <TearsheetProject />
-      <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right">
-        <div className="schedule-project-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          {/* Header */}
-          <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
-            {project ? (
-              <>
-                <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
-                    {project.name}
-                  </Typography>
-                  {getProjectConnection(project.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
-                  <Pill color="blue">{project.stage.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</Pill>
-                  <Typography intent="small" color="gray45">
-                    <Typography intent="small" weight="bold">Schedule Variance:</Typography>{" "}
-                    {varianceBadge(scheduleVariance)}
-                  </Typography>
-                  <Typography intent="small" color="gray45">
-                    <Typography intent="small" weight="bold">Last Milestone:</Typography> {lastMilestone}
-                  </Typography>
-                  <Typography intent="small" color="gray45">
-                    <Typography intent="small" weight="bold">Next Milestone:</Typography> {nextMilestone}
-                  </Typography>
-                </div>
-              </>
-            ) : (
-              <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>Project Schedule</Typography>
-            )}
-          </div>
+    <Tearsheet open={projectId !== null} onClose={onClose} aria-label="Project schedule detail" placement="right">
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Header */}
+        <div style={{ padding: "16px 20px 14px", borderBottom: "1px solid var(--color-border-separator)", flexShrink: 0 }}>
+          {project ? (
+            <>
+              <Typography intent="small" style={{ color: "var(--color-text-secondary)", fontWeight: 500, display: "block", marginBottom: 2 }}>{project.number}</Typography>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)", display: "block" }}>
+                  {project.name}
+                </Typography>
+                {getProjectConnection(project.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+                <Pill color="blue">{project.stage}</Pill>
+                <Typography intent="small" color="gray45">
+                  <Typography intent="small" weight="bold">Schedule Variance:</Typography>{" "}
+                  {varianceBadge(scheduleVariance)}
+                </Typography>
+                <Typography intent="small" color="gray45">
+                  <Typography intent="small" weight="bold">Current Milestone:</Typography> {currentMilestone}
+                </Typography>
+              </div>
+            </>
+          ) : (
+            <Typography intent="h2" style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>Project Schedule</Typography>
+          )}
+        </div>
 
-          {/* Scrollable body */}
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            {project && (
-              <>
-                {/* ── Schedule Duration ── */}
-                <Card style={{ margin: 16, padding: 16 }}>
-                  <H2 style={{ marginBottom: 12 }}>Schedule Duration</H2>
-                  {/* Info Banner */}
-                  {scheduleVariance !== 0 && (
-                    <Banner variant={scheduleVariance > 0 ? "attention" : "info"} style={{ marginBottom: 14 }}>
-                      <Banner.Content>
-                        <Banner.Title>
-                          {scheduleVariance > 0
-                            ? `Project is running ${scheduleVariance} day${scheduleVariance !== 1 ? "s" : ""} behind baseline`
-                            : `Project is running ${Math.abs(scheduleVariance)} day${Math.abs(scheduleVariance) !== 1 ? "s" : ""} ahead of baseline`}
-                        </Banner.Title>
-                        <Banner.Body>
-                          {scheduleVariance > 0
-                            ? `The current schedule variance indicates this project may complete ${scheduleVariance} day${scheduleVariance !== 1 ? "s" : ""} later than the original baseline end date of ${formatDate(project!.endDate)}.`
-                            : `The current schedule variance indicates this project may complete ${Math.abs(scheduleVariance)} day${Math.abs(scheduleVariance) !== 1 ? "s" : ""} earlier than the original baseline end date of ${formatDate(project!.endDate)}.`}
-                        </Banner.Body>
-                      </Banner.Content>
-                    </Banner>
-                  )}
-                  {scheduleVariance === 0 && (
-                    <Banner variant="info" style={{ marginBottom: 14 }}>
-                      <Banner.Content>
-                        <Banner.Body>
-                          This project is tracking on schedule with no variance from the original baseline end date of {formatDate(project!.endDate)}.
-                        </Banner.Body>
-                      </Banner.Content>
-                    </Banner>
-                  )}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", marginBottom: 14 }}>
-                    <div>
-                      <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Baseline</Typography>
-                      <Typography intent="body" style={{ fontWeight: 500 }}>
-                        {formatDate(project.startDate)} → {formatDate(project.endDate)}
-                      </Typography>
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {project && (
+            <>
+              {/* ── Schedule Duration ── */}
+              <Card style={{ margin: 16, padding: 16 }}>
+                <H2 style={{ marginBottom: 16 }}>Schedule Duration</H2>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px", marginBottom: 16 }}>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Start Date (Baseline)</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.startDate)}</Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Actual Start</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>
+                      {actualStartDate ? (
+                        <><span style={{ color: varianceColors(startVariance).bg }}>{formatDate(actualStartDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(startVariance)}</span></>
+                      ) : (
+                        <>{formatDate(project.startDate)} <Pill color="green">On Time</Pill></>
+                      )}
+                    </Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>End Date</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>{formatDate(project.endDate)}</Typography>
+                  </div>
+                  <div>
+                    <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Expected Completion</Typography>
+                    <Typography intent="body" style={{ fontWeight: 500 }}>
+                      {expectedEndDate ? (
+                        <><span style={{ color: varianceColors(scheduleVariance).bg }}>{formatDate(expectedEndDate)}</span> <span style={{ marginLeft: 4 }}>{varianceBadge(scheduleVariance)}</span></>
+                      ) : (
+                        <>{formatDate(project.endDate)} <Pill color="green">On Schedule</Pill></>
+                      )}
+                    </Typography>
+                  </div>
+                </div>
+                {timeline && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: `${timeline.baselineLeft}%`, width: `${timeline.baselineWidth}%`, height: "100%", background: "#b0b8bc", borderRadius: 4 }} />
+                      </div>
+                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Baseline</Typography>
                     </div>
-                    <div>
-                      <Typography intent="small" color="gray45" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "block" }}>Actual</Typography>
-                      <Typography intent="body" style={{ fontWeight: 500 }}>
-                        {actualStartDate ? (
-                          <>{formatDate(actualStartDate)} → {scheduleVariance !== 0 ? formatDate(addDaysLocal(project.endDate, scheduleVariance)) : formatDate(project.endDate)}</>
-                        ) : "—"}
-                      </Typography>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ position: "relative", flex: 1, height: 14, background: "#f0f1f3", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: `${timeline.expectedLeft}%`, width: `${timeline.expectedWidth}%`, height: "100%", background: varianceColors(scheduleVariance).bg, borderRadius: 4, opacity: 0.85 }} />
+                      </div>
+                      <Typography intent="small" color="gray45" style={{ whiteSpace: "nowrap", minWidth: 56 }}>Expected</Typography>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingRight: 64 }}>
+                      <Typography intent="small" color="gray45">{formatDate(actualStartDate ?? project.startDate)}</Typography>
+                      <Typography intent="small" color="gray45">{formatDate(expectedEndDate ?? project.endDate)}</Typography>
                     </div>
                   </div>
-                  {timeline && (
-                    <div>
-                      {/* Bar legend */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "hsl(200, 8%, 82%)" }} />
-                          <Typography intent="small" color="gray45">Baseline duration</Typography>
-                        </span>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "var(--color-action-primary)" }} />
-                          <Typography intent="small" color="gray45">Progress to date</Typography>
-                        </span>
-                      </div>
-                      {/* Bar: gray = baseline full span, blue on top = progress so far */}
-                      <div style={{ position: "relative", width: "100%", height: 16, background: "hsl(200, 8%, 82%)", borderRadius: 4, marginBottom: 6, overflow: "hidden" }}>
-                        <div style={{
-                          position: "absolute",
-                          left: 0,
-                          width: `${timeline.progressWidth}%`,
-                          height: "100%",
-                          background: "var(--color-action-primary)",
-                          borderRadius: timeline.isComplete ? 4 : "4px 0 0 4px",
-                          opacity: 0.9,
-                          transition: "width 0.3s ease",
-                        }} />
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography intent="small" color="gray45">{timeline.startLabel}</Typography>
-                        <Typography intent="small" color="gray45">{timeline.endLabel}</Typography>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-
-                {/* ── Project Manager ── */}
-                {pmContact && (
-                  <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
-                    <H2 style={{ marginBottom: 16 }}>Project Manager</H2>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                      <Avatar size="lg" role="img" aria-label={pmContact.name}>
-                        <Avatar.Label>{pmContact.name.split(" ").map(n => n[0]).join("")}</Avatar.Label>
-                      </Avatar>
-                      <div>
-                        <Typography intent="body" weight="bold" style={{ display: "block" }}>{pmContact.name}</Typography>
-                        <Typography intent="small" color="gray45">{pmContact.company}</Typography>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <Button variant="secondary" size="sm" icon={<Envelope size="sm" />}>Send Email</Button>
-                      <Button variant="secondary" size="sm" icon={<Comment size="sm" />}>Direct Message</Button>
-                      <Button variant="secondary" size="sm" icon={<PhoneMobile size="sm" />}>Call Cell</Button>
-                    </div>
-                  </Card>
                 )}
-              </>
-            )}
+              </Card>
 
-            {/* ── Project Milestones ── */}
-            <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
-              <H2 style={{ marginBottom: 16 }}>Project Milestones</H2>
-              {milestones.length === 0 ? (
-                <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No milestone data available.</Typography>
-              ) : (
-                <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
-                  <Table.Container>
-                    <Table>
-                      <Table.Header>
-                        <Table.HeaderRow>
-                          <Table.HeaderCell>Milestone</Table.HeaderCell>
-                          <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Baseline Date</Table.HeaderCell>
-                          <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Actual / Forecast</Table.HeaderCell>
-                          <Table.HeaderCell style={{ textAlign: "right", whiteSpace: "nowrap" }}>Variance</Table.HeaderCell>
-                          <Table.HeaderCell>Note</Table.HeaderCell>
-                        </Table.HeaderRow>
-                      </Table.Header>
-                      <Table.Body>
-                        {/* ── Past Milestones (collapsed) ── */}
-                        <Table.BodyRow
-                          style={{ background: "var(--color-surface-secondary)", cursor: "pointer" }}
-                          onClick={() => setPastExpanded(x => !x)}
-                        >
-                          <Table.BodyCell colSpan={5} style={{ height: 48 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              {pastExpanded
-                                ? <ChevronDown size="sm" style={{ color: "var(--color-text-secondary)" }} />
-                                : <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)" }} />
-                              }
-                              <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
-                                Past Milestones ({pastMilestones.length})
-                              </Typography>
-                            </div>
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                        {pastExpanded && pastMilestones.map((m) => (
-                          <Table.BodyRow key={`past-${m.name}`}>
-                            <Table.BodyCell style={{ height: 48 }}>{m.name}</Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, color: m.actualDate ? undefined : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
-                              {m.actualDate ? formatDate(m.actualDate) : "—"}
-                            </Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, textAlign: "right" }}>
-                              {m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
-                            </Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48 }}>
-                              {m.note ? (
-                                <Typography intent="small" style={{ color: "var(--color-text-secondary)" }}>{m.note}</Typography>
-                              ) : null}
-                            </Table.BodyCell>
-                          </Table.BodyRow>
-                        ))}
-                        {/* ── Current & Upcoming Milestones ── */}
-                        <Table.BodyRow
-                          style={{ background: "var(--color-surface-secondary)", cursor: "pointer" }}
-                          onClick={() => setCurrentExpanded(x => !x)}
-                        >
-                          <Table.BodyCell colSpan={5} style={{ height: 48 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              {currentExpanded
-                                ? <ChevronDown size="sm" style={{ color: "var(--color-text-secondary)" }} />
-                                : <ChevronRight size="sm" style={{ color: "var(--color-text-secondary)" }} />
-                              }
-                              <Typography intent="small" weight="bold" style={{ color: "var(--color-text-secondary)" }}>
-                                Current &amp; Upcoming Milestones ({currentMilestones.length})
-                              </Typography>
-                            </div>
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                        {currentExpanded && currentMilestones.map((m) => (
-                          <Table.BodyRow key={`current-${m.name}`}>
-                            <Table.BodyCell style={{ height: 48, fontWeight: 500 }}>{m.name}</Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, color: m.actualDate ? undefined : "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
-                              {m.actualDate ? formatDate(m.actualDate) : "—"}
-                            </Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48, textAlign: "right" }}>
-                              {m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
-                            </Table.BodyCell>
-                            <Table.BodyCell style={{ height: 48 }}>
-                              {m.note ? (
-                                <Typography intent="small" style={{ color: "var(--color-text-secondary)" }}>{m.note}</Typography>
-                              ) : null}
-                            </Table.BodyCell>
-                          </Table.BodyRow>
-                        ))}
-                      </Table.Body>
-                    </Table>
-                  </Table.Container>
-                </div>
+              {/* ── Project Manager ── */}
+              {pmContact && (
+                <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+                  <H2 style={{ marginBottom: 16 }}>Project Manager</H2>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <Avatar size="lg" role="img" aria-label={pmContact.name}>
+                      <Avatar.Label>{pmContact.name.split(" ").map(n => n[0]).join("")}</Avatar.Label>
+                    </Avatar>
+                    <div>
+                      <Typography intent="body" weight="bold">{pmContact.name}</Typography>
+                      <Typography intent="small" color="gray45">{pmContact.company}</Typography>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                    <Button variant="secondary" size="sm" icon={<Envelope size="sm" />}>Send Mail</Button>
+                    <Button variant="secondary" size="sm" icon={<Comment size="sm" />}>Direct Message</Button>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <Envelope size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`mailto:${pmContact.email}`} style={{ fontSize: 13, flex: 1 }}>{pmContact.email}</Link>
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.email)} aria-label="Copy email" />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <PhoneMobile size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`tel:${pmContact.mobile}`} style={{ fontSize: 13 }}>{pmContact.mobile}</Link>
+                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(mobile)</Typography>
+                    <span style={{ flex: 1 }} />
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.mobile)} aria-label="Copy mobile" />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", padding: "10px 0" }}>
+                    <Phone size="sm" style={{ marginRight: 10, color: "#6a767c", flexShrink: 0 }} />
+                    <Link href={`tel:${pmContact.office}`} style={{ fontSize: 13 }}>{pmContact.office}</Link>
+                    <Typography intent="small" color="gray45" style={{ marginLeft: 4 }}>(office)</Typography>
+                    <span style={{ flex: 1 }} />
+                    <Button variant="tertiary" size="sm" icon={<Duplicate size="sm" />} onClick={() => navigator.clipboard.writeText(pmContact.office)} aria-label="Copy office" />
+                  </div>
+                </Card>
               )}
-            </Card>
-          </div>
+            </>
+
+          )}
+
+          {/* ── Project Milestones ── */}
+          <Card style={{ margin: 16, marginTop: 0, padding: 16 }}>
+            <H2 style={{ marginBottom: 16 }}>Project Milestones</H2>
+            {milestones.length === 0 ? (
+              <Typography intent="body" style={{ color: "#6a767c" }}>No milestone data available.</Typography>
+            ) : (
+              <div style={{ border: "1px solid #d6dadc", borderRadius: 8, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f5f6f7" }}>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c" }}>Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Baseline Date</th>
+                      <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Actual / Forecast</th>
+                      <th style={{ textAlign: "right", padding: "10px 14px", borderBottom: "1px solid #d6dadc", fontWeight: 600, color: "#6a767c", whiteSpace: "nowrap" }}>Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {milestones.map((m, i) => {
+                      const isCurrent = m.name === currentMilestone;
+                      return (
+                        <tr
+                          key={m.name}
+                          style={{
+                            background: isCurrent ? "#fffde7" : i % 2 === 0 ? "#fff" : "#fafafa",
+                          }}
+                        >
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "#232729" : "#3d4447" }}>
+                            {m.name}
+                            {isCurrent && (
+                              <Pill color="blue" style={{ marginLeft: 8 }}>Current</Pill>
+                            )}
+                          </td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: "#6a767c", whiteSpace: "nowrap" }}>{formatDate(m.baselineDate)}</td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", color: m.actualDate ? "#232729" : "#6a767c", whiteSpace: "nowrap" }}>{m.actualDate ? formatDate(m.actualDate) : "—"}</td>
+                          <td style={{ padding: "9px 14px", borderBottom: "1px solid #eef0f1", textAlign: "right" }}>{m.actualDate ? varianceBadge(m.varianceDays) : <span style={{ color: "#6a767c" }}>—</span>}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </div>
-      </Tearsheet>
-    </>
+      </div>
+    </Tearsheet>
   );
 }
 
@@ -396,10 +316,11 @@ interface VarianceBucketTearsheetProps {
 }
 
 function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceBucketTearsheetProps) {
-  const router = useRouter();
+  const [openProjectId, setOpenProjectId] = useState<number | null>(null);
 
   return (
     <>
+      <TearsheetWide />
       <Tearsheet open={open} onClose={onClose} aria-label={`Schedule variance: ${bucketLabel}`} placement="right">
         <div className="schedule-insights-variance-tearsheet-root" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Header */}
@@ -417,51 +338,52 @@ function VarianceBucketTearsheet({ open, onClose, bucketLabel, rows }: VarianceB
               <Typography intent="body" style={{ color: "var(--color-text-secondary)" }}>No projects in this range.</Typography>
             ) : (
               <div style={{ border: "1px solid var(--color-border-separator)", borderRadius: 8, overflow: "hidden" }}>
-                <Table.Container>
-                  <Table>
-                    <Table.Header>
-                      <Table.HeaderRow>
-                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>#</Table.HeaderCell>
-                        <Table.HeaderCell>Name</Table.HeaderCell>
-                        <Table.HeaderCell>Stage</Table.HeaderCell>
-                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Current Milestone</Table.HeaderCell>
-                        <Table.HeaderCell style={{ whiteSpace: "nowrap" }}>Next Milestone</Table.HeaderCell>
-                        <Table.HeaderCell style={{ textAlign: "right", whiteSpace: "nowrap" }}>Variance</Table.HeaderCell>
-                      </Table.HeaderRow>
-                    </Table.Header>
-                    <Table.Body>
-                      {rows.map((r) => (
-                        <Table.BodyRow key={r.number}>
-                          <Table.BodyCell style={{ height: 48, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{r.number}</Table.BodyCell>
-                          <Table.BodyCell style={{ height: 48 }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              <button
-                                onClick={() => r.projectId !== undefined && router.push(`/project/${r.projectId}/overview`)}
-                                style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", fontSize: 13, textAlign: "left", textDecoration: "underline" }}
-                              >
-                                {r.name}
-                              </button>
-                              {r.projectId !== undefined && getProjectConnection(r.projectId) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
-                            </span>
-                          </Table.BodyCell>
-                          <Table.BodyCell style={{ height: 48, whiteSpace: "nowrap" }}>
-                            <Pill color={STAGE_COLORS[r.stage] ?? "gray"}>{r.stage}</Pill>
-                          </Table.BodyCell>
-                          <Table.BodyCell style={{ height: 48 }}>{r.currentMilestone}</Table.BodyCell>
-                          <Table.BodyCell style={{ height: 48, color: "var(--color-text-secondary)" }}>{r.nextMilestone}</Table.BodyCell>
-                          <Table.BodyCell style={{ height: 48, textAlign: "right", whiteSpace: "nowrap" }}>
-                            {varianceBadge(r.varianceDays)}
-                          </Table.BodyCell>
-                        </Table.BodyRow>
-                      ))}
-                    </Table.Body>
-                  </Table>
-                </Table.Container>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "var(--color-surface-secondary)" }}>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>#</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Name</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)" }}>Stage</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Current Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Next Milestone</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Start Date</th>
+                      <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>End Date</th>
+                      <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Variance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => (
+                      <tr key={r.number} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>{r.number}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <button
+                              onClick={() => r.projectId !== undefined && setOpenProjectId(r.projectId)}
+                              style={{ background: "none", border: "none", padding: 0, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", fontSize: 13, textAlign: "left" }}
+                            >
+                              {r.name}
+                            </button>
+                            {r.projectId !== undefined && getProjectConnection(r.projectId) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
+                          </span>
+                        </td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{r.stage}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)" }}>{r.currentMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>{r.nextMilestone}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.startDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-primary)", whiteSpace: "nowrap" }}>{formatDate(r.endDate)}</td>
+                        <td style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", whiteSpace: "nowrap" }}>
+                          {varianceBadge(r.varianceDays)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
       </Tearsheet>
+      <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>
   );
 }
@@ -473,208 +395,636 @@ const HISTOGRAM_BUCKETS = [
   { label: "14+ days", min: 14, max: Infinity, color: "#b71c1c" },
 ];
 
-type GroupByKey = "stage" | "program" | "region" | "priority" | "type";
+/** Roll detailed `ProjectStage` values into four portfolio buckets (donut + legend). */
+const PROJECT_STAGE_BUCKETS: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+  readonly stages: readonly ProjectStage[];
+}[] = [
+  { id: "concept", label: "Concept", color: "#1d59d1", stages: ["Conceptual", "Feasibility"] },
+  {
+    id: "preconstruction",
+    label: "Preconstruction",
+    color: "#26a69a",
+    stages: ["Final design", "Permitting", "Pre-Construction"],
+  },
+  {
+    id: "coc",
+    label: "Course of Construction",
+    color: "#7b1f62",
+    stages: ["Course of Construction", "Post-Construction", "Handover", "Closeout", "Maintenance"],
+  },
+  { id: "bidding", label: "Bidding", color: "#8d6e63", stages: ["Bidding"] },
+] as const;
 
-const GROUP_BY_OPTIONS: { value: GroupByKey; label: string }[] = [
-  { value: "stage",    label: "Stage"    },
-  { value: "program",  label: "Program"  },
-  { value: "region",   label: "Region"   },
-  { value: "priority", label: "Priority" },
-  { value: "type",     label: "Type"     },
-];
-
-const TYPE_KEYWORDS: [RegExp, string][] = [
-  [/fit-?out|tenant improvement/i,              "Fit-Out"],
-  [/renovation|remodel|retrofit/i,              "Renovation"],
-  [/expansion|expand/i,                         "Expansion"],
-  [/upgrade|replacement|replace/i,              "Upgrade"],
-  [/phase \d|buildout|build-out|new construction/i, "New Construction"],
-  [/solar|substation|transmission|gas main|network/i, "Infrastructure"],
-];
-
-function deriveProjectType(name: string): string {
-  for (const [re, label] of TYPE_KEYWORDS) {
-    if (re.test(name)) return label;
+/** Map seed `Project.stage` → donut bucket id (aligned with hub lifecycle buckets: Concept, Preconstruction, CoC, Bidding). */
+function seedStageToDonutBucketId(stage: SeedProjectStage): (typeof PROJECT_STAGE_BUCKETS)[number]["id"] {
+  switch (stage) {
+    case "conceptual":
+    case "feasibility":
+      return "concept";
+    case "final_design":
+    case "permitting":
+    case "Pre-Construction":
+      return "preconstruction";
+    case "course_of_construction":
+    case "Post-Construction":
+    case "handover":
+    case "closeout":
+    case "maintenance":
+      return "coc";
+    case "bidding":
+      return "bidding";
+    default: {
+      const _exhaustive: never = stage;
+      return _exhaustive;
+    }
   }
-  return "New Construction";
 }
 
-const BAR_COLORS = ["#1d5cc9", "#00a878", "#6b4ce6", "#f6a623", "#e05263"];
-const OTHER_COLOR = "#9e9e9e";
+const PROJECT_PRIORITY_BUCKETS: readonly {
+  readonly id: string;
+  readonly label: string;
+  readonly color: string;
+  readonly priority: ProjectPriority;
+}[] = [
+  { id: "high", label: "High", color: "#c62828", priority: "high" },
+  { id: "medium", label: "Medium", color: "#ef6c00", priority: "medium" },
+  { id: "low", label: "Low", color: "#2e7d32", priority: "low" },
+] as const;
 
-const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-import type { ProjectRow } from "@/data/projects";
-
-function getGroupValue(row: ProjectRow, key: GroupByKey): string {
-  switch (key) {
-    case "stage":    return row.stage ?? "Unknown";
-    case "program":  return row.program ?? "No Program";
-    case "region":   return row.region ?? "Unknown";
-    case "priority": return row.priority ? row.priority.charAt(0).toUpperCase() + row.priority.slice(1) : "Unknown";
-    case "type":     return deriveProjectType(row.name);
-  }
+function donutSectorPath(
+  cx: number,
+  cy: number,
+  rInner: number,
+  rOuter: number,
+  startDeg: number,
+  endDeg: number
+): string {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const a0 = rad(startDeg - 90);
+  const a1 = rad(endDeg - 90);
+  const sweep = endDeg - startDeg;
+  const large = sweep > 180 ? 1 : 0;
+  const xo0 = cx + rOuter * Math.cos(a0);
+  const yo0 = cy + rOuter * Math.sin(a0);
+  const xo1 = cx + rOuter * Math.cos(a1);
+  const yo1 = cy + rOuter * Math.sin(a1);
+  const xi0 = cx + rInner * Math.cos(a0);
+  const yi0 = cy + rInner * Math.sin(a0);
+  const xi1 = cx + rInner * Math.cos(a1);
+  const yi1 = cy + rInner * Math.sin(a1);
+  return `M ${xo0} ${yo0} A ${rOuter} ${rOuter} 0 ${large} 1 ${xo1} ${yo1} L ${xi1} ${yi1} A ${rInner} ${rInner} 0 ${large} 0 ${xi0} ${yi0} Z`;
 }
 
 export function ProjectsByStageHubCard() {
-  const [groupBy, setGroupBy] = useState<GroupByKey>("stage");
-  const { filteredProjectRows } = useHubFilters();
+  const { filteredSeedProjects } = useHubFilters();
+  const [chartView, setChartView] = useState<"pie" | "bar">("pie");
 
-  const rows = useMemo(() => {
-    const counts = new Map<string, number>();
-    filteredProjectRows.forEach((p) => {
-      const key = getGroupValue(p, groupBy);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    });
-
-    let sorted = Array.from(counts.entries())
-      .map(([name, value]) => ({ name, value }));
-
-    if (groupBy === "priority") {
-      sorted.sort((a, b) => (PRIORITY_ORDER[a.name.toLowerCase()] ?? 9) - (PRIORITY_ORDER[b.name.toLowerCase()] ?? 9));
-    } else {
-      sorted.sort((a, b) => b.value - a.value);
+  const bucketCounts = useMemo(() => {
+    const counts = PROJECT_STAGE_BUCKETS.map((b) => ({ bucket: b, value: 0 }));
+    for (const p of filteredSeedProjects) {
+      const id = seedStageToDonutBucketId(p.stage);
+      const row = counts.find((c) => c.bucket.id === id);
+      if (row) row.value += 1;
     }
+    return counts;
+  }, [filteredSeedProjects]);
 
-    if (sorted.length <= 5) return sorted.map((r, i) => ({ ...r, color: BAR_COLORS[i % BAR_COLORS.length], isOther: false }));
+  /** Center total = filtered seed portfolio size (matches Capital Planning hub filter). */
+  const total = filteredSeedProjects.length;
 
-    const top5 = sorted.slice(0, 5);
-    const otherCount = sorted.slice(5).reduce((s, r) => s + r.value, 0);
-    return [
-      ...top5.map((r, i) => ({ ...r, color: BAR_COLORS[i], isOther: false })),
-      { name: "Other", value: otherCount, color: OTHER_COLOR, isOther: true },
-    ];
-  }, [filteredProjectRows, groupBy]);
+  const gapDeg = 2;
+  const cx = 50;
+  const cy = 50;
+  const rOuter = 38;
+  const rInner = 24;
+  const allocDeg = Math.max(0, 360 - PROJECT_STAGE_BUCKETS.length * gapDeg);
 
-  const total = rows.reduce((s, r) => s + r.value, 0);
-  const maxVal = Math.max(...rows.map((r) => r.value), 1);
-
-  const groupByLabel = GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? "Stage";
+  const segments = useMemo(() => {
+    if (total <= 0) return [] as { path: string; color: string; key: string }[];
+    let angle = -90 + gapDeg / 2;
+    return bucketCounts.map(({ bucket, value }) => {
+      const sweep = (value / total) * allocDeg;
+      const start = angle;
+      const end = angle + sweep;
+      angle = end + gapDeg;
+      const path = value > 0 ? donutSectorPath(cx, cy, rInner, rOuter, start, end) : "";
+      return { path, color: bucket.color, key: bucket.id };
+    });
+  }, [bucketCounts, total, allocDeg, gapDeg]);
 
   return (
     <HubCardFrame
-      title={`Project by ${groupByLabel}`}
-      infoTooltip={`Distribution of projects grouped by ${groupByLabel.toLowerCase()}. Shows top 5 values; remaining are grouped into "Other".`}
+      title="Projects by Stage"
+      infoTooltip="On Home → Capital Planning: seed projects in the current hub filter, grouped into four lifecycle stages. Center total matches the filtered portfolio count."
+      style={{ minHeight: 260, maxHeight: 360 }}
       actions={
-        <Button
-          className="b_tertiary"
-          variant="tertiary"
-          size="sm"
-          icon={<ExternalLink size="sm" />}
-          aria-label={`View all projects by ${groupByLabel}`}
-        >
-          View All
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <Button
+            type="button"
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<Fullscreen size="sm" />}
+            aria-label="Full screen"
+            onClick={() => {}}
+          />
+          <Dropdown
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="Projects by stage card menu"
+            placement="bottom-right"
+            onSelect={(selection) => {
+              if (selection.action !== "selected") return;
+            }}
+          >
+            <Dropdown.Item item="export">Export</Dropdown.Item>
+            <Dropdown.Item item="refresh">Refresh</Dropdown.Item>
+          </Dropdown>
+        </div>
       }
       controls={
-        <Select
-          onSelect={(selection: { item: unknown }) => {
-            const val = selection.item as string;
-            setGroupBy(val as GroupByKey);
-          }}
-          placeholder="Group by"
-          style={{ minWidth: 140 }}
-        >
-          {GROUP_BY_OPTIONS.map((opt) => (
-            <Select.Option key={opt.value} value={opt.value} selected={groupBy === opt.value}>
-              {opt.label}
-            </Select.Option>
-          ))}
-        </Select>
+        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+          <Tabs>
+            <Tabs.Tab selected={chartView === "pie"} onPress={() => setChartView("pie")} role="button">
+              <Tabs.Link>Pie Chart</Tabs.Link>
+            </Tabs.Tab>
+            <Tabs.Tab selected={chartView === "bar"} onPress={() => setChartView("bar")} role="button">
+              <Tabs.Link>Bar Chart</Tabs.Link>
+            </Tabs.Tab>
+          </Tabs>
+        </div>
       }
     >
-      <div aria-label={`Project by ${groupByLabel} column chart`}>
-        {/* Bar + count area */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${Math.max(rows.length, 1)}, minmax(52px, 1fr))`,
-            gap: 8,
-            alignItems: "end",
-            height: 160,
-            paddingTop: 8,
-            borderBottom: "2px solid var(--color-border-separator)",
-          }}
-        >
-          {rows.map((r) => {
-            const barHeight = Math.max(r.value > 0 ? 12 : 0, (r.value / maxVal) * 120);
-            const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
-            const popoverContent = (
-              <div style={{ padding: "8px 12px", minWidth: 140 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 4 }}>{r.name}</div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                  <span style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>{r.value}</span> project{r.value !== 1 ? "s" : ""}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{pct}% of portfolio</div>
-              </div>
-            );
-            return (
-              <Popover
-                key={r.name}
-                overlay={<Popover.Content>{popoverContent}</Popover.Content>}
-                trigger={["hover"]}
-                placement="top"
-              >
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "default" }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-primary)", fontVariantNumeric: "tabular-nums" }}>
-                    {r.value}
-                  </span>
-                  <div
-                    style={{
-                      width: "100%",
-                      maxWidth: 44,
-                      height: barHeight,
-                      borderRadius: "5px 5px 0 0",
-                      background: r.color,
-                      opacity: r.isOther ? 0.7 : 1,
-                      transition: "height 0.3s ease",
-                    }}
-                  />
-                </div>
-              </Popover>
-            );
-          })}
-          {rows.length === 0 && (
-            <div style={{ gridColumn: "1 / -1", fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center", paddingTop: 40 }}>
-              No projects match the current filters.
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "28px 40px",
+          width: "100%",
+          minHeight: 200,
+          boxSizing: "border-box",
+        }}
+      >
+        {chartView === "pie" ? (
+          <div
+            style={{
+              position: "relative",
+              width: 200,
+              height: 200,
+              flexShrink: 0,
+            }}
+            aria-label="Projects by stage donut chart"
+          >
+            <svg width="200" height="200" viewBox="0 0 100 100" style={{ display: "block" }}>
+              {total > 0 ? (
+                segments.map(
+                  (s, i) =>
+                    s.path && (
+                      <Tooltip
+                        key={s.key}
+                        trigger={["hover", "focus"]}
+                        placement="top"
+                        overlay={
+                          <Tooltip.Content>
+                            {`${PROJECT_STAGE_BUCKETS[i]?.label ?? "Segment"}: ${bucketCounts[i]?.value ?? 0}`}
+                          </Tooltip.Content>
+                        }
+                      >
+                        <path
+                          d={s.path}
+                          fill={s.color}
+                          stroke="var(--color-surface-card)"
+                          strokeWidth={0.6}
+                          vectorEffect="non-scaling-stroke"
+                          tabIndex={0}
+                        />
+                      </Tooltip>
+                    )
+                )
+              ) : (
+                <circle cx={50} cy={50} r={31} fill="none" stroke="var(--color-border-separator)" strokeWidth={14} />
+              )}
+            </svg>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+                textAlign: "center",
+              }}
+            >
+              <Typography intent="h2" style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.1 }}>
+                {total}
+              </Typography>
+              <Typography intent="small" style={{ marginTop: 2, color: "var(--color-text-secondary)" }}>
+                Total
+              </Typography>
             </div>
-          )}
-        </div>
-        {/* Label + percentage area */}
-        <div
+          </div>
+        ) : (
+          <div style={{ width: "100%", minHeight: 210, display: "flex", gap: 10 }}>
+            {(() => {
+              const maxValue = Math.max(1, ...bucketCounts.map(({ value }) => value));
+              const axisMax = Math.ceil(maxValue / 5) * 5 || 5;
+              const ticks = [0, 0.25, 0.5, 0.75, 1].map((k) => Math.round(axisMax * k));
+              return (
+                <>
+                  <div style={{ width: 42, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingBottom: 30 }}>
+                    {[...ticks].reverse().map((tick, i) => (
+                      <Typography key={`stage-tick-${i}`} intent="small" style={{ color: "var(--color-text-secondary)" }}>
+                        {tick}
+                      </Typography>
+                    ))}
+                  </div>
+                  <div style={{ flex: 1, position: "relative", paddingBottom: 30 }}>
+                    <div style={{ position: "absolute", inset: "0 0 30px 0", display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none" }}>
+                      {ticks.slice(1).map((tick, i) => (
+                        <div key={`stage-grid-${tick}-${i}`} style={{ borderTop: "1px dashed var(--color-border-separator)" }} />
+                      ))}
+                    </div>
+                    <div style={{ position: "absolute", inset: "0 0 30px 0", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: 14 }}>
+                      {bucketCounts.map(({ bucket, value }) => {
+                        const pct = axisMax > 0 ? (value / axisMax) * 100 : 0;
+                        return (
+                          <Tooltip
+                            key={`stage-bar-${bucket.id}`}
+                            trigger={["hover", "focus"]}
+                            placement="top"
+                            overlay={
+                              <Tooltip.Content>
+                                {`${bucket.label}: ${value}`}
+                              </Tooltip.Content>
+                            }
+                          >
+                            <div
+                              style={{
+                                width: 28,
+                                minWidth: 28,
+                                maxWidth: 28,
+                                height: `${Math.max(0, pct)}%`,
+                                minHeight: value > 0 ? 2 : 0,
+                                background: bucket.color,
+                                borderRadius: "3px 3px 0 0",
+                              }}
+                              tabIndex={0}
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", justifyContent: "space-around", gap: 14, borderTop: "1px solid var(--color-border-separator)", paddingTop: 8 }}>
+                      {bucketCounts.map(({ bucket }) => (
+                        <Typography key={`stage-x-${bucket.id}`} intent="small" style={{ color: "var(--color-text-secondary)", width: 72, textAlign: "center" }}>
+                          {bucket.label}
+                        </Typography>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        <ul
           style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${Math.max(rows.length, 1)}, minmax(52px, 1fr))`,
-            gap: 8,
-            paddingTop: 6,
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: chartView === "pie" ? "column" : "row",
+            flexWrap: chartView === "pie" ? "nowrap" : "wrap",
+            gap: chartView === "pie" ? 16 : 12,
+            minWidth: 0,
+            flex: "1 1 200px",
+            maxWidth: chartView === "pie" ? 320 : "100%",
           }}
+          aria-label="Stage legend"
         >
-          {rows.map((r) => {
-            const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
-            return (
-              <div key={r.name} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                <span
-                  style={{
-                    width: "100%",
-                    fontSize: 11,
-                    color: r.isOther ? "var(--color-text-secondary)" : "var(--color-text-primary)",
-                    textAlign: "center",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontStyle: r.isOther ? "italic" : "normal",
-                  }}
-                  title={r.name}
-                >
-                  {r.name}
-                </span>
-                <span style={{ fontSize: 11, color: "var(--color-text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                  {pct}%
-                </span>
-              </div>
-            );
-          })}
+          {bucketCounts.map(({ bucket, value }) => (
+            <li
+              key={bucket.id}
+              style={{
+                display: "flex",
+                alignItems: chartView === "pie" ? "flex-start" : "center",
+                gap: chartView === "pie" ? 10 : 6,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: bucket.color,
+                  marginTop: chartView === "pie" ? 5 : 0,
+                  flexShrink: 0,
+                }}
+              />
+              {chartView === "pie" ? (
+                <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", lineHeight: 1.25 }}>
+                  <Typography intent="body" weight="semibold" style={{ margin: 0, fontVariantNumeric: "tabular-nums" }}>
+                    {value}
+                  </Typography>
+                  <Typography intent="body" style={{ margin: 0, color: "var(--color-text-secondary)" }}>
+                    {bucket.label}
+                  </Typography>
+                </div>
+              ) : (
+                <Typography intent="small" style={{ margin: 0, color: "var(--color-text-primary)" }}>
+                  {bucket.label}
+                </Typography>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </HubCardFrame>
+  );
+}
+
+export function ProjectsByPriorityHubCard() {
+  const { filteredSeedProjects } = useHubFilters();
+  const [chartView, setChartView] = useState<"pie" | "bar">("pie");
+
+  const bucketCounts = useMemo(() => {
+    const counts = PROJECT_PRIORITY_BUCKETS.map((b) => ({ bucket: b, value: 0 }));
+    for (const p of filteredSeedProjects) {
+      const row = counts.find((c) => c.bucket.priority === p.priority);
+      if (row) row.value += 1;
+    }
+    return counts;
+  }, [filteredSeedProjects]);
+
+  /** Center total = filtered seed portfolio size (matches Capital Planning hub filter). */
+  const total = filteredSeedProjects.length;
+
+  const gapDeg = 2;
+  const cx = 50;
+  const cy = 50;
+  const rOuter = 38;
+  const rInner = 24;
+  const nBuckets = PROJECT_PRIORITY_BUCKETS.length;
+  const allocDeg = Math.max(0, 360 - nBuckets * gapDeg);
+
+  const segments = useMemo(() => {
+    if (total <= 0) return [] as { path: string; color: string; key: string }[];
+    let angle = -90 + gapDeg / 2;
+    return bucketCounts.map(({ bucket, value }) => {
+      const sweep = (value / total) * allocDeg;
+      const start = angle;
+      const end = angle + sweep;
+      angle = end + gapDeg;
+      const path = value > 0 ? donutSectorPath(cx, cy, rInner, rOuter, start, end) : "";
+      return { path, color: bucket.color, key: bucket.id };
+    });
+  }, [bucketCounts, total, allocDeg, gapDeg]);
+
+  return (
+    <HubCardFrame
+      title="Projects by Priority"
+      infoTooltip="On Home → Capital Planning: seed projects in the current hub filter, grouped by priority (High, Medium, Low). Center total matches the filtered portfolio count."
+      style={{ minHeight: 260, maxHeight: 360 }}
+      actions={
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <Button
+            type="button"
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<Fullscreen size="sm" />}
+            aria-label="Full screen"
+            onClick={() => {}}
+          />
+          <Dropdown
+            variant="tertiary"
+            className="b_tertiary"
+            size="sm"
+            icon={<EllipsisVertical size="sm" />}
+            aria-label="Projects by priority card menu"
+            placement="bottom-right"
+            onSelect={(selection) => {
+              if (selection.action !== "selected") return;
+            }}
+          >
+            <Dropdown.Item item="export">Export</Dropdown.Item>
+            <Dropdown.Item item="refresh">Refresh</Dropdown.Item>
+          </Dropdown>
         </div>
+      }
+      controls={
+        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+          <Tabs>
+            <Tabs.Tab selected={chartView === "pie"} onPress={() => setChartView("pie")} role="button">
+              <Tabs.Link>Pie Chart</Tabs.Link>
+            </Tabs.Tab>
+            <Tabs.Tab selected={chartView === "bar"} onPress={() => setChartView("bar")} role="button">
+              <Tabs.Link>Bar Chart</Tabs.Link>
+            </Tabs.Tab>
+          </Tabs>
+        </div>
+      }
+    >
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "28px 40px",
+          width: "100%",
+          minHeight: 200,
+          boxSizing: "border-box",
+        }}
+      >
+        {chartView === "pie" ? (
+          <div
+            style={{
+              position: "relative",
+              width: 200,
+              height: 200,
+              flexShrink: 0,
+            }}
+            aria-label="Projects by priority donut chart"
+          >
+            <svg width="200" height="200" viewBox="0 0 100 100" style={{ display: "block" }}>
+              {total > 0 ? (
+                segments.map(
+                  (s, i) =>
+                    s.path && (
+                      <Tooltip
+                        key={s.key}
+                        trigger={["hover", "focus"]}
+                        placement="top"
+                        overlay={
+                          <Tooltip.Content>
+                            {`${PROJECT_PRIORITY_BUCKETS[i]?.label ?? "Segment"}: ${bucketCounts[i]?.value ?? 0}`}
+                          </Tooltip.Content>
+                        }
+                      >
+                        <path
+                          d={s.path}
+                          fill={s.color}
+                          stroke="var(--color-surface-card)"
+                          strokeWidth={0.6}
+                          vectorEffect="non-scaling-stroke"
+                          tabIndex={0}
+                        />
+                      </Tooltip>
+                    )
+                )
+              ) : (
+                <circle cx={50} cy={50} r={31} fill="none" stroke="var(--color-border-separator)" strokeWidth={14} />
+              )}
+            </svg>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "none",
+                textAlign: "center",
+              }}
+            >
+              <Typography intent="h2" style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.1 }}>
+                {total}
+              </Typography>
+              <Typography intent="small" style={{ marginTop: 2, color: "var(--color-text-secondary)" }}>
+                Total
+              </Typography>
+            </div>
+          </div>
+        ) : (
+          <div style={{ width: "100%", minHeight: 210, display: "flex", gap: 10 }}>
+            {(() => {
+              const maxValue = Math.max(1, ...bucketCounts.map(({ value }) => value));
+              const axisMax = Math.ceil(maxValue / 5) * 5 || 5;
+              const ticks = [0, 0.25, 0.5, 0.75, 1].map((k) => Math.round(axisMax * k));
+              return (
+                <>
+                  <div style={{ width: 42, display: "flex", flexDirection: "column", justifyContent: "space-between", paddingBottom: 30 }}>
+                    {[...ticks].reverse().map((tick, i) => (
+                      <Typography key={`priority-tick-${i}`} intent="small" style={{ color: "var(--color-text-secondary)" }}>
+                        {tick}
+                      </Typography>
+                    ))}
+                  </div>
+                  <div style={{ flex: 1, position: "relative", paddingBottom: 30 }}>
+                    <div style={{ position: "absolute", inset: "0 0 30px 0", display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none" }}>
+                      {ticks.slice(1).map((tick, i) => (
+                        <div key={`priority-grid-${tick}-${i}`} style={{ borderTop: "1px dashed var(--color-border-separator)" }} />
+                      ))}
+                    </div>
+                    <div style={{ position: "absolute", inset: "0 0 30px 0", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: 20 }}>
+                      {bucketCounts.map(({ bucket, value }) => {
+                        const pct = axisMax > 0 ? (value / axisMax) * 100 : 0;
+                        return (
+                          <Tooltip
+                            key={`priority-bar-${bucket.id}`}
+                            trigger={["hover", "focus"]}
+                            placement="top"
+                            overlay={
+                              <Tooltip.Content>
+                                {`${bucket.label}: ${value}`}
+                              </Tooltip.Content>
+                            }
+                          >
+                            <div
+                              style={{
+                                width: 40,
+                                minWidth: 40,
+                                maxWidth: 40,
+                                height: `${Math.max(0, pct)}%`,
+                                minHeight: value > 0 ? 2 : 0,
+                                background: bucket.color,
+                                borderRadius: "3px 3px 0 0",
+                              }}
+                              tabIndex={0}
+                            />
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                    <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", justifyContent: "space-around", gap: 20, borderTop: "1px solid var(--color-border-separator)", paddingTop: 8 }}>
+                      {bucketCounts.map(({ bucket }) => (
+                        <Typography key={`priority-x-${bucket.id}`} intent="small" style={{ color: "var(--color-text-secondary)", width: 70, textAlign: "center" }}>
+                          {bucket.label}
+                        </Typography>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        <ul
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "flex",
+            flexDirection: chartView === "pie" ? "column" : "row",
+            flexWrap: chartView === "pie" ? "nowrap" : "wrap",
+            gap: chartView === "pie" ? 16 : 12,
+            minWidth: 0,
+            flex: "1 1 200px",
+            maxWidth: chartView === "pie" ? 320 : "100%",
+          }}
+          aria-label="Priority legend"
+        >
+          {bucketCounts.map(({ bucket, value }) => (
+            <li
+              key={bucket.id}
+              style={{
+                display: "flex",
+                alignItems: chartView === "pie" ? "flex-start" : "center",
+                gap: chartView === "pie" ? 10 : 6,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: bucket.color,
+                  marginTop: chartView === "pie" ? 5 : 0,
+                  flexShrink: 0,
+                }}
+              />
+              {chartView === "pie" ? (
+                <div style={{ minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "6px 8px", lineHeight: 1.25 }}>
+                  <Typography intent="body" weight="semibold" style={{ margin: 0, fontVariantNumeric: "tabular-nums" }}>
+                    {value}
+                  </Typography>
+                  <Typography intent="body" style={{ margin: 0, color: "var(--color-text-secondary)" }}>
+                    {bucket.label}
+                  </Typography>
+                </div>
+              ) : (
+                <Typography intent="small" style={{ margin: 0, color: "var(--color-text-primary)" }}>
+                  {bucket.label}
+                </Typography>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </HubCardFrame>
   );
@@ -778,15 +1128,16 @@ export function ScheduleRiskGHubCard() {
 
   return (
     <>
-      <TearsheetWide />
-      <VarianceBucketTearsheet
-        open={openBucketIdx !== null}
-        onClose={() => setOpenBucketIdx(null)}
-        bucketLabel={openBucketIdx !== null ? HISTOGRAM_BUCKETS[openBucketIdx].label : ""}
-        rows={tearsheetRows}
-      />
+      {openBucketIdx !== null && (
+        <VarianceBucketTearsheet
+          open={true}
+          onClose={() => setOpenBucketIdx(null)}
+          bucketLabel={HISTOGRAM_BUCKETS[openBucketIdx].label}
+          rows={tearsheetRows}
+        />
+      )}
     <HubCardFrame
-      title="Schedule Variance 1"
+      title="Schedule Variance"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
       actions={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -811,7 +1162,7 @@ export function ScheduleRiskGHubCard() {
               background: '#FFF8F5',
               border: '1px solid #FF5100',
               borderRadius: 4,
-              color: '#232729',
+              color: 'var(--color-pill-text-blue)',
             }}
           >
             Summarize
@@ -866,52 +1217,54 @@ export function ScheduleRiskGHubCard() {
           {/* <div style={{ fontSize: 11, fontWeight: 600, color: "#444", borderTop: "1px solid #eee", paddingTop: 8, marginBottom: 6 }}>
             Critical milestones (&gt;=14d)
           </div> */}
-          <HubCardTable columns="1fr 90px 120px 80px 80px 36px">
-            <HubCardTable.Header>
-              <HubCardTable.HeaderCell>Project</HubCardTable.HeaderCell>
-              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>End Date</HubCardTable.HeaderCell>
-              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Expected Completion</HubCardTable.HeaderCell>
-              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>Variance</HubCardTable.HeaderCell>
-              <HubCardTable.HeaderCell style={{ textAlign: "center" }}>% Complete</HubCardTable.HeaderCell>
-              <HubCardTable.HeaderCell />
-            </HubCardTable.Header>
-            <HubCardTable.Body>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Project</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>End Date</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>Expected Completion</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>Variance</th>
+                <th style={{ textAlign: "center", padding: "4px 6px", borderBottom: "1px solid var(--color-border-separator)", fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)" }}>% Complete</th>
+                <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
+              </tr>
+            </thead>
+            <tbody>
               {criticalRows.map(({ row, varianceDays, pctComplete, endDate, expectedCompletionDate }, i) => (
-                <HubCardTable.Row key={row.id} index={i} onClick={() => setOpenProjectId(row.id)}>
-                  <HubCardTable.Cell>
+                <tr key={row.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+                  <td style={{ padding: "8px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {seedProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
-                      </span>
+                      <button
+                        onClick={() => setOpenProjectId(row.id)}
+                        style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
+                      >
+                        {sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name}
+                      </button>
                       {getProjectConnection(row.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                     </span>
-                  </HubCardTable.Cell>
-                  <HubCardTable.Cell style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
                     {endDate ? formatDate(endDate) : "—"}
-                  </HubCardTable.Cell>
-                  <HubCardTable.Cell style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: 12, whiteSpace: "nowrap" }}>
                     {expectedCompletionDate ? formatDate(expectedCompletionDate) : "—"}
-                  </HubCardTable.Cell>
-                  <HubCardTable.Cell style={{ textAlign: "center" }}>
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                     {varianceBadge(varianceDays)}
-                  </HubCardTable.Cell>
-                  <HubCardTable.Cell style={{ textAlign: "center", fontWeight: 600 }}>
+                  </td>
+                  <td style={{ padding: "6px 6px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center", fontSize: "14px", fontWeight: "600", color: "var(--color-text-primary)" }}>
                     {pctComplete}%
-                  </HubCardTable.Cell>
-                  <HubCardTable.Cell style={{ textAlign: "center" }}>
+                  </td>
+                  <td style={{ padding: "4px 4px", borderBottom: "1px solid #eee", textAlign: "center" }}>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openAiPanel({
-                          itemName: seedProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
-                          itemId: `#${row.id}`,
-                          projectId: row.id,
-                          pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],
-                          aiSummary: `This project is ${varianceDays} days behind schedule at ${pctComplete}% completion.`,
-                          cardType: 'schedule_variance',
-                          userRoles: ['owner', 'owner_admin', 'project_manager'],
-                        });
-                      }}
+                      onClick={() => openAiPanel({
+                        itemName: sampleProjectRows.find((p) => p.id === row.id)?.name ?? row.name,
+                        itemId: `#${row.id}`,
+                        projectId: row.id,
+                        pills: [{ label: `+${varianceDays}d variance`, color: varianceDays >= 14 ? 'red' : varianceDays >= 7 ? 'yellow' : 'green' }],
+                        aiSummary: `This project is ${varianceDays} days behind schedule at ${pctComplete}% completion.`,
+                        cardType: 'schedule_variance',
+                        userRoles: ['owner', 'owner_admin', 'project_manager'],
+                      })}
                       aria-label="AI actions for this project"
                       style={{
                         width: 28,
@@ -928,11 +1281,11 @@ export function ScheduleRiskGHubCard() {
                     >
                       <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
                     </button>
-                  </HubCardTable.Cell>
-                </HubCardTable.Row>
+                  </td>
+                </tr>
               ))}
-            </HubCardTable.Body>
-          </HubCardTable>
+            </tbody>
+          </table>
     </HubCardFrame>
     <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>
@@ -942,16 +1295,21 @@ export function ScheduleRiskGHubCard() {
 export function ScheduleVariance2HubCard() {
   const [openSegment, setOpenSegment] = useState<"average" | "onSchedule" | "delays" | "critical" | null>(null);
   const [openProjectId, setOpenProjectId] = useState<number | null>(null);
-  const [viewAllOpen, setViewAllOpen] = useState(false);
   const { openPanel: openAiPanel } = useAiPanel();
   const { filteredProjectRows } = useHubFilters();
 
   const portfolioRows = useMemo(() => {
-    const today = Date.now();
     return filteredProjectRows
-      .filter((row) => new Date(row.endDate).getTime() > today)
       .map((row) => {
-        const worstVariance = scheduleVarianceData.find((d) => d.project === row.name)?.variance ?? 0;
+        const milestones = sampleProjectMilestones.get(row.id) ?? [];
+        const worstVariance = milestones.reduce(
+          (max, m) => Math.max(max, m.varianceDays),
+          0
+        );
+        const delayed = milestones.filter((m) => m.varianceDays >= 7).length;
+        const drift = milestones.length
+          ? Math.round((delayed / milestones.length) * 100)
+          : 0;
         const costDeltaMillions = Math.max(
           0.4,
           Math.round((worstVariance * 0.32 + row.id * 0.11) * 10) / 10
@@ -959,9 +1317,8 @@ export function ScheduleVariance2HubCard() {
         return {
           id: row.id,
           name: row.name,
+          drift,
           worstVariance,
-          endDate: row.endDate,
-          daysRemaining: getDaysRemaining(row.endDate),
           costDeltaLabel:
             costDeltaMillions >= 1
               ? `+$${costDeltaMillions.toFixed(1)}M`
@@ -970,7 +1327,7 @@ export function ScheduleVariance2HubCard() {
       })
       .sort((a, b) => b.worstVariance - a.worstVariance);
   }, [filteredProjectRows]);
-  const rows = useMemo(() => portfolioRows.slice(0, 5), [portfolioRows]);
+  const rows = useMemo(() => portfolioRows.slice(0, 6), [portfolioRows]);
 
   const avgVariance = useMemo(() => {
     if (!portfolioRows.length) return 0;
@@ -985,13 +1342,36 @@ export function ScheduleVariance2HubCard() {
   ).length;
   const criticalCount = portfolioRows.filter((r) => r.worstVariance >= 14).length;
 
-  // Build tearsheet rows helper
-  const buildTearsheetRows = (projectsForSegment: typeof filteredProjectRows) =>
-    projectsForSegment
+  // Build tearsheet rows for the selected KPI segment
+  const tearsheetRows = useMemo(() => {
+    if (openSegment === null) return [];
+    let projectsForSegment = filteredProjectRows;
+    if (openSegment === "onSchedule") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        return (d?.variance ?? 0) <= 0;
+      });
+    } else if (openSegment === "delays") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        const v = d?.variance ?? 0;
+        return v >= 7 && v <= 13;
+      });
+    } else if (openSegment === "critical") {
+      projectsForSegment = filteredProjectRows.filter((p) => {
+        const d = scheduleVarianceData.find((x) => x.project === p.name);
+        return (d?.variance ?? 0) >= 14;
+      });
+    }
+    return projectsForSegment
       .map((project) => {
         const d = scheduleVarianceData.find((x) => x.project === project.name);
         const varianceDays = d?.variance ?? 0;
-        const { lastMilestone: currentMilestone, nextMilestone } = getProjectPortfolioScheduleSummary(project);
+        const currentMilestone = getCurrentMilestoneLabelForProject(project);
+        const curIdx = PROJECT_MILESTONES.indexOf(currentMilestone as typeof PROJECT_MILESTONES[number]);
+        const nextMilestone = curIdx >= 0 && curIdx + 1 < PROJECT_MILESTONES.length
+          ? PROJECT_MILESTONES[curIdx + 1]
+          : "—";
         return {
           number: project.number,
           projectId: project.id,
@@ -1005,29 +1385,7 @@ export function ScheduleVariance2HubCard() {
         };
       })
       .sort((a, b) => b.varianceDays - a.varianceDays);
-
-  // Build tearsheet rows for the selected KPI segment
-  // Use portfolioRows (same source as KPI counts) so tearsheet count matches the KPI tile
-  const tearsheetRows = useMemo(() => {
-    if (openSegment === null) return [];
-    let projectsForSegment = portfolioRows;
-    if (openSegment === "onSchedule") {
-      projectsForSegment = portfolioRows.filter((r) => r.worstVariance <= 0);
-    } else if (openSegment === "delays") {
-      projectsForSegment = portfolioRows.filter((r) => r.worstVariance >= 7 && r.worstVariance <= 13);
-    } else if (openSegment === "critical") {
-      projectsForSegment = portfolioRows.filter((r) => r.worstVariance >= 14);
-    }
-    // Map portfolioRows back to ProjectRow shape for buildTearsheetRows
-    const portfolioIds = new Set(projectsForSegment.map((r) => r.id));
-    return buildTearsheetRows(filteredProjectRows.filter((p) => portfolioIds.has(p.id)));
-  }, [openSegment, portfolioRows, filteredProjectRows]);
-
-  // All-projects rows for "View all" tearsheet
-  const allProjectsRows = useMemo(
-    () => buildTearsheetRows(filteredProjectRows),
-    [filteredProjectRows]
-  );
+  }, [openSegment, filteredProjectRows]);
 
   const tearsheetLabel = openSegment === "average"
     ? "All Projects (Average View)"
@@ -1048,19 +1406,14 @@ export function ScheduleVariance2HubCard() {
 
   return (
     <>
-      <TearsheetWide />
-      <VarianceBucketTearsheet
-        open={openSegment !== null}
-        onClose={() => setOpenSegment(null)}
-        bucketLabel={tearsheetLabel}
-        rows={tearsheetRows}
-      />
-      <VarianceBucketTearsheet
-        open={viewAllOpen}
-        onClose={() => setViewAllOpen(false)}
-        bucketLabel="All Projects"
-        rows={allProjectsRows}
-      />
+      {openSegment !== null && (
+        <VarianceBucketTearsheet
+          open={true}
+          onClose={() => setOpenSegment(null)}
+          bucketLabel={tearsheetLabel}
+          rows={tearsheetRows}
+        />
+      )}
     <HubCardFrame
       title="Schedule Risk"
       infoTooltip="An overview of top schedule-risk projects based on schedule milestones variance."
@@ -1088,7 +1441,7 @@ export function ScheduleVariance2HubCard() {
               background: '#FFF8F5',
               border: '1px solid #FF5100',
               borderRadius: 4,
-              color: '#232729',
+              color: 'var(--color-pill-text-blue)',
             }}
           >
             Summarize
@@ -1097,7 +1450,6 @@ export function ScheduleVariance2HubCard() {
             variant="secondary"
             size="sm"
             aria-label="View all schedule variance rows"
-            onClick={() => setViewAllOpen(true)}
           >
             View all
           </Button>
@@ -1123,7 +1475,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Average</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>+{avgVariance} days</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(avgVariance).bg, marginTop: 4 }}>+{avgVariance} days</div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -1136,7 +1488,7 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>On Schedule</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(0).bg, marginTop: 4 }}>{onScheduleCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(true)}
@@ -1148,8 +1500,8 @@ export function ScheduleVariance2HubCard() {
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-surface-hover)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
-          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (7–13 days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (7-13 days)</div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(10).bg, marginTop: 4 }}>{delaysCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
         <div
           style={kpiCellStyle(false)}
@@ -1162,79 +1514,82 @@ export function ScheduleVariance2HubCard() {
           onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           <div style={{ fontSize: 14, fontWeight: 400, color: "var(--color-text-primary)", letterSpacing: 0.2 }}>Delays (14+ days)</div>
-          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: "var(--color-text-primary)", marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
+          <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 600, color: varianceColors(21).bg, marginTop: 4 }}>{criticalCount} <span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>of {portfolioRows.length}</span></div>
         </div>
       </div>
 
-      <HubCardTable columns="1fr 120px 100px 80px">
-        <HubCardTable.Header>
-          <HubCardTable.HeaderCell>Project</HubCardTable.HeaderCell>
-          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
-              Days Remaining
-              <Popover
-                overlay={
-                  <Popover.Content>
-                    <div style={{ padding: "8px 12px", maxWidth: 220, fontSize: 12, color: "var(--color-text-primary)", lineHeight: "1.5" }}>
-                      The number of calendar days remaining until the project&apos;s current planned end date. Does not account for schedule variance.
-                    </div>
-                  </Popover.Content>
-                }
-                trigger={["hover"]}
-                placement="top"
-              >
-                <span style={{ display: "inline-flex", alignItems: "center", cursor: "default" }}>
-                  <Info size="sm" style={{ color: "var(--color-text-secondary)", width: 12, height: 12 }} />
-                </span>
-              </Popover>
-            </span>
-          </HubCardTable.HeaderCell>
-          <HubCardTable.HeaderCell style={{ textAlign: "center" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
-              Variance
-              <Popover
-                overlay={
-                  <Popover.Content>
-                    <div style={{ padding: "8px 12px", maxWidth: 220, fontSize: 12, color: "var(--color-text-primary)", lineHeight: "1.5" }}>
-                      The worst milestone schedule variance for this project, in days. Positive values mean the project is running behind the original baseline.
-                    </div>
-                  </Popover.Content>
-                }
-                trigger={["hover"]}
-                placement="top"
-              >
-                <span style={{ display: "inline-flex", alignItems: "center", cursor: "default" }}>
-                  <Info size="sm" style={{ color: "var(--color-text-secondary)", width: 12, height: 12 }} />
-                </span>
-              </Popover>
-            </span>
-          </HubCardTable.HeaderCell>
-          <HubCardTable.HeaderCell style={{ textAlign: "right" }}>Cost Delta</HubCardTable.HeaderCell>
-        </HubCardTable.Header>
-        <HubCardTable.Body>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Project</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Drift</th>
+            <th style={{ textAlign: "center", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Variance</th>
+            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid var(--color-border-separator)", color: "var(--color-text-secondary)" }}>Cost Delta</th>
+            <th style={{ width: 36, borderBottom: "1px solid var(--color-border-separator)" }} />
+          </tr>
+        </thead>
+        <tbody>
           {rows.map((r, i) => (
-            <HubCardTable.Row key={r.id} index={i} onClick={() => setOpenProjectId(r.id)}>
-              <HubCardTable.Cell>
+            <tr key={r.id} style={{ background: i % 2 === 0 ? "var(--color-surface-primary)" : "var(--color-surface-secondary)" }}>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <button
+                    onClick={() => setOpenProjectId(r.id)}
+                    style={{ background: "none", border: "none", padding: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-link)", cursor: "pointer", textAlign: "left" }}
+                  >
                     {r.name}
-                  </span>
+                  </button>
                   {getProjectConnection(r.id) && <Connect size="sm" style={{ color: "#ff5200", flexShrink: 0 }} aria-label="Connected project" />}
                 </span>
-              </HubCardTable.Cell>
-              <HubCardTable.Cell style={{ textAlign: "center", fontWeight: 600 }}>
-                {r.daysRemaining}d
-              </HubCardTable.Cell>
-              <HubCardTable.Cell style={{ textAlign: "center" }}>
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
+                {(() => { const c = varianceColors(r.worstVariance); return (
+                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: c.bg, color: c.fg, fontSize: 12, fontWeight: 600 }}>
+                    {r.drift}%
+                  </span>
+                ); })()}
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "center" }}>
                 {varianceBadge(r.worstVariance)}
-              </HubCardTable.Cell>
-              <HubCardTable.Cell style={{ textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
+              </td>
+              <td style={{ padding: "7px 8px", borderBottom: "1px solid var(--color-border-separator)", textAlign: "right", color: varianceColors(r.worstVariance).bg, fontWeight: 600 }}>
                 {r.costDeltaLabel}
-              </HubCardTable.Cell>
-            </HubCardTable.Row>
+              </td>
+              <td style={{ padding: "4px 4px", borderBottom: "1px solid #eef0f1", textAlign: "center" }}>
+                <button
+                  onClick={() => openAiPanel({
+                    itemName: r.name,
+                    itemId: `#${r.id}`,
+                    projectId: r.id,
+                    pills: [
+                      { label: `+${r.worstVariance}d variance`, color: r.worstVariance >= 14 ? 'red' : r.worstVariance >= 7 ? 'yellow' : 'green' },
+                      { label: `${r.drift}% drift`, color: r.drift >= 50 ? 'red' : 'yellow' },
+                    ],
+                    aiSummary: `This project has a worst-case variance of +${r.worstVariance} days with ${r.drift}% milestone drift and an estimated cost delta of ${r.costDeltaLabel}.`,
+                    cardType: 'schedule_variance',
+                    userRoles: ['owner', 'owner_admin', 'project_manager'],
+                  })}
+                  aria-label="AI actions for this project"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 4,
+                    border: '1px solid #FF5100',
+                    background: '#FFF8F5',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                  }}
+                >
+                  <Copilot size="sm" style={{ color: '#FF5100', width: 14, height: 14 }} />
+                </button>
+              </td>
+            </tr>
           ))}
-        </HubCardTable.Body>
-      </HubCardTable>
+        </tbody>
+      </table>
     </HubCardFrame>
     <ProjectScheduleTearsheet projectId={openProjectId} onClose={() => setOpenProjectId(null)} />
     </>
