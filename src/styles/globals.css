@@ -1544,6 +1544,15 @@ div.nextjs-toast {
   box-sizing: border-box !important;
 }
 
+.capital-planning-table-scroll.capital-planning--gantt-forecast.capital-planning--gantt-forecast-rolling-year
+  thead
+  tr:first-child
+  th.capital-planning-forecast-cost-group.capital-planning-col-criteria {
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+}
+
 /* Gantt + View by Quarter: FY row + FQ row = 96px total (rowspan baseline cells align) */
 .capital-planning-table-scroll.capital-planning--gantt-forecast.capital-planning--gantt-forecast-quarter-bands
   thead
@@ -2648,6 +2657,27 @@ div.nextjs-toast {
   overflow-wrap: break-word;
 }
 
+.capital-planning-table-scroll thead tr th.capital-planning-col-criteria {
+  border-right: 1px solid var(--color-border-separator) !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-col-prioritization-group-score {
+  border-right: 1px solid var(--color-border-separator) !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-forecast-cost-group.capital-planning-col-criteria {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll thead tr th.capital-planning-col-criteria:not(.capital-planning-forecast-cost-group),
+.capital-planning-table-scroll thead tr th.capital-planning-col-prioritization-group-score {
+  height: 49px !important;
+  min-height: 49px !important;
+  max-height: 49px !important;
+}
+
 .capital-planning-table-scroll th {
   resize: none;
 }
@@ -3472,6 +3502,53 @@ div.nextjs-toast {
   vertical-align: middle;
   font-size: 12px !important;
   line-height: 16px !important;
+}
+
+/* Keep Prioritization group header fixed, and child headers slightly taller when expanded. */
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  thead
+  tr
+  th.capital-planning-forecast-cost-group.capital-planning-col-criteria,
+.capital-planning-table-scroll.capital-planning-row-height--md
+  thead
+  tr
+  th.capital-planning-forecast-cost-group.capital-planning-col-criteria,
+.capital-planning-table-scroll.capital-planning-row-height--lg
+  thead
+  tr
+  th.capital-planning-forecast-cost-group.capital-planning-col-criteria {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  thead
+  tr
+  th.capital-planning-col-criteria:not(.capital-planning-forecast-cost-group),
+.capital-planning-table-scroll.capital-planning-row-height--sm
+  thead
+  tr
+  th.capital-planning-col-prioritization-group-score,
+.capital-planning-table-scroll.capital-planning-row-height--md
+  thead
+  tr
+  th.capital-planning-col-criteria:not(.capital-planning-forecast-cost-group),
+.capital-planning-table-scroll.capital-planning-row-height--md
+  thead
+  tr
+  th.capital-planning-col-prioritization-group-score,
+.capital-planning-table-scroll.capital-planning-row-height--lg
+  thead
+  tr
+  th.capital-planning-col-criteria:not(.capital-planning-forecast-cost-group),
+.capital-planning-table-scroll.capital-planning-row-height--lg
+  thead
+  tr
+  th.capital-planning-col-prioritization-group-score {
+  height: 49px !important;
+  min-height: 49px !important;
+  max-height: 49px !important;
 }
 
 .capital-planning-table-scroll.capital-planning-row-height--sm td.capital-planning-col-project .capital-planning-project-select-cell-inner {
