@@ -112,6 +112,7 @@ export const CAPITAL_PLANNING_TABLE_SETTINGS_COLUMNS: readonly {
   key: keyof CapitalPlanningColumnVisibility;
   label: string;
 }[] = [
+  { key: "status", label: "Stage" },
   { key: "projectPriority", label: "Priority" },
   { key: "prioritizationScore", label: "Prioritization Score" },
   { key: "originalBudget", label: "Original Budget" },

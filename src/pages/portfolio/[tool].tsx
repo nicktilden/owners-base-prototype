@@ -103,6 +103,15 @@ export default function PortfolioToolPage() {
     );
   }
 
+  if (toolKey === 'capital_planning_target_budget_2_0_settings') {
+    return (
+      <>
+        <Head><title>Capital Planning Settings — Owner Prototype</title></Head>
+        <CapitalPlanningSettingsContent capitalPlanningPageVariant="target_budget_2_0" />
+      </>
+    );
+  }
+
   if (toolKey === 'capital_planning_future_settings') {
     return (
       <>

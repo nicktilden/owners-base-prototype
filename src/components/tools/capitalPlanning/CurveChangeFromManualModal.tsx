@@ -22,6 +22,7 @@ export function CurveChangeFromManualModal({
   onCancel: () => void;
   onConfirm: (rowId: string, nextCurve: ProjectCurve) => void;
 }) {
+  const nextCurveLabel = nextCurve === "Project Forecast" ? "Project Forecast" : "Calculated Curve";
   const lastRowIdRef = useRef<string | null>(null);
   const lastNextCurveRef = useRef<ProjectCurve>(nextCurve);
 
@@ -67,13 +68,12 @@ export function CurveChangeFromManualModal({
           style={{ color: colors.yellow40, flexShrink: 0, marginRight: 8 }}
         />
         <Modal.Heading id="update-to-calculated-curve-modal-title" level={2}>
-          Update to Calculated Curve?
+          {`Update to ${nextCurveLabel}?`}
         </Modal.Heading>
       </Modal.Header>
       <Modal.Body>
         <Typography intent="body" color="gray45" style={{ lineHeight: 1.5 }}>
-          Any manually entered spread values will be permanently lost when changing the curve type from manual to
-          calculated. Are you sure you want to continue?
+          {`Any manually entered spread values will be permanently lost when changing the curve type from manual to ${nextCurveLabel}. Are you sure you want to continue?`}
         </Typography>
       </Modal.Body>
       <Modal.Footer>

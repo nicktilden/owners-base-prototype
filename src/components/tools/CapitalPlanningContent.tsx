@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import {
   Button,
   Dropdown,
+  DropdownFlyout,
   InfoBanner,
   Modal,
   MultiSelect,
@@ -12,6 +13,7 @@ import {
   Select,
   SplitViewCard,
   Switch,
+  Tooltip,
   Tabs,
   Toast,
   ToggleButton,
@@ -27,6 +29,7 @@ import {
   Fullscreen,
   FullscreenExit,
   Gantt,
+  Info,
   Pencil,
   Plus,
   Sliders,
@@ -56,6 +59,7 @@ import {
 import type { CriteriaBuilderRow } from "@/components/tools/capitalPlanning/CriteriaBuilderDataTable";
 import { CapitalPlanningPrioritizationTab } from "@/components/tools/capitalPlanning/CapitalPlanningPrioritizationTab";
 import { CreateSnapshotModal } from "@/components/tools/capitalPlanning/CreateSnapshotModal";
+import { CreateConceptProjectModal } from "@/components/tools/capitalPlanning/CreateConceptProjectModal";
 import {
   computeCapitalPlanningProgramSummaryMetrics,
   type CapitalPlanningProgramSummaryMetrics,
@@ -81,7 +85,9 @@ import {
   PROJECT_STATUS_OPTIONS,
   PRIORITY_OPTIONS,
   CURVE_SELECT_PLACEHOLDER_LABEL,
+  prototypeDepartmentFromName,
   prototypeProjectDescriptionFromName,
+  prototypeProjectTypeFromName,
   SAMPLE_PROJECT_ROWS,
   STATUS_PILL_COLOR,
   initialCurves,
@@ -111,6 +117,7 @@ import {
 } from "@/components/tools/capitalPlanning/capitalPlanningRowGrouping";
 
 type GroupByMultiOption = { id: CapitalPlanningGroupBy; label: string };
+const MAX_PRIORITIZATION_CRITERIA_COLUMNS = 4;
 
 const GROUP_BY_MULTI_OPTIONS: GroupByMultiOption[] = CAPITAL_PLANNING_GROUP_BY_OPTIONS.map((o) => ({
   id: o.value,
@@ -121,6 +128,10 @@ import {
   CAPITAL_PLANNING_FISCAL_SETTINGS_CHANGED_EVENT,
   readCapitalPlanningFiscalYearStartMonth,
 } from "@/utils/capitalPlanningFiscalSettings";
+import {
+  readPersistedTargetBudgetForecastOverrides,
+  writePersistedTargetBudgetForecastOverrides,
+} from "@/utils/capitalPlanningTargetBudgetPersistence";
 
 /**
  * Procore Data Table side panels (filters left, configuration right) — same chrome as {@link ProjectsTableCard}
@@ -243,6 +254,20 @@ function withCapitalPlanningColumnLocks(v: CapitalPlanningColumnVisibility): Cap
     remaining: true,
     forecast: true,
   };
+}
+
+function withCapitalPlanningVariantColumnLocks(
+  v: CapitalPlanningColumnVisibility,
+  pageVariant: CapitalPlanningPageVariant
+): CapitalPlanningColumnVisibility {
+  if (pageVariant === "target_budget_2_0") {
+    return {
+      ...withCapitalPlanningColumnLocks(v),
+      projectPriority: false,
+      prioritizationScore: false,
+    };
+  }
+  return withCapitalPlanningColumnLocks(v);
 }
 
 function toggleIncluded<T extends string>(current: readonly T[], value: T): T[] {
@@ -425,6 +450,7 @@ export type CapitalPlanningPageVariant =
   | "default"
   | "mvp"
   | "next"
+  | "ga"
   | "target_budget"
   | "target_budget_2_0"
   | "future";
@@ -446,6 +472,7 @@ export interface CapitalPlanningContentProps {
 const PORTFOLIO_CAPITAL_PLANNING_PATH = "/portfolio/capital-planning";
 const PORTFOLIO_CAPITAL_PLANNING_MVP_PATH = "/portfolio/capital-planning-mvp";
 const PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH = "/portfolio/capital-planning-next";
+const PORTFOLIO_CAPITAL_PLANNING_GA_PATH = "/portfolio/capital-planning-ga";
 const PORTFOLIO_CAPITAL_PLANNING_TARGET_BUDGET_PATH = "/portfolio/capital-planning-target-budget";
 const PORTFOLIO_CAPITAL_PLANNING_TARGET_BUDGET_2_PATH = "/portfolio/capital-planning-target-budget-2-0";
 const PORTFOLIO_CAPITAL_PLANNING_FUTURE_PATH = "/portfolio/capital-planning-future";
@@ -457,12 +484,12 @@ export default function CapitalPlanningContent({
 }: CapitalPlanningContentProps) {
   const router = useRouter();
   const capitalPlanningSettingsPath =
-    pageVariant === "next"
+    pageVariant === "next" || pageVariant === "ga"
       ? "/portfolio/capital-planning-next-settings"
       : pageVariant === "target_budget"
         ? "/portfolio/capital-planning-target-budget-settings"
         : pageVariant === "target_budget_2_0"
-        ? "/portfolio/capital-planning-target-budget-settings"
+        ? "/portfolio/capital-planning-target-budget-2-0-settings"
         : pageVariant === "future"
           ? "/portfolio/capital-planning-future-settings"
           : "/portfolio/capital-planning-settings";
@@ -498,6 +525,8 @@ export default function CapitalPlanningContent({
   /** Multi-select filters — same interaction model as Procore Data Table filter panels (Projects / Cost Management tables). */
   const [filterStatus, setFilterStatus] = useState<ProjectStatus[]>([]);
   const [filterPriority, setFilterPriority] = useState<ProjectPriority[]>([]);
+  const [filterProjectTypes, setFilterProjectTypes] = useState<string[]>([]);
+  const [filterDepartments, setFilterDepartments] = useState<string[]>([]);
   const [filterRegions, setFilterRegions] = useState<CapitalPlanningRegion[]>([]);
   /** Target Budget tab only — matches {@link assignedHierarchyCampus} / location hierarchy. */
   const [filterCampusLabels, setFilterCampusLabels] = useState<string[]>([]);
@@ -517,27 +546,32 @@ export default function CapitalPlanningContent({
     setGroupBySelection([...kept, ...added]);
   }, [groupBySelection]);
   const [planView, setPlanView] = useState<CapitalPlanningPlanView>("grid");
-  /** Gantt is only offered on the Future route; Now/Next always behave as grid for the program table. */
+  /** Gantt is offered on Future and Target Budget 2.0 routes; other variants stay grid-only. */
   const capitalPlanTablePlanView: CapitalPlanningPlanView =
-    pageVariant === "future" ? planView : "grid";
+    pageVariant === "future" || pageVariant === "target_budget_2_0" ? planView : "grid";
   /** Forecast column period size — View by select (month / quarter / year). */
-  const [viewByGranularity, setViewByGranularity] = useState<ForecastGranularity>("month");
+  const [viewByGranularity, setViewByGranularity] = useState<ForecastGranularity>("year");
   const [configureOpen, setConfigureOpen] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState<CapitalPlanningColumnVisibility>(() =>
-    withCapitalPlanningColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant))
+    withCapitalPlanningVariantColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant), pageVariant)
   );
   /** Target Budget tab: survives switching to Capital Plan / Change History (child table unmounts). */
-  const [targetBudgetForecastOverrides, setTargetBudgetForecastOverrides] = useState<Record<string, number>>({});
+  const [targetBudgetForecastOverrides, setTargetBudgetForecastOverrides] = useState<Record<string, number>>(
+    () => readPersistedTargetBudgetForecastOverrides()
+  );
   const prototypeTargetBudgetSeedAppliedRef = useRef(false);
   const [tableRowHeight, setTableRowHeight] = useState<TableRowHeight>("sm");
   const [tableFullscreen, setTableFullscreen] = useState(false);
+  const [showActuals, setShowActuals] = useState(false);
+  const [showPrioritizationGroup, setShowPrioritizationGroup] = useState(true);
   const [criteriaBuilderRows, setCriteriaBuilderRows] = useState<CriteriaBuilderRow[]>(() =>
-    readPersistedCriteriaBuilderRows()
+    readPersistedCriteriaBuilderRows().slice(0, MAX_PRIORITIZATION_CRITERIA_COLUMNS)
   );
   const [prioritizationCriteriaValues, setPrioritizationCriteriaValues] = useState<
     Record<string, Record<string, string>>
   >(() => buildInitialPrioritizationCriteriaValues());
   const [snapshotModalOpen, setSnapshotModalOpen] = useState(false);
+  const [conceptProjectModalOpen, setConceptProjectModalOpen] = useState(false);
   const [snapshotEditModalOpen, setSnapshotEditModalOpen] = useState(false);
   const [editingSnapshotId, setEditingSnapshotId] = useState<string | null>(null);
   const [snapshotDeleteModalOpen, setSnapshotDeleteModalOpen] = useState(false);
@@ -605,7 +639,7 @@ export default function CapitalPlanningContent({
   );
 
   const capitalPlanGridCriteriaColumns = useMemo(
-    () => criteriaBuilderRowsToGridColumns(criteriaBuilderRows),
+    () => criteriaBuilderRowsToGridColumns(criteriaBuilderRows).slice(0, MAX_PRIORITIZATION_CRITERIA_COLUMNS),
     [criteriaBuilderRows]
   );
 
@@ -643,7 +677,10 @@ export default function CapitalPlanningContent({
 
   useEffect(() => {
     if (pageVariant !== "future") return;
-    const sync = () => setCriteriaBuilderRows(readPersistedCriteriaBuilderRows());
+    const sync = () =>
+      setCriteriaBuilderRows(
+        readPersistedCriteriaBuilderRows().slice(0, MAX_PRIORITIZATION_CRITERIA_COLUMNS)
+      );
     window.addEventListener(CAPITAL_PLANNING_CRITERIA_BUILDER_CHANGED_EVENT, sync);
     return () => window.removeEventListener(CAPITAL_PLANNING_CRITERIA_BUILDER_CHANGED_EVENT, sync);
   }, [pageVariant]);
@@ -753,6 +790,28 @@ export default function CapitalPlanningContent({
   const comparisonHistoricalSnapshotSelected =
     selectedComparisonSnapshotId != null &&
     selectedComparisonSnapshotId !== SNAPSHOT_CURRENT_OPTION.id;
+  const showActualsBlockedBySnapshots =
+    historicalSnapshotSelected || comparisonHistoricalSnapshotSelected;
+  const showActualsBlockedByGantt =
+    headerTab === "capital_plan" && capitalPlanTablePlanView === "gantt";
+  const disableShowActualsToggle =
+    showActualsBlockedBySnapshots || showActualsBlockedByGantt;
+  const showActualsDisabledTooltip = showActualsBlockedBySnapshots && showActualsBlockedByGantt
+    ? "To show actuals, turn off snapshots and snapshot comparisons, and switch to Grid view."
+    : showActualsBlockedBySnapshots
+      ? "To show actuals, turn off snapshots and snapshot comparisons."
+      : "To show actuals, switch to Grid view.";
+  const canShowActualsToggle =
+    pageVariant === "ga" ||
+    pageVariant === "future" ||
+    pageVariant === "target_budget" ||
+    pageVariant === "target_budget_2_0";
+
+  useEffect(() => {
+    if ((!canShowActualsToggle || showActualsBlockedByGantt) && showActuals) {
+      setShowActuals(false);
+    }
+  }, [canShowActualsToggle, showActualsBlockedByGantt, showActuals]);
 
   const selectedHistoricalSnapshotMeta = useMemo(() => {
     if (!historicalSnapshotSelected) return null;
@@ -794,19 +853,43 @@ export default function CapitalPlanningContent({
   const filterPanelHasActiveSelections =
     headerTab === "target_budget"
       ? filterRegions.length > 0 || filterCampusLabels.length > 0 || filterBuildingLabels.length > 0
-      : filterStatus.length > 0 || filterPriority.length > 0 || filterRegions.length > 0;
+      : filterStatus.length > 0 ||
+        filterPriority.length > 0 ||
+        filterProjectTypes.length > 0 ||
+        filterDepartments.length > 0 ||
+        filterRegions.length > 0;
 
   const clearFilterPanel = useCallback(() => {
     setFilterStatus([]);
     setFilterPriority([]);
+    setFilterProjectTypes([]);
+    setFilterDepartments([]);
     setFilterRegions([]);
     setFilterCampusLabels([]);
     setFilterBuildingLabels([]);
   }, []);
 
+  const filterProjectTypeOptions = useMemo(
+    () =>
+      Array.from(new Set(projectRowsForSelectedSnapshot.map((r) => prototypeProjectTypeFromName(r.project)))).sort(
+        (a, b) => a.localeCompare(b)
+      ),
+    [projectRowsForSelectedSnapshot]
+  );
+  const filterDepartmentOptions = useMemo(
+    () =>
+      Array.from(new Set(projectRowsForSelectedSnapshot.map((r) => prototypeDepartmentFromName(r.project)))).sort(
+        (a, b) => a.localeCompare(b)
+      ),
+    [projectRowsForSelectedSnapshot]
+  );
+
   const resetTableSettings = useCallback(() => {
-    setColumnVisibility(withCapitalPlanningColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant)));
+    setColumnVisibility(
+      withCapitalPlanningVariantColumnLocks(capitalPlanningProgramTableDefaultVisibility(pageVariant), pageVariant)
+    );
     setTableRowHeight("sm");
+    setShowPrioritizationGroup(true);
   }, [pageVariant]);
 
   const filteredProjectRows = useMemo((): CapitalPlanningSampleRow[] => {
@@ -841,6 +924,12 @@ export default function CapitalPlanningContent({
       if (filterPriority.length > 0) {
         rows = rows.filter((r) => filterPriority.includes(r.priority));
       }
+      if (filterProjectTypes.length > 0) {
+        rows = rows.filter((r) => filterProjectTypes.includes(prototypeProjectTypeFromName(r.project)));
+      }
+      if (filterDepartments.length > 0) {
+        rows = rows.filter((r) => filterDepartments.includes(prototypeDepartmentFromName(r.project)));
+      }
       if (filterRegions.length > 0) {
         rows = rows.filter((r) => filterRegions.includes(assignedCapitalPlanningRegion(r.id)));
       }
@@ -852,6 +941,8 @@ export default function CapitalPlanningContent({
     headerTab,
     filterStatus,
     filterPriority,
+    filterProjectTypes,
+    filterDepartments,
     filterRegions,
     filterCampusLabels,
     filterBuildingLabels,
@@ -859,12 +950,20 @@ export default function CapitalPlanningContent({
 
   useEffect(() => {
     if (prototypeTargetBudgetSeedAppliedRef.current) return;
+    if (Object.keys(targetBudgetForecastOverrides).length > 0) {
+      prototypeTargetBudgetSeedAppliedRef.current = true;
+      return;
+    }
     if (filteredProjectRows.length === 0) return;
     const seed = buildPrototypeTargetBudgetForecastOverrides(filteredProjectRows, fiscalYearStartMonth);
     if (Object.keys(seed).length === 0) return;
     setTargetBudgetForecastOverrides(seed);
     prototypeTargetBudgetSeedAppliedRef.current = true;
-  }, [filteredProjectRows, fiscalYearStartMonth]);
+  }, [filteredProjectRows, fiscalYearStartMonth, targetBudgetForecastOverrides]);
+
+  useEffect(() => {
+    writePersistedTargetBudgetForecastOverrides(targetBudgetForecastOverrides);
+  }, [targetBudgetForecastOverrides]);
 
   const programSummaryMetrics = useMemo(
     () => computeCapitalPlanningProgramSummaryMetrics(filteredProjectRows),
@@ -895,29 +994,84 @@ export default function CapitalPlanningContent({
         </Button>
       ) : null}
       {headerTab === "capital_plan" ? (
-        <Button variant="secondary" className="b_secondary" icon={<Plus />} onClick={() => setSnapshotModalOpen(true)}>
-          Create Snapshot
-        </Button>
+        <Dropdown
+          label="Create"
+          variant="primary"
+          className="b_primary"
+          icon={<Plus />}
+          onSelect={(selection) => {
+            if (selection.action !== "selected") return;
+            const normalizedItem = String(selection.item ?? "")
+              .trim()
+              .replace(/^['"]+|['"]+$/g, "")
+              .toLowerCase()
+              .replace(/\s+/g, "_");
+            if (normalizedItem === "snapshot") {
+              setSnapshotModalOpen(true);
+              return;
+            }
+            if (normalizedItem === "concept_project") {
+              setConceptProjectModalOpen(true);
+              return;
+            }
+          }}
+        >
+          <Dropdown.Item item="concept_project" onClick={() => setConceptProjectModalOpen(true)}>
+            Concept Project
+          </Dropdown.Item>
+          <Dropdown.Item item="snapshot" onClick={() => setSnapshotModalOpen(true)}>
+            Snapshot
+          </Dropdown.Item>
+        </Dropdown>
       ) : null}
       <Dropdown label="Export" className="b_secondary" variant="secondary">
         <Dropdown.Item item="csv">CSV</Dropdown.Item>
         <Dropdown.Item item="excel">Excel</Dropdown.Item>
       </Dropdown>
-      <Dropdown
+      <DropdownFlyout
         variant="tertiary"
         size="md"
         icon={<EllipsisVertical />}
         aria-label="Time horizon menu"
         placement="bottom-right"
-        onSelect={(selection) => {
-          if (selection.action !== "selected") return;
-          const item = String(selection.item);
+        options={[
+          { value: "closed_beta", label: "Closed Beta" },
+          { value: "next", label: "Open Beta" },
+          { value: "ga", label: "GA" },
+          {
+            value: "future",
+            label: "Future",
+            children: [
+              { value: "gantt_view", label: "Gantt View" },
+              { value: "target_budget", label: "Target Budgets" },
+              { value: "target_budget_2_0", label: "Target Budget 2.0" },
+            ],
+          },
+        ]}
+        onClick={(option) => {
+          const item = String(option.value);
+          if (item === "closed_beta") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_MVP_PATH);
+            return;
+          }
           if (item === "next") {
             void router.push(PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH);
             return;
           }
-          if (item === "mvp") {
+          if (item === "ga") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_GA_PATH);
+            return;
+          }
+          if (item === "gantt_view") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_FUTURE_PATH);
+            return;
+          }
+          if (item === "m2") {
             void router.push(PORTFOLIO_CAPITAL_PLANNING_MVP_PATH);
+            return;
+          }
+          if (item === "m3") {
+            void router.push(PORTFOLIO_CAPITAL_PLANNING_NEXT_PATH);
             return;
           }
           if (item === "target_budget") {
@@ -932,57 +1086,48 @@ export default function CapitalPlanningContent({
             void router.push(PORTFOLIO_CAPITAL_PLANNING_FUTURE_PATH);
             return;
           }
-          if (item === "now") {
-            void router.push(PORTFOLIO_CAPITAL_PLANNING_PATH);
-          }
         }}
-      >
-        <Dropdown.Item item="now">Now</Dropdown.Item>
-        <Dropdown.Item item="mvp">MVP</Dropdown.Item>
-        <Dropdown.Item item="next">Next</Dropdown.Item>
-        <Dropdown.Item item="target_budget">Target Budgets</Dropdown.Item>
-        <Dropdown.Item item="target_budget_2_0">Target Budget 2.0</Dropdown.Item>
-        <Dropdown.Item item="future">Future</Dropdown.Item>
-      </Dropdown>
+      />
     </>
   );
 
-  const headerTabs = (
-    <Tabs>
-      {pageVariant === "future" ? (
+  const headerTabs =
+    pageVariant === "mvp" ? null : (
+      <Tabs>
         <Tabs.Tab
-          selected={headerTab === "prioritization"}
-          onPress={() => setHeaderTab("prioritization")}
+          selected={headerTab === "capital_plan"}
+          onPress={() => setHeaderTab("capital_plan")}
           role="button"
         >
-          <Tabs.Link>Prioritization</Tabs.Link>
+          <Tabs.Link>Capital Plan</Tabs.Link>
         </Tabs.Tab>
-      ) : null}
-      <Tabs.Tab
-        selected={headerTab === "capital_plan"}
-        onPress={() => setHeaderTab("capital_plan")}
-        role="button"
-      >
-        <Tabs.Link>Capital Plan</Tabs.Link>
-      </Tabs.Tab>
-      {pageVariant === "target_budget" || pageVariant === "target_budget_2_0" ? (
+        {pageVariant === "future" ? (
+          <Tabs.Tab
+            selected={headerTab === "prioritization"}
+            onPress={() => setHeaderTab("prioritization")}
+            role="button"
+          >
+            <Tabs.Link>Prioritization</Tabs.Link>
+          </Tabs.Tab>
+        ) : null}
+        {pageVariant === "target_budget" || pageVariant === "target_budget_2_0" ? (
+          <Tabs.Tab
+            selected={headerTab === "target_budget"}
+            onPress={() => setHeaderTab("target_budget")}
+            role="button"
+          >
+            <Tabs.Link>Target Budgets</Tabs.Link>
+          </Tabs.Tab>
+        ) : null}
         <Tabs.Tab
-          selected={headerTab === "target_budget"}
-          onPress={() => setHeaderTab("target_budget")}
+          selected={headerTab === "change_history"}
+          onPress={() => setHeaderTab("change_history")}
           role="button"
         >
-          <Tabs.Link>Target Budgets</Tabs.Link>
+          <Tabs.Link>Change History</Tabs.Link>
         </Tabs.Tab>
-      ) : null}
-      <Tabs.Tab
-        selected={headerTab === "change_history"}
-        onPress={() => setHeaderTab("change_history")}
-        role="button"
-      >
-        <Tabs.Link>Change History</Tabs.Link>
-      </Tabs.Tab>
-    </Tabs>
-  );
+      </Tabs>
+    );
 
   const planningBody = (
     <>
@@ -1033,18 +1178,14 @@ export default function CapitalPlanningContent({
                 color: "var(--color-text-primary)",
                 fontSize: 14,
                 lineHeight: "20px",
-                display: "flex",
-                alignItems: "baseline",
-                flexWrap: "wrap",
-                gap: 0,
                 flex: "1 1 520px",
                 minWidth: 0,
               }}
             >
-              <span style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>
+              <span style={{ display: "block", fontWeight: 600, color: "var(--color-text-primary)" }}>
                 New! Capital Planning in Closed Beta
               </span>
-              <span>
+              <span style={{ display: "block" }}>
                 Create a multi-year capital plan, assign early planned cost to projects, forecast
                 planned project costs, and align costs with your organizational goals. To get started,
                 assign your projects to programs.
@@ -1170,7 +1311,7 @@ export default function CapitalPlanningContent({
                 flexDirection: "column",
                 gap: 8,
                 width: "100%",
-                marginBottom: embeddedInHub ? 0 : 12,
+                marginBottom: 12,
               }}
             >
             {embeddedInHub ? (
@@ -1199,18 +1340,52 @@ export default function CapitalPlanningContent({
                 >
                   Capital Plan
                 </Typography>
-                <Button
-                  type="button"
-                  variant="tertiary"
-                  className="b_tertiary"
-                  icon={<ExternalLink />}
-                  onClick={() => {
-                    void router.push(PORTFOLIO_CAPITAL_PLANNING_PATH);
-                  }}
-                  style={{ flexShrink: 0 }}
-                >
-                  Open Page
-                </Button>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <SegmentedController className="b_radiogroup" style={{ flexShrink: 0 }}>
+                    <SegmentedController.Segment
+                      selected={capitalPlanTablePlanView === "grid"}
+                      onClick={() => setPlanView("grid")}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <ViewGrid size="sm" aria-hidden />
+                        Grid
+                      </span>
+                    </SegmentedController.Segment>
+                    <SegmentedController.Segment
+                      selected={capitalPlanTablePlanView === "gantt"}
+                      onClick={() => setPlanView("gantt")}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Gantt size="sm" aria-hidden />
+                        Gantt
+                      </span>
+                    </SegmentedController.Segment>
+                  </SegmentedController>
+                  <Button
+                    type="button"
+                    variant="tertiary"
+                    className="b_tertiary"
+                    icon={<ExternalLink />}
+                    onClick={() => {
+                      void router.push(PORTFOLIO_CAPITAL_PLANNING_PATH);
+                    }}
+                    style={{ flexShrink: 0 }}
+                  >
+                    Open Plan
+                  </Button>
+                </div>
               </div>
             ) : (
               <div
@@ -1263,6 +1438,7 @@ export default function CapitalPlanningContent({
                           className={`capital-planning-snapshot-select${
                             historicalSnapshotSelected ? " capital-planning-snapshot-select--historical" : ""
                           }`}
+                          disabled={showActuals}
                           block
                           placeholder="Select snapshot"
                           label={snapshotSelectDisplayLabel}
@@ -1346,6 +1522,7 @@ export default function CapitalPlanningContent({
                             className={`capital-planning-snapshot-select${
                               comparisonHistoricalSnapshotSelected ? " capital-planning-snapshot-select--historical" : ""
                             }`}
+                            disabled={showActuals}
                             block
                             placeholder="Select comparison snapshot"
                             label={comparisonSnapshotSelectDisplayLabel}
@@ -1403,6 +1580,43 @@ export default function CapitalPlanningContent({
                     ) : null}
                   </div>
                 ) : null}
+                {headerTab === "capital_plan" ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                    {canShowActualsToggle ? (
+                      <Tooltip
+                        trigger="hover"
+                        placement="top"
+                        beforeShow={() => (disableShowActualsToggle ? undefined : false)}
+                        overlay={
+                          <Tooltip.Content>
+                            {showActualsDisabledTooltip}
+                          </Tooltip.Content>
+                        }
+                      >
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                          <Switch
+                            checked={showActuals}
+                            disabled={disableShowActualsToggle}
+                            onChange={() => setShowActuals((v) => !v)}
+                            aria-label="Toggle show actuals"
+                          />
+                          <Typography intent="small" as="span" style={{ fontSize: 28 / 2, lineHeight: "20px" }}>
+                            Show Actuals
+                          </Typography>
+                        </div>
+                      </Tooltip>
+                    ) : null}
+                    <Button
+                      variant="tertiary"
+                      className="b_tertiary"
+                      icon={tableFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                      onClick={() => setTableFullscreen((v) => !v)}
+                      style={{ flexShrink: 0 }}
+                    >
+                      Full Screen
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             )}
               {!embeddedInHub ? (
@@ -1429,7 +1643,7 @@ export default function CapitalPlanningContent({
                   >
                     <div style={{ width: 280, maxWidth: "100%", minWidth: 0 }}>
                       <Search
-                        placeholder="Search Projects"
+                        placeholder="Search Programs"
                         value={search}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                       />
@@ -1532,7 +1746,8 @@ export default function CapitalPlanningContent({
                         </div>
                       </div>
                     ) : null}
-                    {headerTab === "capital_plan" && pageVariant === "future" ? (
+                    {headerTab === "capital_plan" &&
+                    (pageVariant === "future" || pageVariant === "target_budget_2_0") ? (
                       <SegmentedController className="b_radiogroup" style={{ flexShrink: 0 }}>
                         <SegmentedController.Segment
                           selected={capitalPlanTablePlanView === "grid"}
@@ -1750,6 +1965,46 @@ export default function CapitalPlanningContent({
                         </Select>
                       </FilterFieldSection>
                       <FilterFieldSection>
+                        <FilterFieldLabel htmlFor="capital-planning-filter-project-type">Project Type</FilterFieldLabel>
+                        <Select
+                          id="capital-planning-filter-project-type"
+                          placeholder="Select values"
+                          label={filterProjectTypes.length ? `${filterProjectTypes.length} selected` : undefined}
+                          onSelect={(s) => {
+                            if (s.action !== "selected") return;
+                            setFilterProjectTypes((prev) => toggleIncluded(prev, s.item as string));
+                          }}
+                          onClear={() => setFilterProjectTypes([])}
+                          block
+                        >
+                          {filterProjectTypeOptions.map((v) => (
+                            <Select.Option key={v} value={v} selected={filterProjectTypes.includes(v)}>
+                              {v}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </FilterFieldSection>
+                      <FilterFieldSection>
+                        <FilterFieldLabel htmlFor="capital-planning-filter-department">Department</FilterFieldLabel>
+                        <Select
+                          id="capital-planning-filter-department"
+                          placeholder="Select values"
+                          label={filterDepartments.length ? `${filterDepartments.length} selected` : undefined}
+                          onSelect={(s) => {
+                            if (s.action !== "selected") return;
+                            setFilterDepartments((prev) => toggleIncluded(prev, s.item as string));
+                          }}
+                          onClear={() => setFilterDepartments([])}
+                          block
+                        >
+                          {filterDepartmentOptions.map((v) => (
+                            <Select.Option key={v} value={v} selected={filterDepartments.includes(v)}>
+                              {v}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </FilterFieldSection>
+                      <FilterFieldSection>
                         <FilterFieldLabel htmlFor="capital-planning-filter-region">Region</FilterFieldLabel>
                         <Select
                           id="capital-planning-filter-region"
@@ -1815,7 +2070,7 @@ export default function CapitalPlanningContent({
                 filteredProjectRows={filteredProjectRows}
                 fiscalYearStartMonth={fiscalYearStartMonth}
                 columnVisibility={columnVisibility}
-                readOnly={embeddedInHub || historicalSnapshotSelected}
+                readOnly={embeddedInHub || historicalSnapshotSelected || comparisonHistoricalSnapshotSelected}
                 targetBudgetForecastOverrides={targetBudgetForecastOverrides}
                 setTargetBudgetForecastOverrides={setTargetBudgetForecastOverrides}
                 disableForecastColumnToggles={pageVariant === "target_budget_2_0"}
@@ -1844,6 +2099,7 @@ export default function CapitalPlanningContent({
               }}
             >
             <CapitalPlanningSmartGrid
+              key={`capital-planning-smart-grid-${embeddedInHub ? "embed" : "page"}-${capitalPlanTablePlanView}-${viewByGranularity}`}
               columnVisibility={columnVisibility}
               rowHeight={tableRowHeight}
               configShowEmpty={true}
@@ -1869,25 +2125,33 @@ export default function CapitalPlanningContent({
               criteriaColumns={capitalPlanGridCriteriaColumns}
               criteriaValuesByProjectId={prioritizationCriteriaValues}
               onCriteriaValueChange={onPrioritizationCriteriaValueChange}
-              showPrioritizationScoreColumn={false}
-              renderCriteriaColumnsInGrid={false}
+              showPrioritizationScoreColumn={true}
+              renderCriteriaColumnsInGrid={showPrioritizationGroup}
+              criteriaColumnsCollapsedByDefault={true}
               programPageVariant={pageVariant}
-              readOnly={embeddedInHub || historicalSnapshotSelected}
+              readOnly={embeddedInHub || historicalSnapshotSelected || comparisonHistoricalSnapshotSelected}
               onCapitalPlanningChange={appendCapitalPlanningChange}
               targetBudgetForecastOverrides={targetBudgetForecastOverrides}
               forecastComparisonSnapshotLabel={
                 pageVariant === "default" || pageVariant === "mvp"
                   ? null
+                  : showActuals
+                    ? "Actuals"
                   : selectedComparisonSnapshotId != null
                     ? (comparisonSnapshotSelectDisplayLabel ?? "")
                     : null
               }
               forecastPrimarySnapshotHeaderLabel={
-                snapshotSelectDisplayLabel ?? SNAPSHOT_CURRENT_OPTION.label
+                showActuals
+                  ? "Planned"
+                  : (snapshotSelectDisplayLabel ?? SNAPSHOT_CURRENT_OPTION.label)
               }
+              forecastComparisonMode={showActuals ? "actuals" : "snapshot"}
               forecastComparisonPlannedMultiplier={
                 pageVariant === "default" || pageVariant === "mvp"
                   ? 1
+                  : showActuals
+                    ? 1
                   : selectedComparisonSnapshotId == null ||
                       selectedComparisonSnapshotId === SNAPSHOT_CURRENT_OPTION.id
                     ? 1
@@ -1959,8 +2223,9 @@ export default function CapitalPlanningContent({
                         type="button"
                         onClick={() =>
                           setColumnVisibility(
-                            withCapitalPlanningColumnLocks(
-                              capitalPlanningProgramTableDefaultVisibility(pageVariant)
+                            withCapitalPlanningVariantColumnLocks(
+                              capitalPlanningProgramTableDefaultVisibility(pageVariant),
+                              pageVariant
                             )
                           )
                         }
@@ -1976,16 +2241,35 @@ export default function CapitalPlanningContent({
                       <Switch checked disabled aria-label="Planned amount always shown" />
                       <ColumnToggleLabel>Planned Amount</ColumnToggleLabel>
                     </ColumnToggleRow>
-                    {CAPITAL_PLANNING_TABLE_SETTINGS_COLUMNS.map((col) => (
+                    {headerTab === "capital_plan" ? (
+                      <ColumnToggleRow>
+                        <Switch
+                          checked={showPrioritizationGroup}
+                          onChange={() => setShowPrioritizationGroup((prev) => !prev)}
+                          aria-label="Show Prioritization column group"
+                        />
+                        <ColumnToggleLabel>Prioritization</ColumnToggleLabel>
+                      </ColumnToggleRow>
+                    ) : null}
+                    {CAPITAL_PLANNING_TABLE_SETTINGS_COLUMNS.filter(
+                      (col) =>
+                        !(
+                          pageVariant === "target_budget_2_0" &&
+                          (col.key === "projectPriority" || col.key === "prioritizationScore")
+                        )
+                    ).map((col) => (
                       <ColumnToggleRow key={col.key}>
                         <Switch
                           checked={columnVisibility[col.key]}
                           onChange={() =>
                             setColumnVisibility((prev) =>
-                              withCapitalPlanningColumnLocks({
-                                ...prev,
-                                [col.key]: !prev[col.key],
-                              })
+                              withCapitalPlanningVariantColumnLocks(
+                                {
+                                  ...prev,
+                                  [col.key]: !prev[col.key],
+                                },
+                                pageVariant
+                              )
                             )
                           }
                           aria-label={`Show ${col.label} column`}
@@ -2010,12 +2294,20 @@ export default function CapitalPlanningContent({
   const betaPill = (
     <Pill
       color={
-        pageVariant === "future" ? "green" : pageVariant === "next" || pageVariant === "target_budget" ? "blue" : "magenta"
+        pageVariant === "future" || pageVariant === "ga" || pageVariant === "target_budget_2_0"
+          ? "green"
+          : pageVariant === "next" || pageVariant === "target_budget"
+            ? "blue"
+            : "magenta"
       }
       style={{ flexShrink: 0 }}
     >
-      {pageVariant === "next" || pageVariant === "target_budget"
+      {pageVariant === "ga"
+        ? "GA"
+        : pageVariant === "next" || pageVariant === "target_budget"
         ? "Open Beta"
+        : pageVariant === "target_budget_2_0"
+          ? "Future"
         : pageVariant === "future"
           ? "GA"
           : "Beta"}
@@ -2094,6 +2386,10 @@ export default function CapitalPlanningContent({
           setSelectedSnapshotId(id);
           setSnapshotToastMessage("Snapshot created.");
         }}
+      />
+      <CreateConceptProjectModal
+        open={conceptProjectModalOpen}
+        onClose={() => setConceptProjectModalOpen(false)}
       />
       <CreateSnapshotModal
         mode="edit"

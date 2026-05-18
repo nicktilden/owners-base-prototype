@@ -27,6 +27,7 @@ import type { DropdownFlyoutOption } from "@procore/core-react";
 import {
   CaretDown,
   CaretRight,
+  LocationEnabled,
   CaretsIn,
   CaretsInHorizontalWithLine,
   CaretsInVertical,
@@ -68,7 +69,9 @@ import {
   PRIORITY_OPTIONS,
   PRIORITIZATION_STATUS_OPTIONS,
   PRIORITIZATION_STATUS_PILL_COLOR,
+  prototypeDepartmentFromName,
   prototypeProjectDescriptionFromName,
+  prototypeProjectTypeFromName,
   STATUS_PILL_COLOR,
   dateToIsoString,
   optionalIsoStringToDate,
@@ -100,7 +103,7 @@ import {
 } from "./capitalPlanningChangeHistory";
 
 /** Criteria Builder columns: fixed width so every criterion column matches. */
-const CRITERIA_COLUMN_WIDTH_PX = 200;
+const CRITERIA_COLUMN_WIDTH_PX = 168;
 
 const CRITERIA_COLUMN_CLASS = "capital-planning-col-criteria";
 
@@ -275,8 +278,8 @@ function EstimatedBudgetColumnHeaderTooltipBody() {
     >
       <div style={{ fontWeight: 700, marginBottom: 8 }}>Estimated Budget</div>
       <p style={{ margin: 0, fontWeight: 400 }}>
-        Enter a working dollar estimate for this project while scoring criteria. This value defaults to Planned Amount
-        until you change it; it does not replace the Capital Plan planned amount source.
+        The early estimated cost of the project. This field automatically syncs with the lump sum planned cost in
+        Capital Planning.
       </p>
     </div>
   );
@@ -296,6 +299,35 @@ function budgetMetricCurrencyCell(value: number | null): React.ReactElement {
     <Table.CurrencyCell value={value} />
   );
 }
+
+/**
+ * Deterministic forecast window seed for the "Project Forecast" curve.
+ * Kept independent from existing project start/end so teams can model a separate forecast timeline.
+ */
+function seededProjectForecastDateRange(rowId: string): { startDate: string; endDate: string } {
+  let hash = 0;
+  for (let i = 0; i < rowId.length; i++) {
+    hash = Math.imul(31, hash) + rowId.charCodeAt(i);
+  }
+  const h = Math.abs(hash);
+  const firstFyYear = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[0] ?? new Date().getFullYear();
+  const lastFyYear =
+    CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.length - 1] ??
+    firstFyYear + 5;
+  const startOffsetMonths = h % 18;
+  const durationMonths = 9 + (h % 16); // 9–24 months
+
+  const seededStart = new Date(firstFyYear, 0, 1);
+  seededStart.setMonth(seededStart.getMonth() + startOffsetMonths);
+  const startDate = new Date(seededStart.getFullYear(), seededStart.getMonth(), 1);
+  const seededEnd = new Date(startDate.getFullYear(), startDate.getMonth() + durationMonths, 0);
+  const maxEnd = new Date(lastFyYear, 11, 31);
+  const endDate = seededEnd.getTime() > maxEnd.getTime() ? maxEnd : seededEnd;
+  return {
+    startDate: dateToIsoString(startDate),
+    endDate: dateToIsoString(endDate),
+  };
+}
 import type { ForecastGranularity } from "./capitalPlanningForecast";
 import {
   CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS,
@@ -308,6 +340,7 @@ import {
   getForecastAllocationBasisDollars,
   getForecastColumnLabels,
   getForecastLeafDollarAmount,
+  getProgramJobToDateMonthAllocations,
   expandProjectIsoDatesToCoverCalendarRange,
   getEffectiveProgramForecastMonthAmounts,
   getForecastOverridePartsCalendarRange,
@@ -315,6 +348,7 @@ import {
   getProgramForecastHeaderTitle,
   formatRemainingToForecastCurrency,
   getProgramForecastMonthLabels,
+  programGridMonthFirstLastDay,
   getRemainingToForecast,
   getTotalAllocatedForecastDollars,
   getCapitalPlanningGanttBarPercents,
@@ -405,6 +439,24 @@ function resolvedForecastCellDollars(
   return forecastOverrides[k] ?? computedValue;
 }
 
+/**
+ * Actuals compare should only include fully completed calendar months.
+ * Example: in May 2026, only Jan-Apr 2026 contribute; May+ and future FYs are zeroed.
+ */
+function maskActualsToCompletedProgramMonths(
+  actualByProgramMonth: readonly number[],
+  anchorDate: Date
+): number[] {
+  const cutoffMonthStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1).getTime();
+  return actualByProgramMonth.map((v, monthIndex) => {
+    const rng = programGridMonthFirstLastDay(monthIndex);
+    if (!rng) return 0;
+    const monthStart = new Date(rng.start.getFullYear(), rng.start.getMonth(), 1).getTime();
+    if (monthStart >= cutoffMonthStart) return 0;
+    return Number.isFinite(v) ? v : 0;
+  });
+}
+
 /** Same aggregation as the footer row, for an arbitrary subset of project rows (e.g. one region group). */
 export function computeCapitalPlanningGridTotals(
   rows: readonly CapitalPlanningSampleRow[],
@@ -433,6 +485,8 @@ export function computeCapitalPlanningGridTotals(
     programQuarterLeafSlots?: readonly ProgramQuarterLeafSlot[];
     /** Comparison snapshot planned-amount multiplier vs grid values (prototype). */
     forecastComparisonPlannedMultiplier?: number;
+    /** Comparison value source: snapshot multiplier or actuals. */
+    forecastComparisonMode?: "snapshot" | "actuals" | null;
   }
 ): {
   planned: number;
@@ -592,6 +646,11 @@ export function computeCapitalPlanningGridTotals(
       const slots = args.programQuarterLeafSlots;
       if (slots && slots.length > 0) {
         const mult = args.forecastComparisonPlannedMultiplier ?? 1;
+        const comparisonMode = args.forecastComparisonMode ?? "snapshot";
+        const actualMonthAmounts =
+          comparisonMode === "actuals"
+            ? maskActualsToCompletedProgramMonths(getProgramJobToDateMonthAllocations(row), args.anchorDate)
+            : null;
         for (const slot of slots) {
           switch (slot.kind) {
             case "fy_year": {
@@ -602,6 +661,56 @@ export function computeCapitalPlanningGridTotals(
                 false,
                 row.id,
                 ["q", "y", slot.fyIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fy_cmp_current": {
+              const comp = effectiveMonthAmounts
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              forecastSums[ci] += resolvedForecastCellDollars(
+                false,
+                row.id,
+                ["q", "y", slot.fyIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fy_cmp_snapshot": {
+              const base = effectiveMonthAmounts
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              const actualComp = (actualMonthAmounts ?? [])
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              const comp = comparisonMode === "actuals" ? actualComp : base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                false,
+                row.id,
+                ["q", "y", "cmp", slot.fyIndex, "snap"],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fy_cmp_variance": {
+              const base = effectiveMonthAmounts
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              const actualComp = (actualMonthAmounts ?? [])
+                .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                .reduce((a, b) => a + b, 0);
+              const comp = comparisonMode === "actuals" ? base - actualComp : base - base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                false,
+                row.id,
+                ["q", "y", "cmp", slot.fyIndex, "var"],
                 forecastBasisKey,
                 comp,
                 args.forecastOverrides
@@ -623,6 +732,81 @@ export function computeCapitalPlanningGridTotals(
                 fq1ReadOnly,
                 row.id,
                 ["q", "r", slot.fqIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fq_cmp_current": {
+              const fyYearForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+              const fq1ReadOnly =
+                slot.fqIndex % 4 === 0 &&
+                fyYearForFq !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyYearForFq, args.anchorDate, args.fiscalYearStartMonth);
+              const comp = sumProgramForecastQuarterMonthAmounts(
+                effectiveMonthAmounts,
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              forecastSums[ci] += resolvedForecastCellDollars(
+                fq1ReadOnly,
+                row.id,
+                ["q", "r", slot.fqIndex],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fq_cmp_snapshot": {
+              const fyYearForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+              const fq1ReadOnly =
+                slot.fqIndex % 4 === 0 &&
+                fyYearForFq !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyYearForFq, args.anchorDate, args.fiscalYearStartMonth);
+              const base = sumProgramForecastQuarterMonthAmounts(
+                effectiveMonthAmounts,
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              const actualComp = sumProgramForecastQuarterMonthAmounts(
+                actualMonthAmounts ?? [],
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              const comp = comparisonMode === "actuals" ? actualComp : base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                fq1ReadOnly,
+                row.id,
+                ["q", "r", "cmp", slot.fqIndex, "snap"],
+                forecastBasisKey,
+                comp,
+                args.forecastOverrides
+              );
+              break;
+            }
+            case "fq_cmp_variance": {
+              const fyYearForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+              const fq1ReadOnly =
+                slot.fqIndex % 4 === 0 &&
+                fyYearForFq !== undefined &&
+                isProgramForecastFq1PeriodEnded(fyYearForFq, args.anchorDate, args.fiscalYearStartMonth);
+              const base = sumProgramForecastQuarterMonthAmounts(
+                effectiveMonthAmounts,
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              const actualComp = sumProgramForecastQuarterMonthAmounts(
+                actualMonthAmounts ?? [],
+                slot.fqIndex,
+                args.fiscalYearStartMonth
+              );
+              const comp = comparisonMode === "actuals" ? base - actualComp : base - base * mult;
+              forecastSums[ci] += resolvedForecastCellDollars(
+                fq1ReadOnly,
+                row.id,
+                ["q", "r", "cmp", slot.fqIndex, "var"],
                 forecastBasisKey,
                 comp,
                 args.forecastOverrides
@@ -656,7 +840,8 @@ export function computeCapitalPlanningGridTotals(
                 fyForMonth !== undefined &&
                 isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
               const base = effectiveMonthAmounts[monthIdx] ?? 0;
-              const comp = base * mult;
+              const actualComp = (actualMonthAmounts ?? [])[monthIdx] ?? 0;
+              const comp = comparisonMode === "actuals" ? actualComp : base * mult;
               forecastSums[ci] += resolvedForecastCellDollars(
                 monthFq1ReadOnly,
                 row.id,
@@ -675,7 +860,8 @@ export function computeCapitalPlanningGridTotals(
                 fyForMonth !== undefined &&
                 isProgramForecastFq1PeriodEnded(fyForMonth, args.anchorDate, args.fiscalYearStartMonth);
               const base = effectiveMonthAmounts[monthIdx] ?? 0;
-              const comp = base - base * mult;
+              const actualComp = (actualMonthAmounts ?? [])[monthIdx] ?? 0;
+              const comp = comparisonMode === "actuals" ? base - actualComp : base - base * mult;
               forecastSums[ci] += resolvedForecastCellDollars(
                 monthFq1ReadOnly,
                 row.id,
@@ -941,6 +1127,109 @@ function TargetBudgetExceededHoverPopover({
             {...getFloatingProps()}
           >
             <TargetBudgetExceededPopoverBody targetBudget={targetBudget} forecastTotal={forecastTotal} />
+          </div>
+        </FloatingPortal>
+      ) : null}
+    </>
+  );
+}
+
+function TargetBudgetSetPopoverBody({
+  targetBudget,
+  forecastTotal,
+  totalLabel = "Forecasted Total",
+}: {
+  targetBudget: number;
+  forecastTotal: number;
+  totalLabel?: string;
+}) {
+  const t = Number.isFinite(targetBudget) ? targetBudget : 0;
+  const f = Number.isFinite(forecastTotal) ? forecastTotal : 0;
+  const remaining = Math.max(0, t - f);
+  const remainingPct = t > 0 ? (remaining / t) * 100 : 0;
+
+  return (
+    <div className="capital-planning-target-budget-exceeded-popover-panel">
+      <div className="capital-planning-gantt-bar-popover-title">Target Budget Set</div>
+      <div className="capital-planning-gantt-bar-popover-rows">
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">Target Budget:</span>
+          <span className="capital-planning-gantt-bar-popover-value">{formatLumpSumUsdInput(t)}</span>
+        </div>
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">{totalLabel}:</span>
+          <span className="capital-planning-gantt-bar-popover-value">{formatLumpSumUsdInput(f)}</span>
+        </div>
+      </div>
+      <div className="capital-planning-target-budget-exceeded-popover-divider" aria-hidden />
+      <div className="capital-planning-gantt-bar-popover-rows">
+        <div className="capital-planning-gantt-bar-popover-row">
+          <span className="capital-planning-gantt-bar-popover-label">Amount Available:</span>
+          <div className="capital-planning-target-budget-exceeded-popover-variance-values">
+            <span
+              className="capital-planning-target-budget-exceeded-popover-variance-pct capital-planning-target-budget-set-popover-variance-pct"
+            >
+              {remainingPct.toFixed(1)}%
+            </span>
+            <span className="capital-planning-target-budget-exceeded-popover-variance-usd">
+              {formatLumpSumUsdInput(remaining)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TargetBudgetSetHoverPopover({
+  targetBudget,
+  forecastTotal,
+  totalLabel,
+  children,
+}: {
+  targetBudget: number;
+  forecastTotal: number;
+  totalLabel?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: "top",
+    middleware: [offset(10), flip(), shift({ padding: 12, limiter: limitShift() })],
+    whileElementsMounted: autoUpdate,
+  });
+  const hover = useHover(context, { move: false, delay: { open: 0, close: 120 } });
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover]);
+
+  return (
+    <>
+      <span
+        ref={refs.setReference}
+        {...getReferenceProps()}
+        role="img"
+        aria-label="Target budget set. Hover for remaining budget details."
+        style={{ display: "inline-flex", flexShrink: 0, lineHeight: 0, cursor: "default" }}
+      >
+        {children}
+      </span>
+      {open ? (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            className="capital-planning-target-budget-exceeded-popover-floating"
+            style={{
+              ...floatingStyles,
+              zIndex: 20000,
+            }}
+            {...getFloatingProps()}
+          >
+            <TargetBudgetSetPopoverBody
+              targetBudget={targetBudget}
+              forecastTotal={forecastTotal}
+              totalLabel={totalLabel}
+            />
           </div>
         </FloatingPortal>
       ) : null}
@@ -1833,21 +2122,29 @@ function ForecastFyGroupHeaderCell({
   onToggle,
   readOnly = false,
   showComparisonSnapshotButton = false,
+  className,
+  style,
+  rowSpan,
 }: {
   expanded: boolean;
   fyLabel: string;
   colSpan?: number;
+  rowSpan?: number;
   onToggle: () => void;
   /** When true, omit expand/collapse control (e.g. Gantt month program layout). */
   readOnly?: boolean;
   /** Comparison snapshot: only at the forecast master row when the block is still collapsed. */
   showComparisonSnapshotButton?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }) {
   const labelOnly = fyLabel.trim() === "";
   return (
     <Table.HeaderCell
+      {...(rowSpan !== undefined ? { rowSpan } : {})}
       {...(colSpan !== undefined ? { colSpan } : {})}
-      className="capital-planning-forecast-cost-group"
+      className={["capital-planning-forecast-cost-group", className ?? ""].filter(Boolean).join(" ")}
+      style={style}
     >
       <div
         className={[
@@ -1902,6 +2199,9 @@ function ForecastPeriodHeaderCell({
   fqMonthWidthHeader = false,
   readOnly = false,
   showComparisonSnapshotButton = false,
+  comparisonSnapshotActive = false,
+  comparisonSnapshotAriaLabel = "Comparison snapshot",
+  onComparisonSnapshotToggle,
   rowSpan,
 }: {
   label: string;
@@ -1915,6 +2215,9 @@ function ForecastPeriodHeaderCell({
   readOnly?: boolean;
   /** Comparison snapshot: icon button between the period label and the expand/collapse control. */
   showComparisonSnapshotButton?: boolean;
+  comparisonSnapshotActive?: boolean;
+  comparisonSnapshotAriaLabel?: string;
+  onComparisonSnapshotToggle?: () => void;
   rowSpan?: number;
 }) {
   return (
@@ -1935,12 +2238,19 @@ function ForecastPeriodHeaderCell({
             type="button"
             variant="tertiary"
             size="sm"
-            className="capital-planning-forecast-fy-toggle"
+            className={[
+              "capital-planning-forecast-fy-toggle",
+              comparisonSnapshotActive ? "capital-planning-forecast-month-comparison-toggle--active" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             icon={<SquareStackDashed size="sm" />}
-            aria-label="Comparison snapshot"
+            aria-label={comparisonSnapshotAriaLabel}
+            aria-pressed={comparisonSnapshotActive}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              onComparisonSnapshotToggle?.();
             }}
           />
         ) : null}
@@ -1970,10 +2280,16 @@ function ComparisonMonthSubheaderTrailingIcon({ kind }: { kind: ProgramQuarterLe
   const iconProps = { size: "sm" as const, "aria-hidden": true as const };
   switch (kind) {
     case "cmp_current":
+    case "fq_cmp_current":
+    case "fy_cmp_current":
       return <Circle {...iconProps} />;
     case "cmp_snapshot":
+    case "fq_cmp_snapshot":
+    case "fy_cmp_snapshot":
       return <CircleStroked {...iconProps} />;
     case "cmp_variance":
+    case "fq_cmp_variance":
+    case "fy_cmp_variance":
       return <CirclesOpacity {...iconProps} />;
     default:
       return null;
@@ -2036,6 +2352,8 @@ export interface CapitalPlanningSmartGridProps {
    * @default true
    */
   renderCriteriaColumnsInGrid?: boolean;
+  /** Capital Plan: start prioritization criteria columns collapsed behind a single column. */
+  criteriaColumnsCollapsedByDefault?: boolean;
   /** Prioritization tab: apply title case to visible column header labels. */
   titleCaseHeaders?: boolean;
   /** Now / Next / Future portfolio route — Next enables region → campus → building hierarchy when grouped by region. */
@@ -2072,6 +2390,8 @@ export interface CapitalPlanningSmartGridProps {
   forecastPrimarySnapshotHeaderLabel?: string;
   /** Planned-amount multiplier for the comparison snapshot column vs grid values (prototype). */
   forecastComparisonPlannedMultiplier?: number;
+  /** Comparison source mode: snapshot multipliers or actuals. */
+  forecastComparisonMode?: "snapshot" | "actuals" | null;
 }
 
 /**
@@ -2110,6 +2430,7 @@ export function CapitalPlanningSmartGrid({
   onCriteriaValueChange,
   showPrioritizationScoreColumn = false,
   renderCriteriaColumnsInGrid = true,
+  criteriaColumnsCollapsedByDefault = false,
   titleCaseHeaders = false,
   programPageVariant = "default",
   readOnly = false,
@@ -2125,6 +2446,7 @@ export function CapitalPlanningSmartGrid({
   forecastComparisonSnapshotLabel = null,
   forecastPrimarySnapshotHeaderLabel = "Current",
   forecastComparisonPlannedMultiplier = 1,
+  forecastComparisonMode = "snapshot",
 }: CapitalPlanningSmartGridProps) {
   const formatHeaderLabel = useCallback(
     (text: string) => (titleCaseHeaders ? toHeaderTitleCase(text) : text),
@@ -2143,18 +2465,54 @@ export function CapitalPlanningSmartGrid({
     rowId: string;
     nextCurve: ProjectCurve;
   } | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
+  const [prioritizationColumnsCollapsed, setPrioritizationColumnsCollapsed] = useState(
+    criteriaColumnsCollapsedByDefault
+  );
+  useEffect(() => {
+    setPrioritizationColumnsCollapsed(criteriaColumnsCollapsedByDefault);
+  }, [criteriaColumnsCollapsedByDefault]);
+  const togglePrioritizationColumnsCollapsed = useCallback((nextCollapsed: boolean) => {
+    const tableEl = tableContainerRef.current;
+    const scrollHost =
+      (tableEl?.closest("[data-tab-scroll-root]") as HTMLElement | null) ??
+      tableEl;
+    const priorScrollLeft = scrollHost?.scrollLeft ?? 0;
+    const priorScrollTop = scrollHost?.scrollTop ?? 0;
+    setPrioritizationColumnsCollapsed(nextCollapsed);
+    requestAnimationFrame(() => {
+      if (!scrollHost) return;
+      scrollHost.scrollLeft = priorScrollLeft;
+      scrollHost.scrollTop = priorScrollTop;
+      requestAnimationFrame(() => {
+        scrollHost.scrollLeft = priorScrollLeft;
+        scrollHost.scrollTop = priorScrollTop;
+      });
+    });
+  }, []);
   const openForecastManualCurveModal = useCallback((rowId: string) => {
     setForecastManualCurveModalRowId(rowId);
   }, []);
+  const getDefaultFyYearSectionExpandedForPageVariant = useCallback(
+    () =>
+      programPageVariant === "target_budget_2_0"
+        ? Array.from({ length: CAPITAL_PLANNING_PROGRAM_FY_COUNT }, () => false)
+        : getDefaultFyYearSectionExpanded(),
+    [programPageVariant]
+  );
   const [forecastColumnsExpanded, setForecastColumnsExpanded] = useState(true);
   /** Per FQ (across all program FYs): collapsed → rollup column; expanded → three month columns. */
   const [fqCollapsed, setFqCollapsed] = useState<boolean[]>(getDefaultForecastFqCollapsed);
   /** Per program FY: when false, that year collapses to a single forecast column (not the whole grid). */
   const [fyYearSectionExpanded, setFyYearSectionExpanded] = useState<boolean[]>(
-    getDefaultFyYearSectionExpanded
+    getDefaultFyYearSectionExpandedForPageVariant
   );
   /** Global month indices (program horizon) with comparison Current / Snapshot / Variance columns open. */
   const [comparisonMonthDetailOpen, setComparisonMonthDetailOpen] = useState<Set<number>>(() => new Set());
+  /** Program quarter indices with comparison Current / Snapshot / Variance columns open. */
+  const [comparisonQuarterDetailOpen, setComparisonQuarterDetailOpen] = useState<Set<number>>(() => new Set());
+  /** Program fiscal year indices with comparison Current / Snapshot / Variance columns open. */
+  const [comparisonYearDetailOpen, setComparisonYearDetailOpen] = useState<Set<number>>(() => new Set());
   const [forecastOverrides, setForecastOverrides] = useState<Record<string, number>>({});
   const [mvpAggregateBudgetOverrides, setMvpAggregateBudgetOverrides] = useState<Record<string, number>>({});
   const [mvpAggregateForecastBudgetOverrides, setMvpAggregateForecastBudgetOverrides] = useState<Record<string, number>>(
@@ -2191,6 +2549,23 @@ export function CapitalPlanningSmartGrid({
       const prevCurve = row?.curve ?? "";
       clearForecastOverridesForRow(rowId, setForecastOverrides);
       setCurvesByRowId((prev) => ({ ...prev, [rowId]: nextCurve }));
+      if (nextCurve === "Project Forecast") {
+        const seeded = seededProjectForecastDateRange(rowId);
+        setRowDatesById((prev) => {
+          const cur = prev[rowId] ?? {
+            startDate: row?.startDate ?? seeded.startDate,
+            endDate: row?.endDate ?? seeded.endDate,
+          };
+          return {
+            ...prev,
+            [rowId]: {
+              ...cur,
+              startDate: seeded.startDate,
+              endDate: seeded.endDate,
+            },
+          };
+        });
+      }
       setCurveChangeFromManual(null);
       if (row && onCapitalPlanningChange && prevCurve !== nextCurve) {
         onCapitalPlanningChange({
@@ -2202,7 +2577,13 @@ export function CapitalPlanningSmartGrid({
         });
       }
     },
-    [filteredProjectRows, onCapitalPlanningChange, setCurvesByRowId, setForecastOverrides]
+    [
+      filteredProjectRows,
+      onCapitalPlanningChange,
+      setCurvesByRowId,
+      setForecastOverrides,
+      setRowDatesById,
+    ]
   );
 
   /** Live row from the grid so Planned Amount (incl. HLBI saved total) matches the tearsheet — state snapshot can go stale. */
@@ -2270,9 +2651,9 @@ export function CapitalPlanningSmartGrid({
   useEffect(() => {
     if (forecastGranularity === "quarter" && !ganttFlatForecast) {
       setFqCollapsed(getDefaultForecastFqCollapsed());
-      setFyYearSectionExpanded(getDefaultFyYearSectionExpanded());
+      setFyYearSectionExpanded(getDefaultFyYearSectionExpandedForPageVariant());
     }
-  }, [forecastGranularity, ganttFlatForecast]);
+  }, [forecastGranularity, ganttFlatForecast, getDefaultFyYearSectionExpandedForPageVariant]);
 
   const programQuarterGridUsesLeafSlots = useMemo(
     () =>
@@ -2301,6 +2682,8 @@ export function CapitalPlanningSmartGrid({
       fqCollapsed,
       fiscalYearStartMonth,
       comparisonMonthDetailOpen,
+      comparisonQuarterDetailOpen,
+      comparisonYearDetailOpen,
       comparisonFeatureEnabled: forecastComparisonSnapshotLabel != null,
     });
   }, [
@@ -2309,12 +2692,16 @@ export function CapitalPlanningSmartGrid({
     fqCollapsed,
     fiscalYearStartMonth,
     comparisonMonthDetailOpen,
+    comparisonQuarterDetailOpen,
+    comparisonYearDetailOpen,
     forecastComparisonSnapshotLabel,
   ]);
 
   useEffect(() => {
     if (forecastComparisonSnapshotLabel == null) {
       setComparisonMonthDetailOpen(new Set());
+      setComparisonQuarterDetailOpen(new Set());
+      setComparisonYearDetailOpen(new Set());
     }
   }, [forecastComparisonSnapshotLabel]);
 
@@ -2393,18 +2780,27 @@ export function CapitalPlanningSmartGrid({
   const baselineVisibleColumnCount = 1 + countVisibleBaselineDataColumns(columnVisibility);
   const forecastLeafColumnsForTable = show.forecast ? leafColumnCountForTable : 0;
   const criteriaDefsForScoreCount = criteriaColumns?.length ?? 0;
-  const criteriaColumnsRenderedCount = renderCriteriaColumnsInGrid ? criteriaDefsForScoreCount : 0;
+  const prioritizationCriteriaGroupEnabled = renderCriteriaColumnsInGrid && criteriaDefsForScoreCount > 0;
+  const prioritizationCriteriaGroupExpanded =
+    prioritizationCriteriaGroupEnabled && !prioritizationColumnsCollapsed;
+  const prioritizationTwoRowHeader = prioritizationCriteriaGroupExpanded;
+  const prioritizationHeaderColSpan =
+    criteriaDefsForScoreCount + (showPrioritizationScoreColumn ? 1 : 0);
   const embeddedPrioritizationScoreColumnCount =
-    showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? 1 : 0;
+    showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && prioritizationCriteriaGroupExpanded ? 1 : 0;
+  const criteriaColumnsRenderedCount = prioritizationCriteriaGroupExpanded ? criteriaDefsForScoreCount : 0;
+  const collapsedPrioritizationColumnCount =
+    prioritizationCriteriaGroupEnabled && !prioritizationCriteriaGroupExpanded ? 1 : 0;
   const tableColumnCount =
     baselineVisibleColumnCount +
     criteriaColumnsRenderedCount +
+    collapsedPrioritizationColumnCount +
     embeddedPrioritizationScoreColumnCount +
     forecastLeafColumnsForTable;
 
   /** Sticky right only when score is the last column (prioritization view has no forecast). */
   const prioritizationScoreStickyColClass =
-    showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid && !show.forecast
+    showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && prioritizationCriteriaGroupExpanded && !show.forecast
       ? "capital-planning-col-sticky-prioritization-score"
       : undefined;
 
@@ -2422,7 +2818,7 @@ export function CapitalPlanningSmartGrid({
 
   const renderProjectCriteriaCells = useCallback(
     (projectRowId: string) => {
-      if (!renderCriteriaColumnsInGrid || !criteriaColumns?.length) return null;
+      if (!prioritizationCriteriaGroupExpanded || !criteriaColumns?.length) return null;
       const vals = criteriaValuesByProjectId?.[projectRowId] ?? {};
       return criteriaColumns.map((col) => {
         const val = vals[col.criterionId] ?? "";
@@ -2499,7 +2895,7 @@ export function CapitalPlanningSmartGrid({
         );
       });
     },
-    [criteriaColumns, criteriaValuesByProjectId, onCriteriaValueChange, readOnly, renderCriteriaColumnsInGrid]
+    [criteriaColumns, criteriaValuesByProjectId, onCriteriaValueChange, prioritizationCriteriaGroupExpanded, readOnly]
   );
 
   const normalizedGroupByDimensions = useMemo((): CapitalPlanningGroupBy[] => {
@@ -2609,9 +3005,19 @@ export function CapitalPlanningSmartGrid({
   const showSelectionCheckboxes = programPageVariant === "future";
 
   const showDynamicMultiHierarchy = normalizedGroupByDimensions.length >= 2;
+  const curveOptionsForPage = useMemo<readonly ProjectCurve[]>(
+    () =>
+      programPageVariant === "future" ||
+      programPageVariant === "ga" ||
+      programPageVariant === "target_budget_2_0"
+        ? [...CURVE_OPTIONS, "Project Forecast"]
+        : CURVE_OPTIONS,
+    [programPageVariant]
+  );
 
   const showRegionCampusBuildingHierarchy =
     (programPageVariant === "next" ||
+      programPageVariant === "ga" ||
       programPageVariant === "target_budget" ||
       programPageVariant === "target_budget_2_0") &&
     normalizedGroupByDimensions.length === 1 &&
@@ -2760,13 +3166,67 @@ export function CapitalPlanningSmartGrid({
   const comparisonMonthSubHeaderRow =
     programQuarterGridUsesLeafSlots &&
     forecastComparisonSnapshotLabel != null &&
-    comparisonMonthDetailOpen.size > 0;
+    Boolean(
+      programQuarterLeafSlots?.some(
+        (slot) =>
+          slot.kind === "cmp_current" ||
+          slot.kind === "cmp_snapshot" ||
+          slot.kind === "cmp_variance" ||
+          slot.kind === "fq_cmp_current" ||
+          slot.kind === "fq_cmp_snapshot" ||
+          slot.kind === "fq_cmp_variance" ||
+          slot.kind === "fy_cmp_current" ||
+          slot.kind === "fy_cmp_snapshot" ||
+          slot.kind === "fy_cmp_variance"
+      )
+    );
 
+  const isActualsComparison = forecastComparisonMode === "actuals";
   /** Sub-leaf headers under each expanded month — non-empty even if parent passes empty/undefined labels. */
-  const comparisonMonthSubheaderPrimaryLabel =
-    (forecastPrimarySnapshotHeaderLabel ?? "").trim() || "Current";
+  const comparisonMonthSubheaderPrimaryLabel = isActualsComparison
+    ? "Forecasted"
+    : (forecastPrimarySnapshotHeaderLabel ?? "").trim() || "Current";
   const comparisonMonthSubheaderSnapshotLabel =
     (forecastComparisonSnapshotLabel ?? "").trim() || "Snapshot";
+  const currentMonthStartMs = useMemo(
+    () => new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1).getTime(),
+    [anchorDate]
+  );
+  const isProgramMonthCompleted = useCallback(
+    (monthIdx: number) => {
+      const rng = programGridMonthFirstLastDay(monthIdx);
+      if (!rng) return false;
+      const monthStartMs = new Date(rng.start.getFullYear(), rng.start.getMonth(), 1).getTime();
+      return monthStartMs < currentMonthStartMs;
+    },
+    [currentMonthStartMs]
+  );
+  const isProgramQuarterCompleted = useCallback(
+    (fyIndex: number, fqInFy: number) => {
+      const fqMonthIdx = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, fiscalYearStartMonth);
+      return fqMonthIdx.every((monthIdx) => isProgramMonthCompleted(monthIdx));
+    },
+    [fiscalYearStartMonth, isProgramMonthCompleted]
+  );
+  const isProgramYearCompleted = useCallback(
+    (fyIndex: number) => {
+      for (let fqInFy = 0; fqInFy < 4; fqInFy++) {
+        if (!isProgramQuarterCompleted(fyIndex, fqInFy)) return false;
+      }
+      return true;
+    },
+    [isProgramQuarterCompleted]
+  );
+  const isProgramYearStarted = useCallback(
+    (fyIndex: number) => {
+      for (let fqInFy = 0; fqInFy < 4; fqInFy++) {
+        const fqMonthIdx = fiscalQuarterMonthGlobalIndices(fyIndex, fqInFy, fiscalYearStartMonth);
+        if (fqMonthIdx.some((monthIdx) => isProgramMonthCompleted(monthIdx))) return true;
+      }
+      return false;
+    },
+    [fiscalYearStartMonth, isProgramMonthCompleted]
+  );
 
   /** Must match the number of `<Table.HeaderRow>` rows under the forecast so month/FQ cells align after the baseline columns. */
   const headerBaseRowSpan = useMemo(() => {
@@ -2791,6 +3251,7 @@ export function CapitalPlanningSmartGrid({
     forecastColumnsExpanded,
     comparisonMonthSubHeaderRow,
   ]);
+  const headerBaselineRowSpan = prioritizationTwoRowHeader ? headerBaseRowSpan + 1 : headerBaseRowSpan;
 
   const toggleComparisonMonthDetail = useCallback((monthIdx: number) => {
     setComparisonMonthDetailOpen((prev) => {
@@ -2801,18 +3262,38 @@ export function CapitalPlanningSmartGrid({
     });
   }, []);
 
+  const toggleComparisonQuarterDetail = useCallback((fqIndex: number) => {
+    setComparisonQuarterDetailOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(fqIndex)) next.delete(fqIndex);
+      else next.add(fqIndex);
+      return next;
+    });
+  }, []);
+
+  const toggleComparisonYearDetail = useCallback((fyIndex: number) => {
+    setComparisonYearDetailOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(fyIndex)) next.delete(fyIndex);
+      else next.add(fyIndex);
+      return next;
+    });
+  }, []);
+
   const handleForecastBlockToggle = useCallback(() => {
     setForecastColumnsExpanded((v) => {
       const next = !v;
       if (next) {
         setFqCollapsed(getDefaultForecastFqCollapsed());
-        setFyYearSectionExpanded(getDefaultFyYearSectionExpanded());
+        setFyYearSectionExpanded(getDefaultFyYearSectionExpandedForPageVariant());
       } else {
         setComparisonMonthDetailOpen(new Set());
+        setComparisonQuarterDetailOpen(new Set());
+        setComparisonYearDetailOpen(new Set());
       }
       return next;
     });
-  }, []);
+  }, [getDefaultFyYearSectionExpandedForPageVariant]);
 
   const forecastExpandedForTotals = ganttFlatForecast || forecastColumnsExpanded;
 
@@ -2835,6 +3316,7 @@ export function CapitalPlanningSmartGrid({
       fiscalYearStartMonth,
       programQuarterLeafSlots: programQuarterLeafSlots ?? undefined,
       forecastComparisonPlannedMultiplier,
+      forecastComparisonMode,
     }),
     [
       show.forecast,
@@ -2854,6 +3336,7 @@ export function CapitalPlanningSmartGrid({
       fiscalYearStartMonth,
       programQuarterLeafSlots,
       forecastComparisonPlannedMultiplier,
+      forecastComparisonMode,
     ]
   );
 
@@ -3097,6 +3580,43 @@ export function CapitalPlanningSmartGrid({
                       <Table.TextCell />
                     </Table.BodyCell>
                   ) : null}
+                  {prioritizationCriteriaGroupEnabled ? (
+                    prioritizationCriteriaGroupExpanded ? (
+                      <>
+                        {criteriaColumns?.map((col) => (
+                          <Table.BodyCell
+                            key={`region-group-${aggregateKey}-crit-${col.criterionId}`}
+                            className={CRITERIA_COLUMN_CLASS}
+                            style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
+                          >
+                            <Table.TextCell />
+                          </Table.BodyCell>
+                        )) ?? null}
+                        {showPrioritizationScoreColumn ? (
+                          <Table.BodyCell
+                            key={`region-group-${aggregateKey}-prio-score`}
+                            className={prioritizationScoreStickyColClass}
+                          >
+                            <Table.TextCell />
+                          </Table.BodyCell>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Table.BodyCell className={CRITERIA_COLUMN_CLASS} style={{ ...CRITERIA_COLUMN_BOX_STYLE }}>
+                        <Table.TextCell />
+                      </Table.BodyCell>
+                    )
+                  ) : null}
+                  {isBaselineColumnVisible("projectType", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("projectType", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
+                  {isBaselineColumnVisible("department", columnVisibility) ? (
+                    <Table.BodyCell className={baselineCellClasses("department", columnVisibility)}>
+                      <Table.TextCell />
+                    </Table.BodyCell>
+                  ) : null}
                   {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
                     <Table.BodyCell className={baselineCellClasses("prioritizationScore", columnVisibility)}>
                       <Table.TextCell />
@@ -3187,25 +3707,6 @@ export function CapitalPlanningSmartGrid({
                       )}
                     </Table.BodyCell>
                   ) : null}
-                  {renderCriteriaColumnsInGrid
-                    ? criteriaColumns?.map((col) => (
-                        <Table.BodyCell
-                          key={`region-group-${aggregateKey}-crit-${col.criterionId}`}
-                          className={CRITERIA_COLUMN_CLASS}
-                          style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
-                        >
-                          <Table.TextCell />
-                        </Table.BodyCell>
-                      )) ?? null
-                    : null}
-                  {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-                    <Table.BodyCell
-                      key={`region-group-${aggregateKey}-prio-score`}
-                      className={prioritizationScoreStickyColClass}
-                    >
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  ) : null}
                   {show.forecast
                     ? aggregateGroupTotals.forecast.map((v, idx) => {
                         const forecastSlot = programQuarterLeafSlots?.[idx];
@@ -3217,6 +3718,14 @@ export function CapitalPlanningSmartGrid({
                                 forecastSlot.kind === "cmp_snapshot" ||
                                 forecastSlot.kind === "cmp_variance"
                               ? [forecastSlot.monthIdx]
+                              : forecastSlot.kind === "fq_cmp_current" ||
+                                  forecastSlot.kind === "fq_cmp_snapshot" ||
+                                  forecastSlot.kind === "fq_cmp_variance"
+                                ? fiscalQuarterMonthGlobalIndices(
+                                    Math.floor(forecastSlot.fqIndex / 4),
+                                    forecastSlot.fqIndex % 4,
+                                    fiscalYearStartMonth
+                                  )
                               : forecastSlot.kind === "fq_rollup"
                                 ? fiscalQuarterMonthGlobalIndices(
                                     Math.floor(forecastSlot.fqIndex / 4),
@@ -3225,7 +3734,19 @@ export function CapitalPlanningSmartGrid({
                                   )
                                 : Array.from({ length: 12 }, (_, monthOffset) => forecastSlot.fyIndex * 12 + monthOffset);
                         const targetBudgetKeys = targetBudgetCollapseKeysForAggregateRow(aggregateKey);
-                        const leafMeta = leafForecastColumnMetasForTargetBudget.find((m) => m.columnIndex === idx);
+                        const leafMeta =
+                          leafForecastColumnMetasForTargetBudget.find((m) => m.columnIndex === idx) ??
+                          (planView === "gantt" && forecastGranularity === "year"
+                            ? {
+                                columnIndex: idx,
+                                granularity: "fiscal_year" as const,
+                                fyIndex: idx,
+                                fyYear:
+                                  CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[idx] ??
+                                  CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[0]!,
+                                periodLabel: forecastLeafLabels[idx] ?? `FY ${idx + 1}`,
+                              }
+                            : undefined);
                         const targetCap = readTargetBudgetOverrideForCell(
                           targetBudgetKeys,
                           leafMeta,
@@ -3233,7 +3754,30 @@ export function CapitalPlanningSmartGrid({
                           targetBudgetForecastOverrides ?? {},
                           fiscalYearStartMonth
                         );
-                        const showTargetVarianceWarning = targetCap > 0 && v > targetCap;
+                        const isYearLevelTargetBudgetColumn =
+                          forecastSlot?.kind === "fy_year" ||
+                          leafMeta?.granularity === "fiscal_year" ||
+                          (planView === "gantt" && forecastGranularity === "year");
+                        const showTargetVarianceWarning =
+                          targetCap > 0 &&
+                          v > targetCap &&
+                          programPageVariant !== "mvp" &&
+                          programPageVariant !== "next" &&
+                          (programPageVariant !== "target_budget_2_0" || isYearLevelTargetBudgetColumn);
+                        const isVarianceComparisonSlot =
+                          forecastSlot?.kind === "cmp_variance" ||
+                          forecastSlot?.kind === "fq_cmp_variance" ||
+                          forecastSlot?.kind === "fy_cmp_variance";
+                        const isActualsComparisonValueSlot =
+                          forecastSlot?.kind === "cmp_snapshot" ||
+                          forecastSlot?.kind === "fq_cmp_snapshot" ||
+                          forecastSlot?.kind === "fy_cmp_snapshot";
+                        const showTargetBudgetSnapshotIcon =
+                          programPageVariant === "target_budget_2_0" &&
+                          isYearLevelTargetBudgetColumn &&
+                          targetCap > 0 &&
+                          (!isActualsComparison || !isVarianceComparisonSlot) &&
+                          !showTargetVarianceWarning;
                         return (
                           <Table.BodyCell
                             key={`region-group-${aggregateKey}-fc-${idx}`}
@@ -3341,6 +3885,22 @@ export function CapitalPlanningSmartGrid({
                                         style={{ color: colors.yellow40, display: "block" }}
                                       />
                                     </TargetBudgetExceededHoverPopover>
+                                  ) : showTargetBudgetSnapshotIcon ? (
+                                    <TargetBudgetSetHoverPopover
+                                      targetBudget={targetCap}
+                                      forecastTotal={v}
+                                      totalLabel={
+                                        isActualsComparison && isActualsComparisonValueSlot
+                                          ? "Actuals Total"
+                                          : "Forecasted Total"
+                                      }
+                                    >
+                                      <LocationEnabled
+                                        size="sm"
+                                        aria-hidden
+                                        style={{ color: "var(--color-icon-secondary)", display: "block" }}
+                                      />
+                                    </TargetBudgetSetHoverPopover>
                                   ) : null}
                                 </div>
                                 <div className="capital-planning-target-budget-forecast-warning-cell-inner__amount">
@@ -3373,6 +3933,9 @@ export function CapitalPlanningSmartGrid({
                 anchorDate,
                 fiscalYearStartMonth
               );
+              const actualMonthAmounts = isActualsComparison
+                ? maskActualsToCompletedProgramMonths(getProgramJobToDateMonthAllocations(row), anchorDate)
+                : getProgramJobToDateMonthAllocations(row);
               const plannedSource = plannedAmountSourceByRowId[row.id];
               const isLumpSumPlannedAmount = isLumpSumPlannedAmountSource(plannedSource);
               const isHighLevelBudgetItemsPlannedAmount =
@@ -3782,6 +4345,47 @@ export function CapitalPlanningSmartGrid({
                     )}
                   </Table.BodyCell>
                 ) : null}
+                {prioritizationCriteriaGroupEnabled ? (
+                  prioritizationCriteriaGroupExpanded ? (
+                    <>
+                      {renderProjectCriteriaCells(row.id)}
+                      {showPrioritizationScoreColumn ? (
+                        <Table.BodyCell
+                          key={`${row.id}-prio-score`}
+                          className={prioritizationScoreStickyColClass}
+                          style={{ verticalAlign: "middle" }}
+                        >
+                          <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
+                            {formatPrioritizationScorePercent(
+                              prioritizationScoresByRowId?.[row.id] ?? null
+                            )}
+                          </Typography>
+                        </Table.BodyCell>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Table.BodyCell
+                      className={CRITERIA_COLUMN_CLASS}
+                      style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle", textAlign: "right" }}
+                    >
+                      <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {formatPrioritizationScorePercent(
+                          prioritizationScoresByRowId?.[row.id] ?? null
+                        )}
+                      </Typography>
+                    </Table.BodyCell>
+                  )
+                ) : null}
+                {isBaselineColumnVisible("projectType", columnVisibility) ? (
+                  <Table.BodyCell className={baselineCellClasses("projectType", columnVisibility)}>
+                    <Table.TextCell>{prototypeProjectTypeFromName(row.project)}</Table.TextCell>
+                  </Table.BodyCell>
+                ) : null}
+                {isBaselineColumnVisible("department", columnVisibility) ? (
+                  <Table.BodyCell className={baselineCellClasses("department", columnVisibility)}>
+                    <Table.TextCell>{prototypeDepartmentFromName(row.project)}</Table.TextCell>
+                  </Table.BodyCell>
+                ) : null}
                 {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
                   <Table.BodyCell
                     className={baselineCellClasses("prioritizationScore", columnVisibility)}
@@ -3812,7 +4416,7 @@ export function CapitalPlanningSmartGrid({
                 {isBaselineColumnVisible("startDate", columnVisibility) ? (
                 <Table.BodyCell className={baselineCellClasses("startDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
                   <Table.DateSelectCell
-                    disabled={readOnly}
+                    disabled={readOnly || row.curve === "Project Forecast"}
                     value={optionalIsoStringToDate(row.startDate)}
                     onChange={(d) => {
                       const prevStart = row.startDate?.trim() ?? "";
@@ -3865,7 +4469,7 @@ export function CapitalPlanningSmartGrid({
                 {isBaselineColumnVisible("endDate", columnVisibility) ? (
                 <Table.BodyCell className={baselineCellClasses("endDate", columnVisibility)} style={{ verticalAlign: "middle" }}>
                   <Table.DateSelectCell
-                    disabled={readOnly}
+                    disabled={readOnly || row.curve === "Project Forecast"}
                     value={optionalIsoStringToDate(row.endDate)}
                     onChange={(d) => {
                       const prevEnd = row.endDate?.trim() ?? "";
@@ -3948,9 +4552,29 @@ export function CapitalPlanningSmartGrid({
                           });
                         }
                         setCurvesByRowId((prev) => ({ ...prev, [row.id]: next }));
+                        if (next === "Project Forecast") {
+                          const seeded = seededProjectForecastDateRange(row.id);
+                          setRowDatesById((prev) => {
+                            const cur = prev[row.id] ?? {
+                              startDate: row.startDate,
+                              endDate: row.endDate,
+                            };
+                            return {
+                              ...prev,
+                              [row.id]: {
+                                ...cur,
+                                startDate: seeded.startDate,
+                                endDate: seeded.endDate,
+                              },
+                            };
+                          });
+                        }
                       }}
                     >
-                      {CURVE_OPTIONS.map((c) => (
+                      {(row.originalBudget != null || row.revisedBudget != null
+                        ? curveOptionsForPage
+                        : curveOptionsForPage.filter((c) => c !== "Project Forecast")
+                      ).map((c) => (
                         <Select.Option key={c} value={c} selected={row.curve === c}>
                           {c}
                         </Select.Option>
@@ -3987,20 +4611,6 @@ export function CapitalPlanningSmartGrid({
                     )}
                   </Table.TextCell>
                 </Table.BodyCell>
-                ) : null}
-                {renderProjectCriteriaCells(row.id)}
-                {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-                  <Table.BodyCell
-                    key={`${row.id}-prio-score`}
-                    className={prioritizationScoreStickyColClass}
-                    style={{ verticalAlign: "middle" }}
-                  >
-                    <Typography intent="small" weight="semibold" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {formatPrioritizationScorePercent(
-                        prioritizationScoresByRowId?.[row.id] ?? null
-                      )}
-                    </Typography>
-                  </Table.BodyCell>
                 ) : null}
                 {show.forecast ? (
                   ganttFlatForecast ? (
@@ -4073,6 +4683,68 @@ export function CapitalPlanningSmartGrid({
                           </Table.BodyCell>
                         );
                       }
+                      if (slot.kind === "fy_cmp_current") {
+                        const base = effectiveMonthAmounts
+                          .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                          .reduce((a, b) => a + b, 0);
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fycmp-cur-${slot.fyIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "y", slot.fyIndex]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={base}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly}
+                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} current for ${row.project}`}
+                            />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "fy_cmp_snapshot") {
+                        const base = effectiveMonthAmounts
+                          .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                          .reduce((a, b) => a + b, 0);
+                        const snap = isActualsComparison
+                          ? actualMonthAmounts
+                              .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                              .reduce((a, b) => a + b, 0)
+                          : base * forecastComparisonPlannedMultiplier;
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fycmp-snap-${slot.fyIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <Table.CurrencyCell value={snap} />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "fy_cmp_variance") {
+                        const base = effectiveMonthAmounts
+                          .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                          .reduce((a, b) => a + b, 0);
+                        const varianceD = isActualsComparison
+                          ? base -
+                            actualMonthAmounts
+                              .slice(slot.fyIndex * 12, slot.fyIndex * 12 + 12)
+                              .reduce((a, b) => a + b, 0)
+                          : base - base * forecastComparisonPlannedMultiplier;
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fycmp-var-${slot.fyIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <Table.CurrencyCell value={varianceD} />
+                          </Table.BodyCell>
+                        );
+                      }
                       if (slot.kind === "fq_rollup") {
                         const fqLabel = forecastFqLabels[slot.fqIndex];
                         const fyForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
@@ -4106,6 +4778,84 @@ export function CapitalPlanningSmartGrid({
                           </Table.BodyCell>
                         );
                       }
+                      if (slot.kind === "fq_cmp_current") {
+                        const fqLabel = forecastFqLabels[slot.fqIndex];
+                        const fyForFq = CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS[Math.floor(slot.fqIndex / 4)];
+                        const fq1ReadOnly =
+                          slot.fqIndex % 4 === 0 &&
+                          fyForFq !== undefined &&
+                          isProgramForecastFq1PeriodEnded(fyForFq, anchorDate, fiscalYearStartMonth);
+                        const base = sumProgramForecastQuarterMonthAmounts(
+                          effectiveMonthAmounts,
+                          slot.fqIndex,
+                          fiscalYearStartMonth
+                        );
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fqcmp-cur-${slot.fqIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <ForecastEditableNumberCell
+                              rowId={row.id}
+                              parts={["q", "r", slot.fqIndex]}
+                              forecastBasisKey={forecastBasisKey}
+                              computedValue={base}
+                              overrides={forecastOverridesForDisplay}
+                              setOverrides={setForecastOverrides}
+                              curveBlocksInlineForecastEdit={row.curve !== "Manual"}
+                              onCurveBlocksInlineForecastEdit={() => openForecastManualCurveModal(row.id)}
+                              onExpandProjectDatesForManualForecast={manualForecastDateExpand}
+                              readOnly={readOnly || fq1ReadOnly}
+                              ariaLabel={`Forecast ${programForecastFyLabel(fyYear)} ${fqLabel} current for ${row.project}`}
+                            />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "fq_cmp_snapshot") {
+                        const base = sumProgramForecastQuarterMonthAmounts(
+                          effectiveMonthAmounts,
+                          slot.fqIndex,
+                          fiscalYearStartMonth
+                        );
+                        const snap = isActualsComparison
+                          ? sumProgramForecastQuarterMonthAmounts(
+                              actualMonthAmounts,
+                              slot.fqIndex,
+                              fiscalYearStartMonth
+                            )
+                          : base * forecastComparisonPlannedMultiplier;
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fqcmp-snap-${slot.fqIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <Table.CurrencyCell value={snap} />
+                          </Table.BodyCell>
+                        );
+                      }
+                      if (slot.kind === "fq_cmp_variance") {
+                        const base = sumProgramForecastQuarterMonthAmounts(
+                          effectiveMonthAmounts,
+                          slot.fqIndex,
+                          fiscalYearStartMonth
+                        );
+                        const varianceD = isActualsComparison
+                          ? base -
+                            sumProgramForecastQuarterMonthAmounts(
+                              actualMonthAmounts,
+                              slot.fqIndex,
+                              fiscalYearStartMonth
+                            )
+                          : base - base * forecastComparisonPlannedMultiplier;
+                        return (
+                          <Table.BodyCell
+                            key={`${row.id}-pq-slot-${slotIndex}-fqcmp-var-${slot.fqIndex}`}
+                            className="capital-planning-forecast-fq-rollup-cell"
+                          >
+                            <Table.CurrencyCell value={varianceD} />
+                          </Table.BodyCell>
+                        );
+                      }
                       const monthIdx = slot.monthIdx;
                       const fyForMonth = programFiscalYearForGlobalMonthIndex(monthIdx);
                       const monthFq1ReadOnly =
@@ -4136,7 +4886,9 @@ export function CapitalPlanningSmartGrid({
                         );
                       }
                       if (slot.kind === "cmp_snapshot") {
-                        const snap = base * forecastComparisonPlannedMultiplier;
+                        const snap = isActualsComparison
+                          ? actualMonthAmounts[monthIdx] ?? 0
+                          : base * forecastComparisonPlannedMultiplier;
                         return (
                           <Table.BodyCell
                             key={`${row.id}-pq-slot-${slotIndex}-snap-${monthIdx}`}
@@ -4146,7 +4898,9 @@ export function CapitalPlanningSmartGrid({
                           </Table.BodyCell>
                         );
                       }
-                      const varianceD = base - base * forecastComparisonPlannedMultiplier;
+                      const varianceD = isActualsComparison
+                        ? base - (actualMonthAmounts[monthIdx] ?? 0)
+                        : base - base * forecastComparisonPlannedMultiplier;
                       return (
                         <Table.BodyCell
                           key={`${row.id}-pq-slot-${slotIndex}-var-${monthIdx}`}
@@ -4326,6 +5080,7 @@ export function CapitalPlanningSmartGrid({
   return (
     <>
     <Table.Container
+      ref={tableContainerRef}
       className={[
         "capital-planning-table-scroll",
         showSelectionCheckboxes ? "" : "capital-planning-no-row-selection",
@@ -4342,7 +5097,7 @@ export function CapitalPlanningSmartGrid({
       <Table>
         <Table.Header>
           <Table.HeaderRow>
-            <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("project", columnVisibility)}>
+            <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("project", columnVisibility)}>
               <div className="capital-planning-project-header-inner">
                 <span className="capital-planning-project-checkbox-slot">
                   {showSelectionCheckboxes ? (
@@ -4397,7 +5152,7 @@ export function CapitalPlanningSmartGrid({
             </Table.HeaderCell>
             {isBaselineColumnVisible("projectDescription", columnVisibility) ? (
               <Table.HeaderCell
-                rowSpan={headerBaseRowSpan}
+                rowSpan={headerBaselineRowSpan}
                 className={baselineCellClasses("projectDescription", columnVisibility)}
               >
                 <Typography intent="small" weight="semibold" as="span">
@@ -4407,7 +5162,7 @@ export function CapitalPlanningSmartGrid({
             ) : null}
             {isBaselineColumnVisible("estimatedBudget", columnVisibility) ? (
               <Table.HeaderCell
-                rowSpan={headerBaseRowSpan}
+                rowSpan={headerBaselineRowSpan}
                 className={baselineCellClasses("estimatedBudget", columnVisibility)}
               >
                 <Tooltip
@@ -4433,7 +5188,7 @@ export function CapitalPlanningSmartGrid({
             ) : null}
             {isBaselineColumnVisible("prioritizationStatus", columnVisibility) ? (
               <Table.HeaderCell
-                rowSpan={headerBaseRowSpan}
+                rowSpan={headerBaselineRowSpan}
                 className={baselineCellClasses("prioritizationStatus", columnVisibility)}
               >
                 <Typography intent="small" weight="semibold" as="span">
@@ -4442,7 +5197,7 @@ export function CapitalPlanningSmartGrid({
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("plannedAmount", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("plannedAmount", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("plannedAmount", columnVisibility)}>
                 <Tooltip
                   trigger="hover"
                   placement="top"
@@ -4465,18 +5220,51 @@ export function CapitalPlanningSmartGrid({
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("status", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("status", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("status", columnVisibility)}>
                 {formatHeaderLabel("Stage")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("projectPriority", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("projectPriority", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("projectPriority", columnVisibility)}>
                 {formatHeaderLabel("Priority")}
+              </Table.HeaderCell>
+            ) : null}
+            {prioritizationCriteriaGroupEnabled ? (
+              prioritizationCriteriaGroupExpanded ? (
+                <ForecastFyGroupHeaderCell
+                  expanded={true}
+                  fyLabel={formatHeaderLabel("Prioritization")}
+                  colSpan={prioritizationHeaderColSpan}
+                  onToggle={() => togglePrioritizationColumnsCollapsed(true)}
+                  readOnly={readOnly}
+                  className={CRITERIA_COLUMN_CLASS}
+                />
+              ) : (
+                <ForecastFyGroupHeaderCell
+                  expanded={false}
+                  fyLabel={formatHeaderLabel("Prioritization")}
+                  rowSpan={headerBaselineRowSpan}
+                  colSpan={1}
+                  onToggle={() => togglePrioritizationColumnsCollapsed(false)}
+                  readOnly={readOnly}
+                  className={CRITERIA_COLUMN_CLASS}
+                  style={{ ...CRITERIA_COLUMN_BOX_STYLE }}
+                />
+              )
+            ) : null}
+            {isBaselineColumnVisible("projectType", columnVisibility) ? (
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("projectType", columnVisibility)}>
+                {formatHeaderLabel("Project Type")}
+              </Table.HeaderCell>
+            ) : null}
+            {isBaselineColumnVisible("department", columnVisibility) ? (
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("department", columnVisibility)}>
+                {formatHeaderLabel("Department")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
               <Table.HeaderCell
-                rowSpan={headerBaseRowSpan}
+                rowSpan={headerBaselineRowSpan}
                 className={baselineCellClasses("prioritizationScore", columnVisibility)}
               >
                 <Typography intent="small" weight="semibold" as="span">
@@ -4485,12 +5273,12 @@ export function CapitalPlanningSmartGrid({
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("originalBudget", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("originalBudget", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("originalBudget", columnVisibility)}>
                 {formatHeaderLabel("Original Budget")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("revisedBudget", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("revisedBudget", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("revisedBudget", columnVisibility)}>
                 <Tooltip
                   trigger="hover"
                   placement="top"
@@ -4513,7 +5301,7 @@ export function CapitalPlanningSmartGrid({
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("jobToDate", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("jobToDate", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("jobToDate", columnVisibility)}>
                 <Tooltip
                   trigger="hover"
                   placement="top"
@@ -4536,22 +5324,22 @@ export function CapitalPlanningSmartGrid({
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("startDate", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("startDate", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("startDate", columnVisibility)}>
                 {formatHeaderLabel("Start Date")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("endDate", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("endDate", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("endDate", columnVisibility)}>
                 {formatHeaderLabel("End Date")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("curve", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("curve", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("curve", columnVisibility)}>
                 {formatHeaderLabel("Curve")}
               </Table.HeaderCell>
             ) : null}
             {isBaselineColumnVisible("remaining", columnVisibility) ? (
-              <Table.HeaderCell rowSpan={headerBaseRowSpan} className={baselineCellClasses("remaining", columnVisibility)}>
+              <Table.HeaderCell rowSpan={headerBaselineRowSpan} className={baselineCellClasses("remaining", columnVisibility)}>
                 <Tooltip
                   trigger="hover"
                   placement="top"
@@ -4571,55 +5359,6 @@ export function CapitalPlanningSmartGrid({
                     {formatHeaderLabel("Remaining")}
                   </span>
                 </Tooltip>
-              </Table.HeaderCell>
-            ) : null}
-            {renderCriteriaColumnsInGrid
-              ? criteriaColumns?.map((col) => {
-                  const criteriaDescription = col.description.trim();
-                  const labelEl = (
-                    <Typography intent="small" weight="semibold" as="span">
-                      {formatHeaderLabel(col.label)}
-                    </Typography>
-                  );
-                  return (
-                    <Table.HeaderCell
-                      key={`criteria-h-${col.criterionId}`}
-                      rowSpan={headerBaseRowSpan}
-                      className={CRITERIA_COLUMN_CLASS}
-                      style={{ ...CRITERIA_COLUMN_BOX_STYLE }}
-                    >
-                      {criteriaDescription ? (
-                        <Tooltip
-                          trigger="hover"
-                          placement="top"
-                          overlay={<Tooltip.Content>{criteriaDescription}</Tooltip.Content>}
-                        >
-                          <span
-                            style={{
-                              display: "inline-block",
-                              width: "100%",
-                              cursor: "help",
-                            }}
-                          >
-                            {labelEl}
-                          </span>
-                        </Tooltip>
-                      ) : (
-                        labelEl
-                      )}
-                    </Table.HeaderCell>
-                  );
-                }) ?? null
-              : null}
-            {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-              <Table.HeaderCell
-                key="prioritization-score-h"
-                rowSpan={headerBaseRowSpan}
-                className={prioritizationScoreStickyColClass}
-              >
-                <Typography intent="small" weight="semibold" as="span">
-                  {formatHeaderLabel("Prioritization Score")}
-                </Typography>
               </Table.HeaderCell>
             ) : null}
             {show.forecast && !ganttFlatForecast && !(forecastGranularity === "quarter" && forecastColumnsExpanded) ? (
@@ -4666,6 +5405,62 @@ export function CapitalPlanningSmartGrid({
                 ))
               : null}
           </Table.HeaderRow>
+          {prioritizationTwoRowHeader ? (
+            <Table.HeaderRow>
+              {criteriaColumns?.map((col) => {
+                const criteriaDescription = col.description.trim();
+                const labelEl = (
+                  <Typography intent="small" weight="semibold" as="span">
+                    {toHeaderTitleCase(col.label)}
+                  </Typography>
+                );
+                return (
+                  <Table.HeaderCell
+                    key={`criteria-subheader-h-${col.criterionId}`}
+                    rowSpan={headerBaseRowSpan}
+                    className={CRITERIA_COLUMN_CLASS}
+                    style={{ ...CRITERIA_COLUMN_BOX_STYLE }}
+                  >
+                    {criteriaDescription ? (
+                      <Tooltip
+                        trigger="hover"
+                        placement="top"
+                        overlay={<Tooltip.Content>{criteriaDescription}</Tooltip.Content>}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            width: "100%",
+                            cursor: "help",
+                          }}
+                        >
+                          {labelEl}
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      labelEl
+                    )}
+                  </Table.HeaderCell>
+                );
+              }) ?? null}
+              {showPrioritizationScoreColumn ? (
+                <Table.HeaderCell
+                  key="prioritization-score-subheader-h"
+                  rowSpan={headerBaseRowSpan}
+                  className={[
+                    "capital-planning-col-prioritization-group-score",
+                    prioritizationScoreStickyColClass ?? "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <Typography intent="small" weight="semibold" as="span">
+                    {formatHeaderLabel("Prioritization Score")}
+                  </Typography>
+                </Table.HeaderCell>
+              ) : null}
+            </Table.HeaderRow>
+          ) : null}
           {show.forecast && ganttQuarterYearBands ? (
             <Table.HeaderRow>
               {CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((_fyYear, fyIndex) =>
@@ -4724,17 +5519,32 @@ export function CapitalPlanningSmartGrid({
                       <span className="capital-planning-forecast-fy-subheader-label">
                         {programForecastFyLabel(fyYear)}
                       </span>
-                      {showComparisonForecastHeaderRow && !fyYearSectionExpanded[fyIndex] ? (
+                      {showComparisonForecastHeaderRow &&
+                      !fyYearSectionExpanded[fyIndex] &&
+                      (!isActualsComparison || isProgramYearStarted(fyIndex)) ? (
                         <Button
                           type="button"
                           variant="tertiary"
                           size="sm"
-                          className="capital-planning-forecast-fy-toggle"
+                          className={[
+                            "capital-planning-forecast-fy-toggle",
+                            comparisonYearDetailOpen.has(fyIndex)
+                              ? "capital-planning-forecast-month-comparison-toggle--active"
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
                           icon={<SquareStackDashed size="sm" />}
-                          aria-label="Comparison snapshot"
+                          aria-label={
+                            comparisonYearDetailOpen.has(fyIndex)
+                              ? "Collapse yearly snapshot comparison columns"
+                              : "Expand yearly snapshot comparison columns"
+                          }
+                          aria-pressed={comparisonYearDetailOpen.has(fyIndex)}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            toggleComparisonYearDetail(fyIndex);
                           }}
                         />
                       ) : null}
@@ -4801,9 +5611,12 @@ export function CapitalPlanningSmartGrid({
               forecastGranularity === "quarter" || ganttProgramMonthLayout ? (
                 CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((fyYear, fyIndex) => {
                   if (!ganttProgramMonthLayout && !fyYearSectionExpanded[fyIndex]) {
+                    const fyComparisonOpen =
+                      showComparisonForecastHeaderRow && comparisonYearDetailOpen.has(fyIndex);
                     return [
                       <Table.HeaderCell
                         key={`forecast-fq-fy-collapsed-${fyYear}`}
+                        colSpan={fyComparisonOpen ? 3 : 1}
                         className={[
                           "capital-planning-forecast-period-header",
                           "capital-planning-forecast-period-header--fq-month-width",
@@ -4830,6 +5643,10 @@ export function CapitalPlanningSmartGrid({
                         showComparisonSnapshotButton={false}
                       />
                     ) : (
+                      (() => {
+                        const quarterComparisonOpen =
+                          showComparisonForecastHeaderRow && fqCollapsed[i] && comparisonQuarterDetailOpen.has(i);
+                        return (
                       <ForecastPeriodHeaderCell
                         key={`forecast-fq-${i}-${label}-${fyYear}`}
                         label={label}
@@ -4857,9 +5674,19 @@ export function CapitalPlanningSmartGrid({
                         showComparisonSnapshotButton={
                           showComparisonForecastHeaderRow &&
                           fyYearSectionExpanded[fyIndex] &&
-                          fqCollapsed[i]
+                          fqCollapsed[i] &&
+                          (!isActualsComparison || isProgramQuarterCompleted(fyIndex, fqInFy))
                         }
+                        comparisonSnapshotActive={quarterComparisonOpen}
+                        comparisonSnapshotAriaLabel={
+                          quarterComparisonOpen
+                            ? "Collapse quarterly snapshot comparison columns"
+                            : "Expand quarterly snapshot comparison columns"
+                        }
+                        onComparisonSnapshotToggle={() => toggleComparisonQuarterDetail(i)}
                       />
+                        );
+                      })()
                     );
                   });
                 })
@@ -4956,10 +5783,13 @@ export function CapitalPlanningSmartGrid({
                 ) : (
                 CAPITAL_PLANNING_PROGRAM_FISCAL_YEARS.flatMap((fyYear, fyIndex) => {
                   if (!fyYearSectionExpanded[fyIndex]) {
+                    const fyComparisonOpen =
+                      showComparisonForecastHeaderRow && comparisonYearDetailOpen.has(fyIndex);
                     return [
                       <th
                         key={`forecast-month-fy-collapsed-${fyYear}`}
-                        rowSpan={comparisonMonthSubHeaderRow ? 2 : undefined}
+                        rowSpan={comparisonMonthSubHeaderRow && !fyComparisonOpen ? 2 : undefined}
+                        colSpan={fyComparisonOpen ? 3 : 1}
                         className={[
                           "capital-planning-forecast-fq-rollup-header",
                           showComparisonForecastHeaderRow
@@ -4982,11 +5812,16 @@ export function CapitalPlanningSmartGrid({
                       fqInFy,
                       fiscalYearStartMonth
                     );
+                    const fqComparisonOpen =
+                      showComparisonForecastHeaderRow &&
+                      fqCollapsed[fqIndex] &&
+                      comparisonQuarterDetailOpen.has(fqIndex);
                     return fqCollapsed[fqIndex]
                       ? [
-                          <th
+                          <Table.HeaderCell
                             key={`forecast-fq-rollup-h-${fqIndex}`}
-                            rowSpan={comparisonMonthSubHeaderRow ? 2 : undefined}
+                            rowSpan={comparisonMonthSubHeaderRow && !fqComparisonOpen ? 2 : undefined}
+                            colSpan={fqComparisonOpen ? 3 : 1}
                             className={[
                               "capital-planning-forecast-fq-rollup-header",
                               showComparisonForecastHeaderRow
@@ -4999,7 +5834,7 @@ export function CapitalPlanningSmartGrid({
                             aria-hidden
                           >
                             {"\u00a0"}
-                          </th>,
+                          </Table.HeaderCell>,
                         ]
                       : ([0, 1, 2] as const).map((k) => {
                           const monthIdx = fqMonthIndices[k]!;
@@ -5027,7 +5862,9 @@ export function CapitalPlanningSmartGrid({
                             >
                               <div className="capital-planning-forecast-month-header-inner">
                                 <span className="capital-planning-forecast-month-header-label">{label}</span>
-                                {showComparisonForecastHeaderRow && !fqCollapsed[fqIndex] ? (
+                                {showComparisonForecastHeaderRow &&
+                                !fqCollapsed[fqIndex] &&
+                                (!isActualsComparison || isProgramMonthCompleted(monthIdx)) ? (
                                   <Button
                                     type="button"
                                     variant="tertiary"
@@ -5082,18 +5919,25 @@ export function CapitalPlanningSmartGrid({
                 {programQuarterLeafSlots.map((slot, slotIndex) => {
                   const subLabel = (() => {
                     switch (slot.kind) {
-                      case "fy_year":
-                      case "fq_rollup":
-                      case "month_single":
-                        return null;
                       case "cmp_current":
+                      case "fq_cmp_current":
+                      case "fy_cmp_current":
                         return formatHeaderLabel(comparisonMonthSubheaderPrimaryLabel);
                       case "cmp_snapshot":
+                      case "fq_cmp_snapshot":
+                      case "fy_cmp_snapshot":
                         return formatHeaderLabel(comparisonMonthSubheaderSnapshotLabel);
                       case "cmp_variance":
+                      case "fq_cmp_variance":
+                      case "fy_cmp_variance":
                         return formatHeaderLabel("Variance");
+                      default:
+                        return null;
                     }
                   })();
+                  if (subLabel == null) {
+                    return null;
+                  }
                   return (
                     <Table.HeaderCell
                       key={`forecast-cmp-sub-${slotIndex}-${slot.kind}-${
@@ -5103,7 +5947,13 @@ export function CapitalPlanningSmartGrid({
                         "capital-planning-forecast-month-comparison-subheader",
                         slot.kind === "cmp_current" ||
                         slot.kind === "cmp_snapshot" ||
-                        slot.kind === "cmp_variance"
+                        slot.kind === "cmp_variance" ||
+                        slot.kind === "fq_cmp_current" ||
+                        slot.kind === "fq_cmp_snapshot" ||
+                        slot.kind === "fq_cmp_variance" ||
+                        slot.kind === "fy_cmp_current" ||
+                        slot.kind === "fy_cmp_snapshot" ||
+                        slot.kind === "fy_cmp_variance"
                           ? "capital-planning-forecast-month-comparison-subheader--labeled"
                           : "",
                       ]
@@ -5111,23 +5961,19 @@ export function CapitalPlanningSmartGrid({
                         .join(" ")}
                       scope="col"
                     >
-                      {subLabel != null ? (
-                        <div className="capital-planning-forecast-month-comparison-subheader-inner">
-                          <Typography
-                            intent="small"
-                            weight="semibold"
-                            as="span"
-                            className="capital-planning-forecast-month-comparison-subheader-label"
-                          >
-                            {subLabel}
-                          </Typography>
-                          <span className="capital-planning-forecast-month-comparison-subheader-icon">
-                            <ComparisonMonthSubheaderTrailingIcon kind={slot.kind} />
-                          </span>
-                        </div>
-                      ) : (
-                        "\u00a0"
-                      )}
+                      <div className="capital-planning-forecast-month-comparison-subheader-inner">
+                        <Typography
+                          intent="small"
+                          weight="semibold"
+                          as="span"
+                          className="capital-planning-forecast-month-comparison-subheader-label"
+                        >
+                          {subLabel}
+                        </Typography>
+                        <span className="capital-planning-forecast-month-comparison-subheader-icon">
+                          <ComparisonMonthSubheaderTrailingIcon kind={slot.kind} />
+                        </span>
+                      </div>
                     </Table.HeaderCell>
                   );
                 })}
@@ -5249,6 +6095,40 @@ export function CapitalPlanningSmartGrid({
                   <Table.TextCell />
                 </Table.BodyCell>
               ) : null}
+              {prioritizationCriteriaGroupEnabled ? (
+                prioritizationCriteriaGroupExpanded ? (
+                  <>
+                    {criteriaColumns?.map((col) => (
+                      <Table.BodyCell
+                        key={`footer-crit-${col.criterionId}`}
+                        className={CRITERIA_COLUMN_CLASS}
+                        style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
+                      >
+                        <Table.TextCell />
+                      </Table.BodyCell>
+                    )) ?? null}
+                    {showPrioritizationScoreColumn ? (
+                      <Table.BodyCell key="footer-prio-score" className={prioritizationScoreStickyColClass}>
+                        <Table.TextCell />
+                      </Table.BodyCell>
+                    ) : null}
+                  </>
+                ) : (
+                  <Table.BodyCell className={CRITERIA_COLUMN_CLASS} style={{ ...CRITERIA_COLUMN_BOX_STYLE }}>
+                    <Table.TextCell />
+                  </Table.BodyCell>
+                )
+              ) : null}
+              {isBaselineColumnVisible("projectType", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("projectType", columnVisibility)}>
+                  <Table.TextCell />
+                </Table.BodyCell>
+              ) : null}
+              {isBaselineColumnVisible("department", columnVisibility) ? (
+                <Table.BodyCell className={baselineCellClasses("department", columnVisibility)}>
+                  <Table.TextCell />
+                </Table.BodyCell>
+              ) : null}
               {isBaselineColumnVisible("prioritizationScore", columnVisibility) ? (
                 <Table.BodyCell className={baselineCellClasses("prioritizationScore", columnVisibility)}>
                   <Table.TextCell />
@@ -5307,22 +6187,6 @@ export function CapitalPlanningSmartGrid({
                   >
                     {formatRemainingToForecastCurrency(footerTotals.remaining)}
                   </Table.TextCell>
-                </Table.BodyCell>
-              ) : null}
-              {renderCriteriaColumnsInGrid
-                ? criteriaColumns?.map((col) => (
-                    <Table.BodyCell
-                      key={`footer-crit-${col.criterionId}`}
-                      className={CRITERIA_COLUMN_CLASS}
-                      style={{ ...CRITERIA_COLUMN_BOX_STYLE, verticalAlign: "middle" }}
-                    >
-                      <Table.TextCell />
-                    </Table.BodyCell>
-                  )) ?? null
-                : null}
-              {showPrioritizationScoreColumn && criteriaDefsForScoreCount > 0 && renderCriteriaColumnsInGrid ? (
-                <Table.BodyCell key="footer-prio-score" className={prioritizationScoreStickyColClass}>
-                  <Table.TextCell />
                 </Table.BodyCell>
               ) : null}
               {show.forecast

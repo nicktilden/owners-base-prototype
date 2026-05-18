@@ -180,87 +180,74 @@ export const OWNER_OPERATOR_CRITERIA_BUILDER_SEED: readonly CriteriaBuilderRow[]
   {
     id: "cb-oo-financial",
     criteria: "Risk-adjusted return",
-    description:
-      "Underwritten NPV, IRR, or simple payback after reserves, leasing costs, and contingency—how the project clears your capital hurdle.",
+    description: "How strong the expected return is after accounting for cost, timeline, and delivery risk.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-financial-o1", label: "Below hurdle / negative", value: "2" },
-      { id: "cb-oo-financial-o2", label: "At hurdle with thin margin", value: "5" },
-      { id: "cb-oo-financial-o3", label: "Comfortably clears hurdle", value: "7" },
-      { id: "cb-oo-financial-o4", label: "Top-quartile return", value: "9" },
-      { id: "cb-oo-financial-o5", label: "Exceptional / strategic premium", value: "10" },
+      { id: "cb-oo-financial-o1", label: "Low (limited return)", value: "3" },
+      { id: "cb-oo-financial-o2", label: "Medium (meets target)", value: "6" },
+      { id: "cb-oo-financial-o3", label: "High (strong return)", value: "9" },
     ],
-    scoringWeightPercent: "25",
+    scoringWeightPercent: "35",
   },
   {
     id: "cb-oo-strategic",
     criteria: "Strategic portfolio fit",
-    description:
-      "Alignment with market plan, anchor strategy, hold period, and where this asset sits in the portfolio (core vs value-add).",
+    description: "How well this project aligns with portfolio priorities, asset strategy, and long-term plans.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-strategic-o1", label: "Outside stated strategy", value: "2" },
-      { id: "cb-oo-strategic-o2", label: "Opportunistic / one-off", value: "4" },
-      { id: "cb-oo-strategic-o3", label: "Supports portfolio plan", value: "6" },
-      { id: "cb-oo-strategic-o4", label: "Priority market or asset", value: "8" },
-      { id: "cb-oo-strategic-o5", label: "Flagship / anchor initiative", value: "10" },
+      { id: "cb-oo-strategic-o1", label: "Low (weak alignment)", value: "3" },
+      { id: "cb-oo-strategic-o2", label: "Medium (some alignment)", value: "6" },
+      { id: "cb-oo-strategic-o3", label: "High (strong alignment)", value: "9" },
     ],
-    scoringWeightPercent: "20",
+    scoringWeightPercent: "30",
   },
   {
     id: "cb-oo-market-risk",
     criteria: "Market & entitlement risk",
-    description:
-      "Leasing risk, rent growth assumptions, approvals, easements, and exposure if timelines slip.",
+    description: "How much risk exists from market conditions, permitting, approvals, or entitlement timing.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-market-o1", label: "Low — entitled path, stable demand", value: "9" },
-      { id: "cb-oo-market-o2", label: "Moderate — some contingencies", value: "5" },
-      { id: "cb-oo-market-o3", label: "High — rezoning, lease-up, or volatile submarket", value: "2" },
+      { id: "cb-oo-market-o1", label: "Low risk (clear path)", value: "9" },
+      { id: "cb-oo-market-o2", label: "Medium risk (some unknowns)", value: "6" },
+      { id: "cb-oo-market-o3", label: "High risk (major unknowns)", value: "3" },
     ],
-    scoringWeightPercent: "18",
+    scoringWeightPercent: "20",
   },
   {
-    id: "cb-oo-noi",
-    criteria: "Revenue & NOI impact",
-    description:
-      "Stabilized rent roll, renewal rates, downtime, and incremental NOI or yield on cost your asset management team expects.",
+    id: "cb-oo-roi",
+    criteria: "Return on Investment",
+    description: "Expected ROI relative to required capital, factoring in payback period and value creation.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-noi-o1", label: "Limited incremental NOI", value: "3" },
-      { id: "cb-oo-noi-o2", label: "Modest uplift", value: "5" },
-      { id: "cb-oo-noi-o3", label: "Meaningful stabilized impact", value: "7" },
-      { id: "cb-oo-noi-o4", label: "Material to portfolio yield", value: "9" },
-      { id: "cb-oo-noi-o5", label: "Transformative revenue profile", value: "10" },
+      { id: "cb-oo-roi-o1", label: "Low (long payback)", value: "3" },
+      { id: "cb-oo-roi-o2", label: "Medium (moderate payback)", value: "6" },
+      { id: "cb-oo-roi-o3", label: "High (strong payback)", value: "9" },
     ],
     scoringWeightPercent: "15",
   },
   {
     id: "cb-oo-building",
-    criteria: "Building condition & compliance",
-    description:
-      "Life-safety, code, insurance, accessibility, and near-term capex exposure after the project.",
+    criteria: "Building condition",
+    description: "Current building condition and compliance needs.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-building-o1", label: "Critical deferred items", value: "2" },
-      { id: "cb-oo-building-o2", label: "Baseline maintained", value: "5" },
-      { id: "cb-oo-building-o3", label: "Modern systems; low near-term risk", value: "8" },
-      { id: "cb-oo-building-o4", label: "Materially extends useful life", value: "10" },
+      { id: "cb-oo-building-o1", label: "Low", value: "3" },
+      { id: "cb-oo-building-o2", label: "Medium", value: "6" },
+      { id: "cb-oo-building-o3", label: "High", value: "9" },
     ],
-    scoringWeightPercent: "12",
+    scoringWeightPercent: "0",
   },
   {
     id: "cb-oo-disruption",
-    criteria: "Operations & schedule disruption",
-    description:
-      "Tenant experience, revenue loss during work, parking/loading impacts, and confidence in delivery dates.",
+    criteria: "Operations disruption",
+    description: "Expected impact on day-to-day operations during execution.",
     inputType: "dropdown",
     criteriaRuleOptions: [
-      { id: "cb-oo-disruption-o1", label: "Minimal — phased or off-hours", value: "9" },
-      { id: "cb-oo-disruption-o2", label: "Manageable interruptions", value: "6" },
-      { id: "cb-oo-disruption-o3", label: "Material outage or revenue impact", value: "3" },
+      { id: "cb-oo-disruption-o1", label: "Low", value: "9" },
+      { id: "cb-oo-disruption-o2", label: "Medium", value: "6" },
+      { id: "cb-oo-disruption-o3", label: "High", value: "3" },
     ],
-    scoringWeightPercent: "10",
+    scoringWeightPercent: "0",
   },
 ];
 
@@ -430,6 +417,10 @@ export const CriteriaBuilderDataTable = forwardRef<CriteriaBuilderDataTableHandl
     const sum = sumScoringWeightPercents(rows);
     return `Total: ${formatScoringWeightTotal(sum)}%`;
   }, [rows]);
+  const scoringWeightTotalValid = useMemo(() => {
+    const sum = sumScoringWeightPercents(rows);
+    return Math.abs(sum - 100) < WEIGHT_TOTAL_TOLERANCE;
+  }, [rows]);
 
   return (
     <div style={{ minWidth: 0, width: "100%" }}>
@@ -492,7 +483,7 @@ export const CriteriaBuilderDataTable = forwardRef<CriteriaBuilderDataTableHandl
                       paddingRight: 16,
                     }}
                   >
-                    Criteria options
+                    Criteria Options
                   </Table.HeaderCell>
                   <Table.HeaderCell style={{ minWidth: 120 }}>% Weight</Table.HeaderCell>
                   <Table.HeaderCell scope="col" style={{ width: 48 }} aria-label="Delete criteria" />
@@ -637,7 +628,16 @@ export const CriteriaBuilderDataTable = forwardRef<CriteriaBuilderDataTableHandl
                   </div>
                 </Table.BodyCell>
                 <Table.BodyCell style={{ verticalAlign: "middle", padding: "10px 12px" }}>
-                  <Typography intent="body" weight="semibold" as="span">
+                  <Typography
+                    intent="body"
+                    weight="semibold"
+                    as="span"
+                    style={{
+                      color: scoringWeightTotalValid
+                        ? "var(--color-text-primary)"
+                        : "var(--color-text-error)",
+                    }}
+                  >
                     {scoringWeightTotalLabel}
                   </Typography>
                 </Table.BodyCell>
