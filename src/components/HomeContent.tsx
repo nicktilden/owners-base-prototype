@@ -1,60 +1,79 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import ReactDOM from "react-dom";
-import styled, { createGlobalStyle } from "styled-components";
-import { Button, Dropdown, Modal, ToolLandingPage, H1, Title, ToggleButton, Switch, Typography } from "@procore/core-react";
-import { Home, Plus, Filter, EllipsisVertical, Check } from "@procore/core-icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import styled from "styled-components";
+import {
+  Button,
+  MenuImperative,
+  Modal,
+  ToolLandingPage,
+  H1,
+  Title,
+  ToggleButton,
+  Switch,
+  Typography,
+} from "@procore/core-react";
+import { Home, Plus, Filter, EllipsisVertical } from "@procore/core-icons";
 import GlobalHeader from "@/components/nav/GlobalHeader";
 import AppLayout from "@/components/nav/AppLayout";
 import MyOpenItemsCard from "@/components/MyOpenItemsCard";
-import RiskScorecardCard from "@/components/RiskScorecardCard";
 import AIDailyPlannerCard from "@/components/AIDailyPlannerCard";
 import ProjectsTableCard from "@/components/ProjectsTableCard";
 import ScheduleHeatmapCard from "@/components/ScheduleHeatmapCard";
 import CostManagementTableCard from "@/components/CostManagementTableCard";
 import HubsContentLayout from "@/components/hubs/HubsContentLayout";
-import { ScheduleRiskGHubCard, ScheduleVariance2HubCard, ProjectsByStageHubCard } from "@/components/ScheduleInsightsHubCards";
+import {
+  ProjectsByPriorityHubCard,
+  ProjectsByStageHubCard,
+  ScheduleRiskGHubCard,
+  ScheduleVariance2HubCard,
+} from "@/components/ScheduleInsightsHubCards";
 import { FinancialScorecardCard, InvoicesForApprovalCard } from "@/components/FinancialHubCards";
 import {
-  ActionPlansPortfolioMatrixHubCard,
   ActionPlansTemplateAdoptionHubCard,
   ActionPlansOverdueItemsHubCard,
 } from "@/components/ActionPlansExplorationHubCards";
-import { AssetsHubCard } from "@/components/AssetsHubCard";
 import {
   APv2FullMatrixHubCard,
   APv2KpiDashboardHubCard,
   APv2ProjectCardsHubCard,
 } from "@/components/ActionPlansExploration2HubCards";
+import CapitalPlanningExplorationHubCard from "@/components/CapitalPlanningExplorationHubCard";
+import CapitalPlanSummaryHubCard from "@/components/CapitalPlanSummaryHubCard";
+import CapitalPlanByRegionHubCard from "@/components/CapitalPlanByRegionHubCard";
+import CapitalPlanningRegionalHeatmapHubCard from "@/components/CapitalPlanningRegionalHeatmapHubCard";
+import CapitalPlanningForecastIntensityHeatmapHubCard from "@/components/CapitalPlanningForecastIntensityHeatmapHubCard";
+import CapitalPlanningForecastTreemapHubCard from "@/components/CapitalPlanningForecastTreemapHubCard";
+import CapitalPlanningForecastVarianceHeatmapHubCard from "@/components/CapitalPlanningForecastVarianceHeatmapHubCard";
+import CapitalPlanningProjectFundingFlowHubCard from "@/components/CapitalPlanningProjectFundingFlowHubCard";
+import CapitalPlanningFundingAllocationByRegionHubCard from "@/components/CapitalPlanningFundingAllocationByRegionHubCard";
+import {
+  ProjectsByDepartmentHubCard,
+  ProjectsBreakdownSelectorHubCard,
+  ProjectsByProjectTypeHubCard,
+} from "@/components/CapitalPlanningBreakdownHubCards";
+import { SAMPLE_PROJECT_ROWS } from "@/components/tools/capitalPlanning/capitalPlanningData";
+import {
+  computeCapitalPlanningProgramSummaryMetrics,
+  type CapitalPlanningProgramSummaryMetrics,
+} from "@/components/tools/capitalPlanning/capitalPlanningProgramSummaryMetrics";
 import { HubFilterProvider, useHubFilters } from "@/context/HubFilterContext";
-import { useHorizon } from "@/context/HorizonContext";
-import { ReleaseTimeframe } from "@/types/features";
 import HubFilterBar from "@/components/HubFilterBar";
 import { useResetScrollOnTabChange } from "@/hooks/useResetScrollOnTabChange";
-import HealthSummaryCard from "@/components/health/cards/HealthSummaryCard";
-import TopRiskProjectsCard from "@/components/health/cards/TopRiskProjectsCard";
-import PortfolioRiskGaugeCard from "@/components/health/cards/PortfolioRiskGaugeCard";
-import HealthKPIGridCard from "@/components/health/cards/HealthKPIGridCard";
-import PortfolioRiskTableCard from "@/components/health/cards/PortfolioRiskTableCard";
 
-const tabs = ["Portfolio Performance", "My Work", "Health & Risk", "Schedule & Milestones", "Ideas Hub"] as const;
+const CapitalPlanningHubPanel = dynamic(
+  () => import("@/components/tools/CapitalPlanningContent"),
+  { ssr: false, loading: () => <p style={{ padding: 24 }}>Loading Capital Planning…</p> }
+);
+
+const tabs = [
+  "My Work",
+  "Capital Planning",
+  "Capital Planning 2.0",
+  "Cost Management",
+  "Schedule & Milestones",
+  "Action Plans",
+] as const;
 type TabName = typeof tabs[number];
-
-// Horizon timeframe for each tab. Omitted === 'now'.
-// Seed verification: "Ideas Hub" tagged 'future'.
-const TAB_TIMEFRAMES: Partial<Record<TabName, ReleaseTimeframe>> = {
-  "Ideas Hub": "future",
-};
-
-// Horizon timeframe for individual cards within a tab. Omitted === 'now'.
-// Seed verification: "Invoices for Approval" tagged 'next'.
-const CARD_TIMEFRAMES: Partial<Record<TabName, Partial<Record<string, ReleaseTimeframe>>>> = {
-  "Ideas Hub": {
-    "Invoices for Approval": "next",
-  },
-};
-
-// Default tabs that start hidden — users can toggle them on via the + menu
-const DEFAULT_HIDDEN_TABS = new Set<TabName>(["Ideas Hub"]);
 
 // ─── Custom tab bar styled to match @procore/core-react Tabs ─────────────────
 // Uses the same colors/spacing as Tabs internals so it's visually identical,
@@ -125,79 +144,43 @@ const EllipsisBtn = styled.button`
   }
 `;
 
-const ViewsMenuWrap = styled.div<{ $top: number; $left: number }>`
-  position: fixed;
-  top: ${({ $top }) => $top}px;
-  left: ${({ $left }) => $left}px;
-  z-index: 1000;
-  min-width: 220px;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  background: var(--color-surface-primary);
-  border: 1px solid var(--color-border-separator);
-  overflow: hidden;
-  padding: 4px 0;
-`;
-
-const ViewsMenuItem = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 14px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  text-align: left;
-  gap: 8px;
-
-  &:hover {
-    background: var(--color-surface-secondary);
-  }
-`;
-
-const ViewsMenuLabel = styled.span`
-  flex: 1;
-`;
-
-const CheckIconWrap = styled.span`
-  display: inline-flex;
-  align-items: center;
-  color: var(--color-text-primary);
-  width: 16px;
-  flex-shrink: 0;
-`;
-
-const AddViewBtnWrap = styled.div`
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-`;
-
-// Force min-width on the Dropdown (ellipsis) popovers rendered in the tab bar
-const TabDropdownMinWidth = createGlobalStyle`
-  [class*="StyledDropdownMenu"] {
-    min-width: 220px !important;
-    max-width: none !important;
-  }
-`;
-
 /** Card registry: the display name for each card per tab (order matches render order). */
 const TAB_CARDS: Record<TabName, string[]> = {
-  "My Work": ["My Open Items", "Projects by Stage", "Projects Table"],
-  "Health & Risk": ["Portfolio Health", "Cost Health", "Schedule Health", "Delivery Risk", "Health & Risk"],
-  "Portfolio Performance": ["Risk KPIs", "Financial Scorecard", "Schedule Variance", "Assets by Type", "Action Plans Portfolio Matrix"],
-  "Schedule & Milestones": ["Schedule Risk", "Action Plans Template", "Schedule Heatmap"],
-  "Ideas Hub": [
-    "Invoices for Approval",
+  "My Work": ["My Open Items", "AI Daily Planner", "Projects Table"],
+  "Capital Planning": [
+    "Capital Planning",
+    "Planned Cost",
+    "Regional Forecast Heatmap",
+    "Forecast Intensity Heatmap",
+    "Forecast Treemap",
+    "Forecast Variance Heatmap",
+    "Project Funding Flow",
+    "Funding Allocation by Region",
+    "Projects by Stage",
+    "Projects by Priority",
+    "Projects by Department",
+    "Projects by Project Type",
+  ],
+  "Capital Planning 2.0": [
+    "Capital Planning",
+    "Planned Cost",
+    "Capital Plan by Region",
+    "Regional Forecast Heatmap",
+    "Forecast Intensity Heatmap",
+    "Forecast Treemap",
+    "Forecast Variance Heatmap",
+    "Project Funding Flow",
+    "Funding Allocation by Region",
+  ],
+  "Cost Management": ["Financial Scorecard", "Invoices for Approval", "Cost Management Table"],
+  "Schedule & Milestones": ["Schedule Risk", "Schedule Variance", "Schedule Heatmap"],
+  "Action Plans": [
     "AP v2 Full Matrix",
-    "AI Daily Planner",
+    "Action Plans Portfolio Matrix",
+    "Template Adoption",
     "Overdue Action Items",
     "AP v2 KPI Dashboard",
     "AP v2 Project Cards",
-    "Cost Management Table",
   ],
 };
 
@@ -206,90 +189,84 @@ type HiddenCards = Record<TabName, Set<string>>;
 function makeEmptyHidden(): HiddenCards {
   return {
     "My Work": new Set(),
-    "Health & Risk": new Set(),
-    "Portfolio Performance": new Set(["Schedule Variance"]),
+    "Capital Planning": new Set(),
+    "Capital Planning 2.0": new Set(),
+    "Cost Management": new Set(),
     "Schedule & Milestones": new Set(),
-    "Ideas Hub": new Set(),
+    "Action Plans": new Set(),
   };
 }
 
 function HomeContentInner() {
-  const [activeTab, setActiveTab] = useState<TabName>("Portfolio Performance");
+  const [activeTab, setActiveTab] = useState<TabName>("My Work");
   useResetScrollOnTabChange(activeTab);
   const [filterBarOpen, setFilterBarOpen] = useState(false);
-  const { hasActiveFilters } = useHubFilters();
-  const { isVisible } = useHorizon();
+  const { hasActiveFilters, filteredSeedProjects } = useHubFilters();
+
+  // Ellipsis menu state
+  const [menuOpenTab, setMenuOpenTab] = useState<TabName | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const ellipsisBtnRefs = useRef<Partial<Record<TabName, HTMLButtonElement>>>({});
 
   // Edit view modal state
   const [editViewTab, setEditViewTab] = useState<TabName | null>(null);
   const [hiddenCards, setHiddenCards] = useState<HiddenCards>(makeEmptyHidden);
 
-  // Hub views visibility (tabs) — start with the defaults hidden
-  const [hiddenTabs, setHiddenTabs] = useState<Set<TabName>>(() => new Set(DEFAULT_HIDDEN_TABS));
+  /** Capital plan rows that match the hub filter bar (seed `projectId` ∩ filtered seed projects). */
+  const capitalPlanHubRowsForFilterBar = useMemo(() => {
+    const allowed = new Set(filteredSeedProjects.map((p) => p.id));
+    return SAMPLE_PROJECT_ROWS.filter((r) => allowed.has(r.projectId));
+  }, [filteredSeedProjects]);
 
-  // Tabs visible under current horizon and user-hidden state
-  const visibleTabs = tabs.filter(t => !hiddenTabs.has(t) && isVisible(TAB_TIMEFRAMES[t]));
+  const capitalPlanHubMetricsFromFilterBar = useMemo(
+    () => computeCapitalPlanningProgramSummaryMetrics(capitalPlanHubRowsForFilterBar),
+    [capitalPlanHubRowsForFilterBar]
+  );
 
-  // If the active tab is no longer visible (horizon changed), fall back to first visible tab
-  useEffect(() => {
-    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
-      setActiveTab(visibleTabs[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTabs.join(','), activeTab]);
-  const [viewsMenuOpen, setViewsMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const viewsMenuRef = useRef<HTMLDivElement>(null);
-  const viewsBtnRef = useRef<HTMLDivElement>(null);
+  /** When the embedded grid applies search / table filters, it overrides the filter-bar-only rollup. */
+  const [capitalPlanGridMetrics, setCapitalPlanGridMetrics] = useState<CapitalPlanningProgramSummaryMetrics | null>(null);
 
   useEffect(() => {
-    if (!viewsMenuOpen) return;
+    setCapitalPlanGridMetrics(null);
+  }, [capitalPlanHubRowsForFilterBar]);
+
+  const capitalPlanHubMetrics = capitalPlanGridMetrics ?? capitalPlanHubMetricsFromFilterBar;
+
+  const onCapitalPlanHubMetrics = useCallback((m: CapitalPlanningProgramSummaryMetrics) => {
+    setCapitalPlanGridMetrics(m);
+  }, []);
+
+  // Close dropdown on outside click or Escape
+  useEffect(() => {
+    if (!menuOpenTab) return;
     function handleClick(e: MouseEvent) {
+      const btn = ellipsisBtnRefs.current[menuOpenTab!];
       if (
-        viewsMenuRef.current && !viewsMenuRef.current.contains(e.target as Node) &&
-        viewsBtnRef.current && !viewsBtnRef.current.contains(e.target as Node)
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        btn &&
+        !btn.contains(e.target as Node)
       ) {
-        setViewsMenuOpen(false);
+        setMenuOpenTab(null);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [viewsMenuOpen]);
-
-  function openViewsMenu() {
-    if (viewsBtnRef.current) {
-      const rect = viewsBtnRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom + 6,
-        left: rect.left,
-      });
-    }
-    setViewsMenuOpen(v => !v);
-  }
-
-  function toggleTabVisibility(tab: TabName) {
-    setHiddenTabs(prev => {
-      const next = new Set(prev);
-      if (next.has(tab)) {
-        next.delete(tab);
-      } else {
-        next.add(tab);
-        // If the hidden tab was active, switch to the first visible tab
-        if (activeTab === tab) {
-          const firstVisible = tabs.find(t => !next.has(t));
-          if (firstVisible) setActiveTab(firstVisible);
-        }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpenTab(null);
+        ellipsisBtnRefs.current[menuOpenTab!]?.focus();
       }
-      return next;
-    });
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpenTab]);
+
+  function isCardVisible(tab: TabName, cardName: string) {
+    return !hiddenCards[tab].has(cardName);
   }
-
-
-  const isCardVisible = useCallback((tab: TabName, cardName: string) => {
-    if (hiddenCards[tab].has(cardName)) return false;
-    const cardTimeframe = CARD_TIMEFRAMES[tab]?.[cardName];
-    return isVisible(cardTimeframe);
-  }, [hiddenCards, isVisible]);
 
   function toggleCard(tab: TabName, cardName: string) {
     setHiddenCards((prev) => {
@@ -303,15 +280,22 @@ function HomeContentInner() {
     });
   }
 
+  function openMenu(tab: TabName, e: React.MouseEvent) {
+    e.stopPropagation();
+    setMenuOpenTab((prev) => (prev === tab ? null : tab));
+  }
+
   function handleMenuAction(action: string) {
+    const tab = menuOpenTab;
+    setMenuOpenTab(null);
+    if (!tab) return;
     if (action === "edit_view") {
-      setEditViewTab(activeTab);
+      setEditViewTab(tab);
     }
   }
 
   return (
     <>
-      <TabDropdownMinWidth />
       <GlobalHeader />
       <AppLayout>
       <ToolLandingPage>
@@ -346,7 +330,7 @@ function HomeContentInner() {
                 </ToggleButton>
                 <div style={{ width: 2, height: 20, background: "var(--color-border-separator)", borderRadius: 1, flexShrink: 0 }} />
                 <TabBarList className="Tabs__TabsList">
-                  {visibleTabs.map((tab) => {
+                  {tabs.map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <TabItem
@@ -358,61 +342,48 @@ function HomeContentInner() {
                         <TabInner $selected={isActive}>
                           {tab}
                           {isActive && (
-                            <Dropdown
-                              label=""
-                              icon={<EllipsisVertical size="sm" />}
-                              onSelect={({ item }) => handleMenuAction(item as string)}
-                              onClick={(e) => e.stopPropagation()}
-                              variant="tertiary"
-                              size="sm"
-                              style={{ width: 20, height: 20, padding: 0, minWidth: 0 }}
+                            <EllipsisBtn
+                             className="b_tertiary"
+                              ref={(el) => { if (el) ellipsisBtnRefs.current[tab] = el; }}
+                              type="button"
                               aria-label={`${tab} options`}
+                              aria-haspopup="menu"
+                              aria-expanded={menuOpenTab === tab}
+                              onClick={(e) => openMenu(tab, e)}
+                              style={{ background: menuOpenTab === tab ? "rgba(0,0,0,0.08)" : undefined }}
                             >
-                              <Dropdown.Item item="rename">Rename</Dropdown.Item>
-                              <Dropdown.Item item="edit_view">Edit</Dropdown.Item>
-                              <Dropdown.Item item="share">Share</Dropdown.Item>
-                              <Dropdown.Item item="duplicate">Duplicate</Dropdown.Item>
-                              <Dropdown.Item item="delete">Delete</Dropdown.Item>
-                            </Dropdown>
+                              <EllipsisVertical size="sm" />
+                            </EllipsisBtn>
                           )}
                         </TabInner>
+                        {menuOpenTab === tab && (
+                          <div
+                            ref={menuRef}
+                            style={{
+                              position: "absolute",
+                              top: "calc(100% + 4px)",
+                              left: 0,
+                              zIndex: 100,
+                              minWidth: 150,
+                              borderRadius: 4,
+                              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                              backgroundColor: "var(--color-surface-primary)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <MenuImperative role="menu">
+                              <MenuImperative.Item item="rename" onClick={() => handleMenuAction("rename")}>Rename</MenuImperative.Item>
+                              <MenuImperative.Item item="edit_view" onClick={() => handleMenuAction("edit_view")}>Edit Hub View</MenuImperative.Item>
+                              <MenuImperative.Item item="share" onClick={() => handleMenuAction("share")}>Share</MenuImperative.Item>
+                              <MenuImperative.Item item="duplicate" onClick={() => handleMenuAction("duplicate")}>Duplicate</MenuImperative.Item>
+                              <MenuImperative.Item item="delete" onClick={() => handleMenuAction("delete")}>Delete</MenuImperative.Item>
+                            </MenuImperative>
+                          </div>
+                        )}
                       </TabItem>
                     );
                   })}
                 </TabBarList>
-                <div style={{ width: 2, height: 20, background: 'var(--color-border-separator)', borderRadius: 1, flexShrink: 0 }} />
-                <AddViewBtnWrap ref={viewsBtnRef}>
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    icon={<Plus size="sm" />}
-                    aria-label="Manage hub views"
-                    aria-haspopup="menu"
-                    aria-expanded={viewsMenuOpen}
-                    onClick={openViewsMenu}
-                  />
-                </AddViewBtnWrap>
-                {viewsMenuOpen && typeof document !== 'undefined' && ReactDOM.createPortal(
-                  <ViewsMenuWrap ref={viewsMenuRef} role="menu" $top={menuPos.top} $left={menuPos.left}>
-                    {tabs.map(tab => {
-                      const isTabOn = !hiddenTabs.has(tab);
-                      return (
-                        <ViewsMenuItem
-                          key={tab}
-                          role="menuitemcheckbox"
-                          aria-checked={isTabOn}
-                          onClick={() => toggleTabVisibility(tab)}
-                        >
-                          <ViewsMenuLabel>{tab}</ViewsMenuLabel>
-                          <CheckIconWrap>
-                            {isTabOn && <Check size="sm" />}
-                          </CheckIconWrap>
-                        </ViewsMenuItem>
-                      );
-                    })}
-                  </ViewsMenuWrap>,
-                  document.body
-                )}
               </div>
             </ToolLandingPage.Tabs>
           </ToolLandingPage.Header>
@@ -422,17 +393,12 @@ function HomeContentInner() {
                 <HubFilterBar />
               </div>
             )}
-            {visibleTabs.length === 0 && (
-              <div style={{ padding: 48, textAlign: 'center' }}>
-                <Typography intent="body" color="gray45">No features in the current Horizon.</Typography>
-              </div>
-            )}
             {activeTab === "My Work" && (
               <HubsContentLayout>
-                {isCardVisible("My Work", "My Open Items") || isCardVisible("My Work", "Projects by Stage") ? (
-                  <HubsContentLayout.Row columnsTemplate="1fr minmax(0, 440px)">
+                {isCardVisible("My Work", "My Open Items") || isCardVisible("My Work", "AI Daily Planner") ? (
+                  <HubsContentLayout.Row>
                     {isCardVisible("My Work", "My Open Items") && <MyOpenItemsCard />}
-                    {isCardVisible("My Work", "Projects by Stage") && <ProjectsByStageHubCard />}
+                    {isCardVisible("My Work", "AI Daily Planner") && <AIDailyPlannerCard />}
                   </HubsContentLayout.Row>
                 ) : null}
                 {isCardVisible("My Work", "Projects Table") && (
@@ -442,49 +408,29 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Health & Risk" && (
+            {activeTab === "Cost Management" && (
               <HubsContentLayout>
-                <HubsContentLayout.Row variant="table">
-                  <RiskScorecardCard cardId="health-risk" defaultKPIs={['budgetVariance', 'rfisAtRisk', 'scheduleStatus', 'changeEvents']} />
-                </HubsContentLayout.Row>
-                <HubsContentLayout.Row columnsTemplate="2fr 1fr">
-                  <TopRiskProjectsCard />
-                  <PortfolioRiskGaugeCard />
-                </HubsContentLayout.Row>
-                <HubsContentLayout.Row variant="table">
-                  <PortfolioRiskTableCard />
-                </HubsContentLayout.Row>
-              </HubsContentLayout>
-            )}
-            {activeTab === "Portfolio Performance" && (
-              <HubsContentLayout>
-                {isCardVisible("Portfolio Performance", "Risk KPIs") && (
-                  <HubsContentLayout.Row>
-                    <RiskScorecardCard cardId="portfolio-performance" />
-                  </HubsContentLayout.Row>
-                )}
-                {isCardVisible("Portfolio Performance", "Financial Scorecard") || isCardVisible("Portfolio Performance", "Schedule Variance") || isCardVisible("Portfolio Performance", "Assets by Type") ? (
-                  <HubsContentLayout.Row columnsTemplate="1fr 1fr">
-                    {isCardVisible("Portfolio Performance", "Financial Scorecard") && <FinancialScorecardCard />}
-                    {isCardVisible("Portfolio Performance", "Schedule Variance") && <ScheduleVariance2HubCard />}
-                    {isCardVisible("Portfolio Performance", "Assets by Type") && <AssetsHubCard />}
+                {isCardVisible("Cost Management", "Financial Scorecard") || isCardVisible("Cost Management", "Invoices for Approval") ? (
+                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
+                    {isCardVisible("Cost Management", "Financial Scorecard") && <FinancialScorecardCard />}
+                    {isCardVisible("Cost Management", "Invoices for Approval") && <InvoicesForApprovalCard />}
                   </HubsContentLayout.Row>
                 ) : null}
-                {isCardVisible("Portfolio Performance", "Action Plans Portfolio Matrix") && (
+                {isCardVisible("Cost Management", "Cost Management Table") && (
                   <HubsContentLayout.Row variant="table">
-                    <ActionPlansPortfolioMatrixHubCard />
+                    <CostManagementTableCard />
                   </HubsContentLayout.Row>
                 )}
               </HubsContentLayout>
             )}
             {activeTab === "Schedule & Milestones" && (
               <HubsContentLayout>
-                {(isCardVisible("Schedule & Milestones", "Schedule Risk") || isCardVisible("Schedule & Milestones", "Action Plans Template")) && (
-                  <HubsContentLayout.Row columnsTemplate="1fr 1fr">
+                {isCardVisible("Schedule & Milestones", "Schedule Risk") || isCardVisible("Schedule & Milestones", "Schedule Variance") ? (
+                  <HubsContentLayout.Row>
                     {isCardVisible("Schedule & Milestones", "Schedule Risk") && <ScheduleRiskGHubCard />}
-                    {isCardVisible("Schedule & Milestones", "Action Plans Template") && <ActionPlansTemplateAdoptionHubCard />}
+                    {isCardVisible("Schedule & Milestones", "Schedule Variance") && <ScheduleVariance2HubCard />}
                   </HubsContentLayout.Row>
-                )}
+                ) : null}
                 {isCardVisible("Schedule & Milestones", "Schedule Heatmap") && (
                   <HubsContentLayout.Row variant="table">
                     <ScheduleHeatmapCard />
@@ -492,31 +438,133 @@ function HomeContentInner() {
                 )}
               </HubsContentLayout>
             )}
-            {activeTab === "Ideas Hub" && (
+            {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") && (
               <HubsContentLayout>
-                {isCardVisible("Ideas Hub", "Invoices for Approval") || isCardVisible("Ideas Hub", "AP v2 Full Matrix") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Ideas Hub", "Invoices for Approval") && <InvoicesForApprovalCard />}
-                    {isCardVisible("Ideas Hub", "AP v2 Full Matrix") && <APv2FullMatrixHubCard />}
+                {(() => {
+                  const capitalPlanningTabKey: TabName =
+                    activeTab === "Capital Planning 2.0" ? "Capital Planning 2.0" : "Capital Planning";
+                  const showCapSummary = isCardVisible(capitalPlanningTabKey, "Capital Planning");
+                  const showPlannedCost = isCardVisible(capitalPlanningTabKey, "Planned Cost");
+                  if (!showCapSummary && !showPlannedCost) return null;
+                  const both = showCapSummary && showPlannedCost;
+                  return (
+                    <HubsContentLayout.Row
+                      columnsTemplate={both ? "minmax(0, 1fr) minmax(0, 2fr)" : "minmax(0, 1fr)"}
+                    >
+                      {showCapSummary ? <CapitalPlanSummaryHubCard metrics={capitalPlanHubMetrics} /> : null}
+                      {showPlannedCost ? <CapitalPlanningExplorationHubCard /> : null}
+                    </HubsContentLayout.Row>
+                  );
+                })()}
+                {activeTab === "Capital Planning" &&
+                (isCardVisible(activeTab, "Projects by Stage") ||
+                isCardVisible(activeTab, "Projects by Priority")) ? (
+                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) minmax(0, 1fr)">
+                    {isCardVisible(activeTab, "Projects by Stage") && <ProjectsByStageHubCard />}
+                    {isCardVisible(activeTab, "Projects by Priority") && <ProjectsByPriorityHubCard />}
                   </HubsContentLayout.Row>
                 ) : null}
-                {isCardVisible("Ideas Hub", "AI Daily Planner") || isCardVisible("Ideas Hub", "Overdue Action Items") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Ideas Hub", "AI Daily Planner") && <AIDailyPlannerCard />}
-                    {isCardVisible("Ideas Hub", "Overdue Action Items") && <ActionPlansOverdueItemsHubCard />}
+                {activeTab === "Capital Planning" &&
+                (isCardVisible(activeTab, "Projects by Department") ||
+                  isCardVisible(activeTab, "Projects by Project Type")) ? (
+                  <HubsContentLayout.Row
+                    columnsTemplate="minmax(0, 1fr) minmax(0, 1fr)"
+                  >
+                    {isCardVisible(activeTab, "Projects by Department") ? (
+                      <ProjectsByDepartmentHubCard />
+                    ) : null}
+                    {isCardVisible(activeTab, "Projects by Project Type") ? (
+                      <ProjectsByProjectTypeHubCard />
+                    ) : null}
                   </HubsContentLayout.Row>
                 ) : null}
-                {isCardVisible("Ideas Hub", "AP v2 KPI Dashboard") || isCardVisible("Ideas Hub", "AP v2 Project Cards") ? (
-                  <HubsContentLayout.Row>
-                    {isCardVisible("Ideas Hub", "AP v2 KPI Dashboard") && <APv2KpiDashboardHubCard />}
-                    {isCardVisible("Ideas Hub", "AP v2 Project Cards") && <APv2ProjectCardsHubCard />}
+                {activeTab === "Capital Planning 2.0" ? (
+                  <HubsContentLayout.Row
+                    columnsTemplate={
+                      isCardVisible(activeTab, "Capital Plan by Region")
+                        ? "minmax(0, 1fr) minmax(0, 1fr)"
+                        : "minmax(0, 1fr)"
+                    }
+                  >
+                    <ProjectsBreakdownSelectorHubCard />
+                    {isCardVisible(activeTab, "Capital Plan by Region") ? (
+                      <CapitalPlanByRegionHubCard />
+                    ) : null}
                   </HubsContentLayout.Row>
                 ) : null}
-                {isCardVisible("Ideas Hub", "Cost Management Table") && (
-                  <HubsContentLayout.Row variant="table">
-                    <CostManagementTableCard />
+                {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") &&
+                (isCardVisible(activeTab, "Regional Forecast Heatmap") ||
+                  isCardVisible(activeTab, "Forecast Treemap")) ? (
+                  <HubsContentLayout.Row
+                    columnsTemplate={
+                      isCardVisible(activeTab, "Regional Forecast Heatmap") &&
+                      isCardVisible(activeTab, "Forecast Treemap")
+                        ? "minmax(0, 1fr) minmax(0, 1fr)"
+                        : "minmax(0, 1fr)"
+                    }
+                  >
+                    {isCardVisible(activeTab, "Regional Forecast Heatmap") ? (
+                      <CapitalPlanningRegionalHeatmapHubCard />
+                    ) : null}
+                    {isCardVisible(activeTab, "Forecast Treemap") ? (
+                      <CapitalPlanningForecastTreemapHubCard />
+                    ) : null}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") &&
+                isCardVisible(activeTab, "Forecast Intensity Heatmap") ? (
+                  <HubsContentLayout.Row>
+                    <CapitalPlanningForecastIntensityHeatmapHubCard />
+                  </HubsContentLayout.Row>
+                ) : null}
+                {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") &&
+                isCardVisible(activeTab, "Forecast Variance Heatmap") ? (
+                  <HubsContentLayout.Row>
+                    <CapitalPlanningForecastVarianceHeatmapHubCard />
+                  </HubsContentLayout.Row>
+                ) : null}
+                {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") &&
+                isCardVisible(activeTab, "Project Funding Flow") ? (
+                  <HubsContentLayout.Row>
+                    <CapitalPlanningProjectFundingFlowHubCard />
+                  </HubsContentLayout.Row>
+                ) : null}
+                {(activeTab === "Capital Planning" || activeTab === "Capital Planning 2.0") &&
+                isCardVisible(activeTab, "Funding Allocation by Region") ? (
+                  <HubsContentLayout.Row>
+                    <CapitalPlanningFundingAllocationByRegionHubCard />
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible(activeTab, "Capital Planning") && (
+                  <HubsContentLayout.Row variant="table-scroll">
+                    <CapitalPlanningHubPanel
+                      pageVariant={activeTab === "Capital Planning 2.0" ? "ga" : "default"}
+                      embeddedInHub
+                      hubEmbedReportSummaryMetrics={onCapitalPlanHubMetrics}
+                    />
                   </HubsContentLayout.Row>
                 )}
+              </HubsContentLayout>
+            )}
+            {activeTab === "Action Plans" && (
+              <HubsContentLayout>
+                {isCardVisible("Action Plans", "AP v2 Full Matrix") && (
+                  <HubsContentLayout.Row variant="table">
+                    <APv2FullMatrixHubCard />
+                  </HubsContentLayout.Row>
+                )}
+                {isCardVisible("Action Plans", "Overdue Action Items") || isCardVisible("Action Plans", "Template Adoption") ? (
+                  <HubsContentLayout.Row columnsTemplate="minmax(0, 1fr) 440px">
+                    {isCardVisible("Action Plans", "Overdue Action Items") && <ActionPlansOverdueItemsHubCard />}
+                    {isCardVisible("Action Plans", "Template Adoption") && <ActionPlansTemplateAdoptionHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
+                {isCardVisible("Action Plans", "AP v2 KPI Dashboard") || isCardVisible("Action Plans", "AP v2 Project Cards") ? (
+                  <HubsContentLayout.Row>
+                    {isCardVisible("Action Plans", "AP v2 KPI Dashboard") && <APv2KpiDashboardHubCard />}
+                    {isCardVisible("Action Plans", "AP v2 Project Cards") && <APv2ProjectCardsHubCard />}
+                  </HubsContentLayout.Row>
+                ) : null}
               </HubsContentLayout>
             )}
           </ToolLandingPage.Body>
